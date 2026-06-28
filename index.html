@@ -78,6 +78,13 @@
   .bar:hover{opacity:.8}
   .bar .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:4px 8px;border-radius:6px;font-size:12px;white-space:nowrap;margin-bottom:4px;z-index:5}
   .bar:hover .tip{display:block}
+  .bar.show .tip{display:block}            /* tap-to-pin on touch devices */
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:auto}
+  .seg button{background:var(--panel2);color:var(--muted);border:none;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button.on{background:var(--accent);color:#04201a}
+  .cardhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .cardhead h3{margin:0}
   .xlab{position:relative;height:15px;margin-top:7px}
   .xlab span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px}
@@ -245,8 +252,28 @@ function renderTabs(){
   document.getElementById("tabs").innerHTML = TABS.map(([id,name])=>
     `<button data-tab="${id}" class="${id===current?'active':''}">${name}</button>`).join("");
   document.querySelectorAll("#tabs button").forEach(b=>
-    b.onclick=()=>{ current=b.dataset.tab; renderTabs(); route(); window.scrollTo(0,0); });
+    b.onclick=()=>go(b.dataset.tab));
 }
+// navigate to a tab, syncing the URL hash (deep-linkable, survives refresh)
+function go(tab){
+  if(!TABS.some(t=>t[0]===tab)) tab="dash";
+  current=tab;
+  if(location.hash.replace("#","")!==tab) location.hash=tab; // fires hashchange (skipped: h===current)
+  renderTabs(); route(); window.scrollTo(0,0);
+}
+window.addEventListener("hashchange",()=>{
+  const h=(location.hash.replace("#","")||"dash");
+  if(h===current) return;            // ignore the hash we just set ourselves
+  if(TABS.some(t=>t[0]===h)){ current=h; renderTabs(); route(); window.scrollTo(0,0); }
+});
+// tap a chart bar to pin its tooltip (hover doesn't exist on touch)
+document.addEventListener("click",e=>{
+  const bar=e.target.closest(".chart .bar");
+  if(!bar) return;
+  const on=bar.classList.contains("show");
+  document.querySelectorAll(".bar.show").forEach(x=>x.classList.remove("show"));
+  if(!on) bar.classList.add("show");
+});
 function route(){
   const app=document.getElementById("app");
   if(current==="dash") renderDash(app);
@@ -266,9 +293,18 @@ function renderDash(app){
     t.count++; if(r.k)t.dist+=r.k; if(r.t)t.dur+=r.t; }
   const ranked = Object.entries(sportTotals).sort((x,y)=>y[1].count-x[1].count);
 
-  // per-year workout counts
-  const byYear = years.map(y=>({label:String(y),
-    value: real.filter(r=>yearOf(r)===y).length}));
+  // per-year aggregates (reused for the metric toggle)
+  const byYearAgg = years.map(y=>({y, a:agg(real.filter(r=>yearOf(r)===y))}));
+  const DM = {
+    count:{lbl:"Sessions", val:o=>o.a.count,            fmt:v=>fmtNum(v)},
+    dist: {lbl:"Distance", val:o=>Math.round(o.a.dist), fmt:v=>fmtNum(v)+" km"},
+    dur:  {lbl:"Hours",    val:o=>Math.round(o.a.dur/3600), fmt:v=>fmtNum(v)+" h"},
+  };
+  function dashChart(metric){
+    const m=DM[metric];
+    const data=byYearAgg.map(o=>({label:String(o.y), value:m.val(o)}));
+    return columnChart(data,{shortLabel:l=>"'"+l.slice(2), fmt:m.fmt});
+  }
 
   app.innerHTML = `
    <h2 class="section">Lifetime Overview</h2>
@@ -281,12 +317,22 @@ function renderDash(app){
    </div>
 
    <div class="card" style="margin-bottom:18px">
-     <h3>Workouts per year</h3>
-     ${columnChart(byYear,{shortLabel:l=>"'"+l.slice(2)})}
-     <div class="note-sm">Tip: click a sport below or use Reports to drill in.</div>
+     <div class="cardhead"><h3>Per year</h3>
+       <div class="seg" id="dash-seg">
+         <button data-m="count" class="on">Sessions</button>
+         <button data-m="dist">Distance</button>
+         <button data-m="dur">Hours</button>
+       </div></div>
+     <div id="dash-chart">${dashChart("count")}</div>
+     <div class="note-sm">Tip: tap a bar to read its value · click a sport below to drill in.</div>
    </div>
 
-   <h3>By sport</h3>
+   <h3>By sport</h3>`;
+  app.querySelectorAll("#dash-seg button").forEach(b=>b.onclick=()=>{
+    app.querySelectorAll("#dash-seg button").forEach(x=>x.classList.toggle("on",x===b));
+    document.getElementById("dash-chart").innerHTML=dashChart(b.dataset.m);
+  });
+  app.insertAdjacentHTML("beforeend",`
    <div class="grid sportcards">
      ${ranked.map(([s,t])=>`
        <div class="card sportcard" data-sport="${s}">
@@ -295,11 +341,12 @@ function renderDash(app){
          ${t.dist>5?`<div class="kv"><span>Distance</span><b>${fmtNum(t.dist)} km</b></div>`:""}
          ${t.dur?`<div class="kv"><span>Time</span><b>${Math.round(t.dur/3600).toLocaleString()} h</b></div>`:""}
        </div>`).join("")}
-   </div>`;
+   </div>`);
   app.querySelectorAll(".sportcard").forEach(c=>c.onclick=()=>{
-    current="reports"; renderTabs(); route();
-    setTimeout(()=>{ const sel=document.getElementById("rep-type"); if(sel){sel.value="sport"; sel.onchange();
-      const ss=document.getElementById("rep-sport"); if(ss){ss.value=c.dataset.sport; ss.onchange();}}},0);
+    go("reports");   // route() runs synchronously, so the Reports controls exist now
+    const sel=document.getElementById("rep-type");
+    if(sel){ sel.value="sport"; sel.onchange();
+      const ss=document.getElementById("rep-sport"); if(ss){ ss.value=c.dataset.sport; ss.onchange(); } }
   });
 }
 
@@ -601,19 +648,33 @@ function renderBrowse(app){
      <label class="fld" style="max-width:150px">Source<select id="x-src"><option value="">all</option><option value="t">training log</option><option value="r">running log</option></select></label>
      <label class="fld" style="max-width:150px">Confidence<select id="x-conf"><option value="">all</option><option value="x">confirmed</option><option value="d">deduced</option><option value="u">uncertain</option></select></label>
      <button class="btn ghost" id="x-clear">Clear</button>
+     <button class="btn ghost" id="x-csv">Export CSV</button>
    </div>
    <div class="muted" id="x-count" style="margin-bottom:8px"></div>
    <div class="tablewrap"><table id="x-table"></table></div>
    <div class="pager" id="x-pager"></div>`;
-  ["x-q","x-sport","x-year","x-src","x-conf"].forEach(id=>{
-    const el=document.getElementById(id);
-    el.oninput=el.onchange=()=>{BROWSE.page=0;drawBrowse();};
-  });
+  const debounce=(fn,ms)=>{let t;return()=>{clearTimeout(t);t=setTimeout(fn,ms);};};
+  const redraw=()=>{BROWSE.page=0;drawBrowse();};
+  document.getElementById("x-q").oninput=debounce(redraw,180);   // smooth typing over 12k rows
+  ["x-sport","x-year","x-src","x-conf"].forEach(id=>document.getElementById(id).onchange=redraw);
   document.getElementById("x-clear").onclick=()=>{
     ["x-q","x-sport","x-year","x-src","x-conf"].forEach(id=>document.getElementById(id).value="");
     BROWSE.page=0; drawBrowse();
   };
+  document.getElementById("x-csv").onclick=exportRawCSV;
   drawBrowse();
+}
+function exportRawCSV(){
+  const rows=BROWSE.rows||[];
+  const head=["date","sport","duration_sec","distance_km","heart_rate","avg_speed_kmh","source","classification","note","raw"];
+  const esc=v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;
+  const lines=[head.join(",")].concat(rows.map(r=>[
+    r.d,sportName(r.s),r.t||"",r.k==null?"":r.k,r.h||"",r.a||"",
+    r.src==="r"?"running":"training",CONF[r.c],r.n||"",r.r||""
+  ].map(esc).join(",")));
+  const blob=new Blob([lines.join("\n")],{type:"text/csv"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="mike-raw-data.csv"; a.click();
 }
 function applyBuilderToBrowse(){
   const f=BUILDER.f||{};
@@ -657,7 +718,9 @@ function drawBrowse(){
   if(BROWSE.page>=pages)BROWSE.page=0;
   const start=BROWSE.page*BROWSE.per;
   const slice=rows.slice(start,start+BROWSE.per);
-  document.getElementById("x-count").textContent=`${fmtNum(total)} entries`;
+  document.getElementById("x-count").textContent= total
+    ? `Showing ${fmtNum(start+1)}–${fmtNum(start+slice.length)} of ${fmtNum(total)} entries`
+    : "No entries match these filters.";
   const th=BROWSE_COLS.map(([k,lbl,num])=>`<th class="sortable ${num?'num':''}" data-k="${k}">${lbl}${BROWSE.sort===k?(BROWSE.dir>0?" ▲":" ▼"):""}</th>`).join("");
   const body=slice.map((r,i)=>rowHTML(r,start+i)).join("");
   document.getElementById("x-table").innerHTML=`<thead><tr>${th}</tr></thead><tbody>${body}</tbody>`;
@@ -750,6 +813,8 @@ function renderAbout(app){
 //============================================================ boot
 fetch("data.json").then(r=>r.json()).then(j=>{
   META=j.meta; DATA=j.rows;
+  const h=(location.hash.replace("#","")||"dash");
+  current=TABS.some(t=>t[0]===h)?h:"dash";
   renderTabs(); route();
 }).catch(e=>{
   document.getElementById("app").innerHTML=
