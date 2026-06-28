@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mike's Training Log</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#161d26; --panel2:#1d2733; --line:#283546;
+    --text:#e7edf3; --muted:#8aa0b5; --accent:#36c2a8; --accent2:#4d9fff;
+    --shadow:0 2px 14px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent2);text-decoration:none}
+  header.top{
+    position:sticky;top:0;z-index:30;background:rgba(15,20,25,.92);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+  }
+  .top-inner{max-width:1180px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .brand{font-weight:700;font-size:18px;letter-spacing:.2px;display:flex;align-items:center;gap:9px}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent)}
+  nav.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+  nav.tabs button{
+    background:transparent;border:1px solid transparent;color:var(--muted);
+    padding:7px 13px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;
+  }
+  nav.tabs button:hover{color:var(--text);background:var(--panel)}
+  nav.tabs button.active{color:var(--text);background:var(--panel2);border-color:var(--line)}
+  main{max-width:1180px;margin:0 auto;padding:22px 18px 70px}
+  h2.section{font-size:20px;margin:6px 0 16px;font-weight:700}
+  h3{font-size:15px;margin:0 0 10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:14px}
+  .stat-row{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .stat .num{font-size:26px;font-weight:800;letter-spacing:.4px}
+  .stat .lbl{color:var(--muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+  .sportcards{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+  .sportcard{display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:transform .08s,border-color .12s}
+  .sportcard:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .sportcard .head{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .chip{width:13px;height:13px;border-radius:4px;flex:none}
+  .sportcard .kv{display:flex;justify-content:space-between;font-size:13px}
+  .sportcard .kv span:first-child{color:var(--muted)}
+  /* controls */
+  label.fld{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--muted);font-weight:600}
+  select,input[type=text],input[type=number],input[type=date]{
+    background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    padding:8px 10px;border-radius:9px;font-size:14px;font-family:inherit;width:100%;
+  }
+  select:focus,input:focus{outline:none;border-color:var(--accent)}
+  .btn{background:var(--accent);color:#04201a;border:none;padding:9px 16px;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px}
+  .btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  .btn:hover{filter:brightness(1.07)}
+  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .controls .fld{min-width:120px;flex:1}
+  /* table */
+  table{border-collapse:collapse;width:100%;font-size:13.5px}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;user-select:none;position:sticky;top:54px;background:var(--panel)}
+  th.sortable:hover{color:var(--text)}
+  tbody tr:hover{background:var(--panel2)}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  .sportlabel{display:inline-flex;align-items:center;gap:7px}
+  .pill{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+  .pill.d{color:#e0b15a;border-color:#5a4a26}
+  .pill.u{color:#d98b8b;border-color:#5a3030}
+  /* chart */
+  .chart{display:flex;align-items:flex-end;gap:3px;height:200px;padding-top:10px}
+  .bar{flex:1;background:linear-gradient(var(--accent),#1d6e60);border-radius:4px 4px 0 0;min-height:2px;position:relative;cursor:pointer;transition:opacity .1s}
+  .bar:hover{opacity:.8}
+  .bar .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:4px 8px;border-radius:6px;font-size:12px;white-space:nowrap;margin-bottom:4px;z-index:5}
+  .bar:hover .tip{display:block}
+  .xlab{display:flex;gap:3px;margin-top:6px}
+  .xlab span{flex:1;text-align:center;font-size:10px;color:var(--muted);overflow:hidden}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px}
+  .legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+  .checks{display:flex;flex-wrap:wrap;gap:8px}
+  .checks label{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--text)}
+  .checks input{accent-color:var(--accent)}
+  .row-detail{background:var(--panel2)!important}
+  .row-detail td{white-space:normal;padding:14px 16px}
+  .kvgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 18px}
+  .kvgrid div{font-size:13px}
+  .kvgrid b{color:var(--muted);font-weight:600;display:block;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+  .rawbox{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0c1116;border:1px solid var(--line);padding:9px 12px;border-radius:8px;margin-top:10px;font-size:12.5px;color:#bcd}
+  .pager{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px}
+  .pager button{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer}
+  .pager button:disabled{opacity:.4;cursor:default}
+  .hidden{display:none!important}
+  .loading{text-align:center;padding:80px 0;color:var(--muted)}
+  .matrix td.num{cursor:default}
+  .matrix tr:hover td{background:var(--panel2)}
+  .note-sm{font-size:12px;color:var(--muted);margin-top:4px}
+  @media(max-width:640px){th{position:static}.top-inner{padding:10px 12px}main{padding:16px 12px 60px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><span class="dot"></span>Mike's Training Log</div>
+    <nav class="tabs" id="tabs"></nav>
+  </div>
+</header>
+<main id="app"><div class="loading">Loading training data…</div></main>
+
+<script>
+//============================================================ data + config
+const SPORTS = {
+  run:        {name:"Run",          color:"#4d9fff", metric:"pace"},
+  bike:       {name:"Bike",         color:"#36c2a8", metric:"speed"},
+  swim:       {name:"Swim",         color:"#7c5cff", metric:"swimpace"},
+  hockey:     {name:"Hockey",       color:"#ff7a59", metric:"time"},
+  karate:     {name:"Karate",       color:"#e0556e", metric:"time"},
+  xcski:      {name:"XC Ski",       color:"#56c2e0", metric:"dist"},
+  skate:      {name:"Skate",        color:"#5ad0ff", metric:"time"},
+  snowboard:  {name:"Snowboard",    color:"#9aa7ff", metric:"time"},
+  snowshoe:   {name:"Snowshoe",     color:"#86b6c9", metric:"dist"},
+  ski:        {name:"Alpine Ski",   color:"#7fb0d6", metric:"time"},
+  weights:    {name:"Weights",      color:"#c9a14a", metric:"time"},
+  elliptical: {name:"Elliptical",   color:"#b08fd0", metric:"time"},
+  row:        {name:"Row",          color:"#5fb38f", metric:"dist"},
+  yoga:       {name:"Yoga",         color:"#d08fb8", metric:"time"},
+  walk:       {name:"Walk",         color:"#8fae6f", metric:"dist"},
+  hike:       {name:"Hike",         color:"#9c7b4f", metric:"dist"},
+  squash:     {name:"Squash",       color:"#e0a14a", metric:"time"},
+  golf:       {name:"Golf",         color:"#6fb86f", metric:"time"},
+  canoe:      {name:"Canoe/Kayak",  color:"#4ab0b0", metric:"dist"},
+  soccer:     {name:"Soccer",       color:"#6fd06f", metric:"time"},
+  tennis:     {name:"Tennis",       color:"#d0d04a", metric:"time"},
+  physio:     {name:"Physio",       color:"#9aa6b2", metric:"time"},
+  other:      {name:"Other",        color:"#9aa6b2", metric:"time"},
+  note:       {name:"Note / rest",  color:"#5e6b78", metric:"none"},
+};
+const sportName = s => (SPORTS[s]||{name:s}).name;
+const sportColor = s => (SPORTS[s]||{color:"#888"}).color;
+const CONF = {x:"confirmed", d:"deduced", u:"uncertain"};
+
+let DATA = [], META = null;
+
+//============================================================ helpers
+const pad = n => String(n).padStart(2,"0");
+function fmtDur(sec){
+  if(!sec) return "";
+  const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=sec%60;
+  if(h) return h+":"+pad(m)+":"+pad(s);
+  return m+":"+pad(s);
+}
+function fmtDurShort(sec){
+  if(!sec) return "—";
+  const h=Math.floor(sec/3600), m=Math.round(sec%3600/60);
+  if(h) return h+"h "+(m?m+"m":"");
+  return m+"m";
+}
+function fmtKm(k){ return k==null? "" : (Math.round(k*10)/10)+" km"; }
+function fmtNum(n,d=0){ return n==null?"":n.toLocaleString(undefined,{maximumFractionDigits:d}); }
+// performance metric label per sport
+function perf(r){
+  const sp=SPORTS[r.s]||{}, t=r.t, k=r.k;
+  if(!t||!k) return "";
+  if(sp.metric==="pace"){ const p=(t/60)/k; return fmtPace(p)+" /km"; }
+  if(sp.metric==="swimpace"){ const p=t/(k*10); return fmtMMSS(p)+" /100m"; }
+  if(sp.metric==="speed"){ return (k/(t/3600)).toFixed(1)+" km/h"; }
+  return "";
+}
+function fmtPace(minPerKm){ const m=Math.floor(minPerKm), s=Math.round((minPerKm-m)*60); return m+":"+pad(s); }
+function fmtMMSS(sec){ const m=Math.floor(sec/60), s=Math.round(sec%60); return m+":"+pad(s); }
+const yearOf = r => +r.d.slice(0,4);
+const monthOf = r => +r.d.slice(5,7);
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const WEEKDAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+function weekdayOf(r){ const dt=new Date(r.d+"T00:00:00"); return (dt.getDay()+6)%7; }
+
+// aggregate a list of rows -> metrics
+function agg(rows){
+  let count=rows.length, dist=0, dur=0, dCount=0, tCount=0;
+  for(const r of rows){ if(r.k){dist+=r.k;dCount++;} if(r.t){dur+=r.t;tCount++;} }
+  return {count, dist, dur, dCount, tCount};
+}
+
+//============================================================ tiny chart (column)
+function columnChart(data, opts={}){
+  // data: [{label, value, color?, sub?}]
+  const max = Math.max(1, ...data.map(d=>d.value));
+  const fmt = opts.fmt || (v=>fmtNum(v));
+  const bars = data.map(d=>{
+    const h = (d.value/max*100).toFixed(1);
+    const col = d.color||"";
+    const style = col? `background:linear-gradient(${col},${col}99)`:"";
+    return `<div class="bar" style="height:${h}%;${style}" data-v="${d.value}">
+      <span class="tip">${d.label}: ${fmt(d.value)}${d.sub?" · "+d.sub:""}</span></div>`;
+  }).join("");
+  const labs = data.map(d=>`<span>${opts.shortLabel?opts.shortLabel(d.label):d.label}</span>`).join("");
+  return `<div class="chart">${bars}</div><div class="xlab">${labs}</div>`;
+}
+
+//============================================================ tabs / routing
+const TABS = [
+  ["dash","Dashboard"], ["reports","Reports"], ["builder","Report Builder"],
+  ["browse","Raw Data"], ["about","About"],
+];
+let current="dash";
+function renderTabs(){
+  document.getElementById("tabs").innerHTML = TABS.map(([id,name])=>
+    `<button data-tab="${id}" class="${id===current?'active':''}">${name}</button>`).join("");
+  document.querySelectorAll("#tabs button").forEach(b=>
+    b.onclick=()=>{ current=b.dataset.tab; renderTabs(); route(); window.scrollTo(0,0); });
+}
+function route(){
+  const app=document.getElementById("app");
+  if(current==="dash") renderDash(app);
+  else if(current==="reports") renderReports(app);
+  else if(current==="builder") renderBuilder(app);
+  else if(current==="browse") renderBrowse(app);
+  else renderAbout(app);
+}
+
+//============================================================ DASHBOARD
+function renderDash(app){
+  const real = DATA.filter(r=>r.s!=="note");
+  const a = agg(real);
+  const years = [...new Set(DATA.map(yearOf))].sort();
+  const sportTotals = {};
+  for(const r of real){ const t=sportTotals[r.s]||(sportTotals[r.s]={count:0,dist:0,dur:0});
+    t.count++; if(r.k)t.dist+=r.k; if(r.t)t.dur+=r.t; }
+  const ranked = Object.entries(sportTotals).sort((x,y)=>y[1].count-x[1].count);
+
+  // per-year workout counts
+  const byYear = years.map(y=>({label:String(y),
+    value: real.filter(r=>yearOf(r)===y).length}));
+
+  app.innerHTML = `
+   <h2 class="section">Lifetime Overview</h2>
+   <div class="grid stat-row" style="margin-bottom:18px">
+     <div class="card stat"><div class="num">${fmtNum(a.count)}</div><div class="lbl">Workouts</div></div>
+     <div class="card stat"><div class="num">${fmtNum(a.dist)}</div><div class="lbl">Total km</div></div>
+     <div class="card stat"><div class="num">${Math.round(a.dur/3600).toLocaleString()}</div><div class="lbl">Total hours</div></div>
+     <div class="card stat"><div class="num">${years.length}</div><div class="lbl">Years active</div></div>
+     <div class="card stat"><div class="num">${META.span[0].slice(0,4)}–${META.span[1].slice(0,4)}</div><div class="lbl">Span</div></div>
+   </div>
+
+   <div class="card" style="margin-bottom:18px">
+     <h3>Workouts per year</h3>
+     ${columnChart(byYear,{shortLabel:l=>"'"+l.slice(2)})}
+     <div class="note-sm">Tip: click a sport below or use Reports to drill in.</div>
+   </div>
+
+   <h3>By sport</h3>
+   <div class="grid sportcards">
+     ${ranked.map(([s,t])=>`
+       <div class="card sportcard" data-sport="${s}">
+         <div class="head"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</div>
+         <div class="kv"><span>Sessions</span><b>${fmtNum(t.count)}</b></div>
+         ${t.dist>5?`<div class="kv"><span>Distance</span><b>${fmtNum(t.dist)} km</b></div>`:""}
+         ${t.dur?`<div class="kv"><span>Time</span><b>${Math.round(t.dur/3600).toLocaleString()} h</b></div>`:""}
+       </div>`).join("")}
+   </div>`;
+  app.querySelectorAll(".sportcard").forEach(c=>c.onclick=()=>{
+    current="reports"; renderTabs(); route();
+    setTimeout(()=>{ const sel=document.getElementById("rep-type"); if(sel){sel.value="sport"; sel.onchange();
+      const ss=document.getElementById("rep-sport"); if(ss){ss.value=c.dataset.sport; ss.onchange();}}},0);
+  });
+}
+
+//============================================================ REPORTS (premade)
+function renderReports(app){
+  const years=[...new Set(DATA.map(yearOf))].sort((a,b)=>b-a);
+  const sports=Object.keys(SPORTS).filter(s=>DATA.some(r=>r.s===s));
+  app.innerHTML=`
+   <h2 class="section">Reports</h2>
+   <div class="card controls" style="margin-bottom:18px">
+     <label class="fld" style="max-width:220px">Report
+       <select id="rep-type">
+         <option value="year">Year summary</option>
+         <option value="sport">Sport summary</option>
+         <option value="matrix">Year × Sport matrix</option>
+         <option value="bests">Personal bests</option>
+       </select></label>
+     <label class="fld" id="wrap-year" style="max-width:160px">Year
+       <select id="rep-year">${years.map(y=>`<option>${y}</option>`).join("")}</select></label>
+     <label class="fld hidden" id="wrap-sport" style="max-width:200px">Sport
+       <select id="rep-sport">${sports.map(s=>`<option value="${s}">${sportName(s)}</option>`).join("")}</select></label>
+     <label class="fld hidden" id="wrap-metric" style="max-width:180px">Metric
+       <select id="rep-metric">
+         <option value="count">Sessions</option>
+         <option value="dist">Distance (km)</option>
+         <option value="dur">Time (hours)</option>
+       </select></label>
+   </div>
+   <div id="rep-out"></div>`;
+  const type=document.getElementById("rep-type");
+  const wYear=document.getElementById("wrap-year"), wSport=document.getElementById("wrap-sport"), wMetric=document.getElementById("wrap-metric");
+  function syncControls(){
+    wYear.classList.toggle("hidden", type.value!=="year");
+    wSport.classList.toggle("hidden", type.value!=="sport");
+    wMetric.classList.toggle("hidden", type.value!=="matrix");
+  }
+  type.onchange=()=>{ syncControls(); draw(); };
+  document.getElementById("rep-year").onchange=draw;
+  document.getElementById("rep-sport").onchange=draw;
+  document.getElementById("rep-metric").onchange=draw;
+  function draw(){
+    const out=document.getElementById("rep-out");
+    if(type.value==="year") out.innerHTML=reportYear(+document.getElementById("rep-year").value);
+    else if(type.value==="sport") out.innerHTML=reportSport(document.getElementById("rep-sport").value);
+    else if(type.value==="matrix") out.innerHTML=reportMatrix(document.getElementById("rep-metric").value);
+    else out.innerHTML=reportBests();
+  }
+  syncControls(); draw();
+}
+
+function reportYear(y){
+  const rows=DATA.filter(r=>yearOf(r)===y && r.s!=="note");
+  if(!rows.length) return `<div class="card">No data for ${y}.</div>`;
+  const a=agg(rows);
+  const sportTotals={};
+  for(const r of rows){ const t=sportTotals[r.s]||(sportTotals[r.s]={count:0,dist:0,dur:0});
+    t.count++; if(r.k)t.dist+=r.k; if(r.t)t.dur+=r.t; }
+  const ranked=Object.entries(sportTotals).sort((x,y)=>y[1].count-x[1].count);
+  // monthly stacked-ish (count) chart
+  const byMonth=MONTHS.map((m,i)=>({label:m,value:rows.filter(r=>monthOf(r)===i+1).length}));
+  return `
+   <div class="grid stat-row" style="margin-bottom:16px">
+     <div class="card stat"><div class="num">${fmtNum(a.count)}</div><div class="lbl">Workouts in ${y}</div></div>
+     <div class="card stat"><div class="num">${fmtNum(a.dist)}</div><div class="lbl">km</div></div>
+     <div class="card stat"><div class="num">${Math.round(a.dur/3600)}</div><div class="lbl">hours</div></div>
+     <div class="card stat"><div class="num">${ranked.length}</div><div class="lbl">sports</div></div>
+   </div>
+   <div class="card" style="margin-bottom:16px"><h3>${y} by month</h3>${columnChart(byMonth)}</div>
+   <div class="card"><h3>${y} by sport</h3>
+     <div class="tablewrap"><table><thead><tr><th>Sport</th><th class="num">Sessions</th><th class="num">Distance</th><th class="num">Time</th></tr></thead>
+     <tbody>${ranked.map(([s,t])=>`<tr>
+        <td><span class="sportlabel"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</span></td>
+        <td class="num">${fmtNum(t.count)}</td>
+        <td class="num">${t.dist?fmtNum(t.dist)+" km":"—"}</td>
+        <td class="num">${t.dur?fmtDurShort(t.dur):"—"}</td></tr>`).join("")}</tbody></table></div></div>`;
+}
+
+function reportSport(s){
+  const rows=DATA.filter(r=>r.s===s);
+  if(!rows.length) return `<div class="card">No data.</div>`;
+  const years=[...new Set(rows.map(yearOf))].sort();
+  const a=agg(rows);
+  const byYear=years.map(y=>({label:String(y),value:rows.filter(r=>yearOf(r)===y).length}));
+  const perYearRows=years.map(y=>{const rr=rows.filter(r=>yearOf(r)===y);const ya=agg(rr);
+    return {y,...ya};}).reverse();
+  const recs=bestsFor(s);
+  return `
+   <div class="grid stat-row" style="margin-bottom:16px">
+     <div class="card stat"><div class="num">${fmtNum(a.count)}</div><div class="lbl">${sportName(s)} sessions</div></div>
+     ${a.dist>5?`<div class="card stat"><div class="num">${fmtNum(a.dist)}</div><div class="lbl">total km</div></div>`:""}
+     <div class="card stat"><div class="num">${Math.round(a.dur/3600)}</div><div class="lbl">total hours</div></div>
+     <div class="card stat"><div class="num">${years[0]}–${years[years.length-1]}</div><div class="lbl">span</div></div>
+   </div>
+   <div class="card" style="margin-bottom:16px"><h3>${sportName(s)} sessions per year</h3>
+     ${columnChart(byYear,{shortLabel:l=>"'"+l.slice(2)})}</div>
+   ${recs?`<div class="card" style="margin-bottom:16px"><h3>Records</h3><div class="kvgrid">${recs}</div></div>`:""}
+   <div class="card"><h3>Per year</h3>
+     <div class="tablewrap"><table><thead><tr><th>Year</th><th class="num">Sessions</th><th class="num">Distance</th><th class="num">Time</th></tr></thead>
+     <tbody>${perYearRows.map(r=>`<tr><td>${r.y}</td><td class="num">${fmtNum(r.count)}</td>
+        <td class="num">${r.dist?fmtNum(r.dist)+" km":"—"}</td><td class="num">${r.dur?fmtDurShort(r.dur):"—"}</td></tr>`).join("")}</tbody></table></div></div>`;
+}
+
+function reportMatrix(metric){
+  const years=[...new Set(DATA.map(yearOf))].sort();
+  const sports=Object.keys(SPORTS).filter(s=>s!=="note"&&DATA.some(r=>r.s===s));
+  const val=(rows)=>{ const a=agg(rows); return metric==="count"?a.count:metric==="dist"?Math.round(a.dist):Math.round(a.dur/3600); };
+  const cell=(y,s)=>val(DATA.filter(r=>yearOf(r)===y&&r.s===s));
+  const head=`<th>Year</th>`+sports.map(s=>`<th class="num"><span class="sportlabel"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</span></th>`).join("")+`<th class="num">Total</th>`;
+  const body=years.slice().reverse().map(y=>{
+    let tot=0; const cells=sports.map(s=>{const v=cell(y,s);tot+=v;return `<td class="num">${v||""}</td>`;}).join("");
+    return `<tr><td><b>${y}</b></td>${cells}<td class="num"><b>${tot||""}</b></td></tr>`;
+  }).join("");
+  const unit=metric==="count"?"sessions":metric==="dist"?"km":"hours";
+  return `<div class="card"><h3>Year × Sport — ${unit}</h3>
+    <div class="tablewrap"><table class="matrix"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`;
+}
+
+function bestsFor(s){
+  const rows=DATA.filter(r=>r.s===s);
+  const sp=SPORTS[s]||{};
+  let html=[];
+  const withDist=rows.filter(r=>r.k); const withDur=rows.filter(r=>r.t);
+  if(withDist.length){ const m=withDist.reduce((a,b)=>b.k>a.k?b:a);
+    html.push(kv("Longest distance",`${fmtNum(m.k,1)} km`,m.d)); }
+  if(withDur.length){ const m=withDur.reduce((a,b)=>b.t>a.t?b:a);
+    html.push(kv("Longest duration",fmtDur(m.t),m.d)); }
+  if(sp.metric==="pace"){ const c=rows.filter(r=>r.t&&r.k&&r.k>=3);
+    if(c.length){ const m=c.reduce((a,b)=> (b.t/b.k)<(a.t/a.k)?b:a); html.push(kv("Fastest pace (≥3 km)",fmtPace((m.t/60)/m.k)+" /km",m.d)); } }
+  if(sp.metric==="speed"){ const c=rows.filter(r=>r.t&&r.k&&r.k>=10);
+    if(c.length){ const m=c.reduce((a,b)=>(b.k/b.t)>(a.k/a.t)?b:a); html.push(kv("Fastest avg speed (≥10 km)",(m.k/(m.t/3600)).toFixed(1)+" km/h",m.d)); } }
+  // best year
+  const years=[...new Set(rows.map(yearOf))];
+  if(years.length){ const by=years.map(y=>[y,rows.filter(r=>yearOf(r)===y).length]).reduce((a,b)=>b[1]>a[1]?b:a);
+    html.push(kv("Most sessions in a year",`${by[1]}`,String(by[0]))); }
+  return html.join("");
+  function kv(label,val,date){ return `<div><b>${label}</b>${val} <span class="muted">(${date})</span></div>`; }
+}
+
+function reportBests(){
+  const sports=["run","bike","swim","xcski","hockey"].filter(s=>DATA.some(r=>r.s===s));
+  return sports.map(s=>{const h=bestsFor(s); return h?`<div class="card" style="margin-bottom:14px">
+    <h3><span class="sportlabel"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</span></h3>
+    <div class="kvgrid">${h}</div></div>`:"";}).join("");
+}
+
+//============================================================ REPORT BUILDER
+const BUILDER={f:{}};
+function renderBuilder(app){
+  const years=[...new Set(DATA.map(yearOf))].sort((a,b)=>b-a);
+  const sports=Object.keys(SPORTS).filter(s=>DATA.some(r=>r.s===s));
+  app.innerHTML=`
+   <h2 class="section">Custom Report Builder</h2>
+   <div class="card" style="margin-bottom:16px">
+     <h3>1 · Filter</h3>
+     <div class="controls" style="margin-bottom:14px">
+       <label class="fld">From year<select id="b-y0"><option value="">earliest</option>${years.slice().reverse().map(y=>`<option>${y}</option>`).join("")}</select></label>
+       <label class="fld">To year<select id="b-y1"><option value="">latest</option>${years.slice().reverse().map(y=>`<option>${y}</option>`).join("")}</select></label>
+       <label class="fld">Source<select id="b-src"><option value="">all</option><option value="t">training log</option><option value="r">running log</option></select></label>
+       <label class="fld">Confidence<select id="b-conf"><option value="">all</option><option value="x">confirmed</option><option value="d">deduced</option><option value="u">uncertain</option></select></label>
+       <label class="fld">Min km<input type="number" id="b-kmin" min="0" step="1" placeholder="any"></label>
+       <label class="fld">Search notes<input type="text" id="b-q" placeholder="text…"></label>
+     </div>
+     <h3>Sports</h3>
+     <div class="checks" id="b-sports">
+       <label><input type="checkbox" value="__all" checked> All</label>
+       ${sports.map(s=>`<label><input type="checkbox" value="${s}"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</label>`).join("")}
+     </div>
+   </div>
+   <div class="card" style="margin-bottom:16px">
+     <h3>2 · Group &amp; measure</h3>
+     <div class="controls">
+       <label class="fld">Group by<select id="b-group">
+         <option value="year">Year</option><option value="sport">Sport</option>
+         <option value="year_sport">Year + Sport</option><option value="month">Month of year</option>
+         <option value="ym">Year-Month</option><option value="weekday">Weekday</option>
+         <option value="none">No grouping (totals)</option>
+       </select></label>
+       <label class="fld">Sort by<select id="b-sort">
+         <option value="key">Group</option><option value="count">Sessions</option>
+         <option value="dist">Distance</option><option value="dur">Time</option></select></label>
+       <button class="btn" id="b-run">Run report</button>
+       <button class="btn ghost" id="b-csv">Export CSV</button>
+       <button class="btn ghost" id="b-view">View matching entries</button>
+     </div>
+   </div>
+   <div id="b-out"></div>`;
+
+  // "All" checkbox logic
+  const sportsBox=document.getElementById("b-sports");
+  sportsBox.addEventListener("change",e=>{
+    const all=sportsBox.querySelector('input[value="__all"]');
+    if(e.target.value==="__all"&&e.target.checked){
+      sportsBox.querySelectorAll('input').forEach(i=>{if(i!==all)i.checked=false;});
+    }else if(e.target.value!=="__all"&&e.target.checked){ all.checked=false; }
+    if(![...sportsBox.querySelectorAll('input')].some(i=>i.checked)) all.checked=true;
+  });
+  document.getElementById("b-run").onclick=runBuilder;
+  document.getElementById("b-csv").onclick=()=>runBuilder(true);
+  document.getElementById("b-view").onclick=()=>{
+    BUILDER.f=collectFilter(); current="browse"; renderTabs(); route();
+    setTimeout(()=>applyBuilderToBrowse(),0);
+  };
+  runBuilder();
+}
+function collectFilter(){
+  const v=id=>document.getElementById(id).value;
+  const sportsBox=document.getElementById("b-sports");
+  const checked=[...sportsBox.querySelectorAll('input:checked')].map(i=>i.value).filter(x=>x!=="__all");
+  return {y0:v("b-y0"),y1:v("b-y1"),src:v("b-src"),conf:v("b-conf"),
+    kmin:v("b-kmin"),q:v("b-q").toLowerCase(),sports:checked};
+}
+function filterRows(f){
+  return DATA.filter(r=>{
+    if(f.sports.length && !f.sports.includes(r.s)) return false;
+    if(!f.sports.length && r.s==="note") {/* include notes only if explicitly chosen */ }
+    const y=yearOf(r);
+    if(f.y0 && y<+f.y0) return false;
+    if(f.y1 && y>+f.y1) return false;
+    if(f.src && r.src!==f.src) return false;
+    if(f.conf && r.c!==f.conf) return false;
+    if(f.kmin && (!r.k || r.k<+f.kmin)) return false;
+    if(f.q && !(r.r||"").toLowerCase().includes(f.q) && !(r.n||"").toLowerCase().includes(f.q)) return false;
+    return true;
+  });
+}
+function runBuilder(csv){
+  const f=collectFilter(); BUILDER.f=f;
+  const rows=filterRows(f);
+  const group=document.getElementById("b-group").value;
+  const sortBy=document.getElementById("b-sort").value;
+  const keyFn={
+    year:r=>String(yearOf(r)), sport:r=>sportName(r.s),
+    year_sport:r=>yearOf(r)+" · "+sportName(r.s),
+    month:r=>MONTHS[monthOf(r)-1], ym:r=>r.d.slice(0,7),
+    weekday:r=>WEEKDAYS[weekdayOf(r)], none:_=>"All",
+  }[group];
+  const groups={};
+  for(const r of rows){ const k=keyFn(r); (groups[k]||(groups[k]=[])).push(r); }
+  let entries=Object.entries(groups).map(([k,rs])=>{const a=agg(rs);return {k,...a,
+     avgKm:a.dCount?a.dist/a.dCount:0, avgDur:a.tCount?a.dur/a.tCount:0};});
+  // sort
+  const monthOrder=MONTHS, wdOrder=WEEKDAYS;
+  entries.sort((a,b)=>{
+    if(sortBy==="key"){
+      if(group==="month") return monthOrder.indexOf(a.k)-monthOrder.indexOf(b.k);
+      if(group==="weekday") return wdOrder.indexOf(a.k)-wdOrder.indexOf(b.k);
+      return a.k<b.k?-1:a.k>b.k?1:0;
+    }
+    return b[sortBy]-a[sortBy];
+  });
+  const tot=agg(rows);
+  if(csv){ exportCSV(entries,group); return; }
+  const out=document.getElementById("b-out");
+  if(!rows.length){ out.innerHTML=`<div class="card">No entries match these filters.</div>`; return; }
+  const showChart = entries.length>1 && entries.length<=60;
+  const chartData=entries.map(e=>({label:e.k,value:e.count}));
+  out.innerHTML=`
+   <div class="grid stat-row" style="margin-bottom:14px">
+     <div class="card stat"><div class="num">${fmtNum(tot.count)}</div><div class="lbl">matching workouts</div></div>
+     <div class="card stat"><div class="num">${fmtNum(tot.dist)}</div><div class="lbl">total km</div></div>
+     <div class="card stat"><div class="num">${Math.round(tot.dur/3600)}</div><div class="lbl">total hours</div></div>
+     <div class="card stat"><div class="num">${entries.length}</div><div class="lbl">groups</div></div>
+   </div>
+   ${showChart?`<div class="card" style="margin-bottom:14px"><h3>Sessions by ${group.replace("_"," + ")}</h3>
+      ${columnChart(chartData,{shortLabel:l=>l.length>6?l.slice(0,6):l})}</div>`:""}
+   <div class="card"><h3>Results</h3>
+   <div class="tablewrap"><table><thead><tr>
+     <th>${group==="none"?"Total":group.replace("_"," + ")}</th>
+     <th class="num">Sessions</th><th class="num">Distance</th><th class="num">Avg km</th>
+     <th class="num">Total time</th><th class="num">Avg time</th></tr></thead>
+   <tbody>${entries.map(e=>`<tr>
+     <td>${e.k}</td><td class="num">${fmtNum(e.count)}</td>
+     <td class="num">${e.dist?fmtNum(e.dist)+" km":"—"}</td>
+     <td class="num">${e.avgKm?fmtNum(e.avgKm,1):"—"}</td>
+     <td class="num">${e.dur?fmtDurShort(e.dur):"—"}</td>
+     <td class="num">${e.avgDur?fmtDur(Math.round(e.avgDur)):"—"}</td></tr>`).join("")}
+   </tbody></table></div></div>`;
+}
+function exportCSV(entries,group){
+  const head=["group","sessions","distance_km","avg_km","total_seconds","avg_seconds"];
+  const lines=[head.join(",")].concat(entries.map(e=>
+    [`"${e.k}"`,e.count,e.dist.toFixed(2),e.avgKm.toFixed(2),Math.round(e.dur),Math.round(e.avgDur)].join(",")));
+  const blob=new Blob([lines.join("\n")],{type:"text/csv"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`mike-report-${group}.csv`; a.click();
+}
+
+//============================================================ RAW DATA BROWSE
+const BROWSE={page:0,per:50,sort:"d",dir:-1,rows:null};
+function renderBrowse(app){
+  const years=[...new Set(DATA.map(yearOf))].sort((a,b)=>b-a);
+  const sports=Object.keys(SPORTS).filter(s=>DATA.some(r=>r.s===s));
+  app.innerHTML=`
+   <h2 class="section">Raw Data</h2>
+   <div class="card controls" style="margin-bottom:14px">
+     <label class="fld">Search<input type="text" id="x-q" placeholder="notes / raw text…"></label>
+     <label class="fld" style="max-width:150px">Sport<select id="x-sport"><option value="">all</option>${sports.map(s=>`<option value="${s}">${sportName(s)}</option>`).join("")}</select></label>
+     <label class="fld" style="max-width:120px">Year<select id="x-year"><option value="">all</option>${years.map(y=>`<option>${y}</option>`).join("")}</select></label>
+     <label class="fld" style="max-width:150px">Source<select id="x-src"><option value="">all</option><option value="t">training log</option><option value="r">running log</option></select></label>
+     <label class="fld" style="max-width:150px">Confidence<select id="x-conf"><option value="">all</option><option value="x">confirmed</option><option value="d">deduced</option><option value="u">uncertain</option></select></label>
+     <button class="btn ghost" id="x-clear">Clear</button>
+   </div>
+   <div class="muted" id="x-count" style="margin-bottom:8px"></div>
+   <div class="tablewrap"><table id="x-table"></table></div>
+   <div class="pager" id="x-pager"></div>`;
+  ["x-q","x-sport","x-year","x-src","x-conf"].forEach(id=>{
+    const el=document.getElementById(id);
+    el.oninput=el.onchange=()=>{BROWSE.page=0;drawBrowse();};
+  });
+  document.getElementById("x-clear").onclick=()=>{
+    ["x-q","x-sport","x-year","x-src","x-conf"].forEach(id=>document.getElementById(id).value="");
+    BROWSE.page=0; drawBrowse();
+  };
+  drawBrowse();
+}
+function applyBuilderToBrowse(){
+  const f=BUILDER.f||{};
+  if(f.q!==undefined) document.getElementById("x-q").value=f.q||"";
+  if(f.src) document.getElementById("x-src").value=f.src;
+  if(f.conf) document.getElementById("x-conf").value=f.conf;
+  if(f.sports&&f.sports.length===1) document.getElementById("x-sport").value=f.sports[0];
+  if(f.y0&&f.y0===f.y1) document.getElementById("x-year").value=f.y0;
+  drawBrowse();
+}
+function browseFilter(){
+  const q=document.getElementById("x-q").value.toLowerCase();
+  const sport=document.getElementById("x-sport").value;
+  const year=document.getElementById("x-year").value;
+  const src=document.getElementById("x-src").value;
+  const conf=document.getElementById("x-conf").value;
+  return DATA.filter(r=>{
+    if(sport&&r.s!==sport) return false;
+    if(year&&yearOf(r)!==+year) return false;
+    if(src&&r.src!==src) return false;
+    if(conf&&r.c!==conf) return false;
+    if(q&&!(r.r||"").toLowerCase().includes(q)&&!(r.n||"").toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+const BROWSE_COLS=[
+  ["d","Date",0],["s","Sport",0],["t","Duration",1],["k","Distance",1],
+  ["perf","Pace / Speed",1],["h","HR",1],["src","Source",0],["c","Conf",0],["r","Notes / raw",0],
+];
+function drawBrowse(){
+  let rows=browseFilter();
+  const {sort,dir}=BROWSE;
+  rows.sort((a,b)=>{
+    let av,bv;
+    if(sort==="perf"){av=a.t&&a.k?a.t/a.k:0;bv=b.t&&b.k?b.t/b.k:0;}
+    else {av=(a[sort]==null?-Infinity:a[sort]);bv=(b[sort]==null?-Infinity:b[sort]);}
+    if(av<bv)return -dir; if(av>bv)return dir; return 0;
+  });
+  BROWSE.rows=rows;
+  const total=rows.length, pages=Math.max(1,Math.ceil(total/BROWSE.per));
+  if(BROWSE.page>=pages)BROWSE.page=0;
+  const start=BROWSE.page*BROWSE.per;
+  const slice=rows.slice(start,start+BROWSE.per);
+  document.getElementById("x-count").textContent=`${fmtNum(total)} entries`;
+  const th=BROWSE_COLS.map(([k,lbl,num])=>`<th class="sortable ${num?'num':''}" data-k="${k}">${lbl}${BROWSE.sort===k?(BROWSE.dir>0?" ▲":" ▼"):""}</th>`).join("");
+  const body=slice.map((r,i)=>rowHTML(r,start+i)).join("");
+  document.getElementById("x-table").innerHTML=`<thead><tr>${th}</tr></thead><tbody>${body}</tbody>`;
+  document.querySelectorAll("#x-table th.sortable").forEach(t=>t.onclick=()=>{
+    const k=t.dataset.k;
+    if(BROWSE.sort===k)BROWSE.dir*=-1; else {BROWSE.sort=k;BROWSE.dir=(k==="d")?-1:1;}
+    drawBrowse();
+  });
+  document.querySelectorAll("#x-table tbody tr.datarow").forEach(tr=>tr.onclick=()=>toggleDetail(tr));
+  // pager
+  const pg=document.getElementById("x-pager");
+  pg.innerHTML=`<button ${BROWSE.page===0?"disabled":""} id="pg-prev">‹ Prev</button>
+    <span class="muted">Page ${BROWSE.page+1} / ${pages}</span>
+    <button ${BROWSE.page>=pages-1?"disabled":""} id="pg-next">Next ›</button>`;
+  const prev=document.getElementById("pg-prev"),next=document.getElementById("pg-next");
+  if(prev)prev.onclick=()=>{BROWSE.page--;drawBrowse();window.scrollTo(0,0);};
+  if(next)next.onclick=()=>{BROWSE.page++;drawBrowse();window.scrollTo(0,0);};
+}
+function rowHTML(r,idx){
+  const sp=`<span class="sportlabel"><span class="chip" style="background:${sportColor(r.s)}"></span>${sportName(r.s)}</span>`;
+  const confPill=r.c==="x"?"":`<span class="pill ${r.c}">${CONF[r.c]}</span>`;
+  return `<tr class="datarow" data-idx="${idx}">
+    <td>${r.d}</td><td>${sp}</td>
+    <td class="num">${fmtDur(r.t)||"—"}</td>
+    <td class="num">${r.k!=null?fmtNum(r.k,1)+" km":"—"}</td>
+    <td class="num">${perf(r)||"—"}</td>
+    <td class="num">${r.h||"—"}</td>
+    <td>${r.src==="r"?"running":"training"}</td>
+    <td>${confPill||'<span class="pill">ok</span>'}</td>
+    <td>${escapeHTML(r.n||r.r||"").slice(0,46)}</td></tr>`;
+}
+function toggleDetail(tr){
+  const next=tr.nextElementSibling;
+  if(next&&next.classList.contains("row-detail")){ next.remove(); return; }
+  const r=BROWSE.rows[+tr.dataset.idx];
+  const tdcount=BROWSE_COLS.length;
+  const det=document.createElement("tr"); det.className="row-detail";
+  det.innerHTML=`<td colspan="${tdcount}">
+    <div class="kvgrid">
+      <div><b>Date</b>${r.d} (${WEEKDAYS[weekdayOf(r)]})</div>
+      <div><b>Sport</b>${sportName(r.s)}</div>
+      <div><b>Duration</b>${fmtDur(r.t)||"—"}</div>
+      <div><b>Distance</b>${r.k!=null?fmtNum(r.k,2)+" km":"—"}</div>
+      <div><b>Pace / Speed</b>${perf(r)||"—"}</div>
+      <div><b>Heart rate</b>${r.h?r.h+" bpm":"—"}</div>
+      <div><b>Avg speed (logged)</b>${r.a?r.a+" km/h":"—"}</div>
+      ${r.sh?`<div><b>Shoe</b>${escapeHTML(r.sh)}</div>`:""}
+      <div><b>Source</b>${r.src==="r"?"running log":"training log"}</div>
+      <div><b>Classification</b>${CONF[r.c]}</div>
+    </div>
+    ${r.n?`<div class="note-sm" style="margin-top:8px"><b>Note:</b> ${escapeHTML(r.n)}</div>`:""}
+    <div class="rawbox">${escapeHTML(r.r)}</div>
+  </td>`;
+  tr.after(det);
+}
+function escapeHTML(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+//============================================================ ABOUT
+function renderAbout(app){
+  const conf={};DATA.forEach(r=>conf[r.c]=(conf[r.c]||0)+1);
+  app.innerHTML=`
+   <h2 class="section">About this log</h2>
+   <div class="card" style="margin-bottom:14px;max-width:760px;line-height:1.7">
+     <p>This site is built from two source files: a 32-year <b>training log</b> (a weekly
+     calendar grid) and a precise <b>running log</b>. Running entries that also appeared in
+     the training grid have been de-duplicated, keeping the detailed running-log version.</p>
+     <p>The training grid recorded workouts in shorthand. Each entry was parsed to recover the
+     sport, duration and distance. Sports were taken from explicit codes/words where present
+     (<code>r</code>=run, <code>s</code>=swim, <code>b</code>=bike, plus hockey, karate, XC ski,
+     snowboard, …). Where unmarked, the sport was deduced:</p>
+     <ul>
+       <li><b>Distance only</b> → usually a bike ride.</li>
+       <li><b>Distance + time</b> → classified by pace/speed
+         (bike ≈ 25–30 km/h, run ≈ 3:30–5:30 /km, swim ≈ 1:45 /100 m).</li>
+     </ul>
+     <p>Each entry is tagged <span class="pill">confirmed</span>
+        <span class="pill d">deduced</span> or
+        <span class="pill u">uncertain</span>. The original shorthand is always shown in the
+        Raw Data view so nothing is lost.</p>
+   </div>
+   <div class="grid stat-row" style="max-width:760px">
+     <div class="card stat"><div class="num">${fmtNum(META.count)}</div><div class="lbl">total entries</div></div>
+     <div class="card stat"><div class="num">${fmtNum(conf.x||0)}</div><div class="lbl">confirmed</div></div>
+     <div class="card stat"><div class="num">${fmtNum(conf.d||0)}</div><div class="lbl">deduced</div></div>
+     <div class="card stat"><div class="num">${fmtNum(conf.u||0)}</div><div class="lbl">uncertain</div></div>
+   </div>
+   <div class="note-sm" style="margin-top:14px">Generated ${META.generated}. Span ${META.span[0]} → ${META.span[1]}.</div>`;
+}
+
+//============================================================ boot
+fetch("data.json").then(r=>r.json()).then(j=>{
+  META=j.meta; DATA=j.rows;
+  renderTabs(); route();
+}).catch(e=>{
+  document.getElementById("app").innerHTML=
+    `<div class="card" style="margin-top:20px"><h3>Couldn't load data.json</h3>
+     <p class="muted">If you opened this file directly from disk, your browser blocks loading
+     <code>data.json</code>. View it through the GitHub Pages link, or run a local server
+     (<code>python -m http.server</code>) in this folder.</p>
+     <div class="rawbox">${e}</div></div>`;
+});
+</script>
+</body>
+</html>
