@@ -99,7 +99,28 @@
   .matrix td.num{cursor:default}
   .matrix tr:hover td{background:var(--panel2)}
   .note-sm{font-size:12px;color:var(--muted);margin-top:4px}
-  @media(max-width:640px){th{position:static}.top-inner{padding:10px 12px}main{padding:16px 12px 60px}}
+  @media(max-width:640px){
+    th{position:static}
+    .top-inner{padding:10px 12px}
+    main{padding:14px 11px 56px}
+    h2.section{font-size:17px;margin:4px 0 12px}
+    h3{font-size:13px;margin-bottom:8px}
+    .grid{gap:9px}
+    .card{padding:11px 12px;border-radius:11px}
+    /* Compact stat tiles: ~3 per row with smaller numbers so the overview
+       fits the screen instead of forcing long scrolls. */
+    .stat-row{grid-template-columns:repeat(auto-fit,minmax(96px,1fr))}
+    .stat .num{font-size:18px}
+    .stat .lbl{font-size:10.5px;margin-top:1px}
+    /* Sport tiles: 2 per row and tighter. */
+    .sportcards{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+    .sportcard{gap:4px}
+    .sportcard .head{font-size:13.5px;gap:7px}
+    .sportcard .kv{font-size:12px}
+    /* Denser data tables. */
+    table{font-size:12.5px}
+    th,td{padding:6px 8px}
+  }
 </style>
 </head>
 <body>
