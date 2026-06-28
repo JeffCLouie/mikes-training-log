@@ -103,6 +103,28 @@
   .cardhead h3{margin:0}
   .xlab{position:relative;height:15px;margin-top:7px}
   .xlab span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
+  /* insights: fun-fact callouts */
+  .facts{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  .fact{display:flex;gap:12px;align-items:center}
+  .fact .big{font-size:22px;line-height:1}
+  .fact .ftxt b{display:block;font-size:17px;font-weight:800}
+  .fact .ftxt span{color:var(--muted);font-size:12.5px}
+  /* insights: activity heatmap (GitHub-style) */
+  .hm-scroll{overflow-x:auto;padding-bottom:4px}
+  .hm-months{display:flex;gap:3px;margin-bottom:4px;font-size:10px;color:var(--muted);height:12px}
+  .hm-mlabel{width:13px;flex:none;white-space:nowrap;overflow:visible}
+  .hm{display:flex;gap:3px}
+  .hm-week{display:flex;flex-direction:column;gap:3px;flex:none}
+  .hm-cell{width:13px;height:13px;border-radius:3px;background:var(--panel2)}
+  .hm-legend{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:11.5px;color:var(--muted)}
+  .hm-legend .hm-cell{width:12px;height:12px}
+  /* insights: shoe leaderboard */
+  .shoebar{display:grid;grid-template-columns:1fr;gap:7px}
+  .shoe{display:flex;align-items:center;gap:10px;font-size:13px}
+  .shoe .nm{width:120px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+  .shoe .track{flex:1;background:var(--panel2);border-radius:6px;height:16px;overflow:hidden;min-width:60px}
+  .shoe .fill{height:100%;background:linear-gradient(90deg,var(--accent),#1d6e60);border-radius:6px}
+  .shoe .km{width:74px;flex:none;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px}
   .legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
   .checks{display:flex;flex-wrap:wrap;gap:8px}
@@ -987,6 +1009,140 @@ function toggleDetail(tr){
   tr.after(det);
 }
 function escapeHTML(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+//============================================================ INSIGHTS
+let _insightsYear = null;
+function renderInsights(app){
+  const real = DATA.filter(r=>r.s!=="note");
+  const a = agg(real);
+  const years = [...new Set(real.map(yearOf))].sort((x,y)=>x-y);
+  const dnum = ds => Math.floor(Date.parse(ds+"T00:00:00Z")/864e5);
+
+  // total running distance (for the marathon equivalence)
+  let runKm=0; for(const r of real) if(r.s==="run"&&r.k) runKm+=r.k;
+  // distinct active days power the streak + average stats
+  const activeDays=[...new Set(real.map(r=>r.d))].sort();
+  const spanDays = activeDays.length>1 ? dnum(activeDays[activeDays.length-1])-dnum(activeDays[0])+1 : 1;
+  const perWeek = a.count/(spanDays/7);
+  // most active year + busiest single day
+  const yc={}; real.forEach(r=>{const y=yearOf(r);yc[y]=(yc[y]||0)+1;});
+  const topYear = Object.entries(yc).sort((x,y)=>y[1]-x[1])[0];
+  const dc={}; real.forEach(r=>{dc[r.d]=(dc[r.d]||0)+1;});
+  const busiest = Object.entries(dc).sort((x,y)=>y[1]-x[1])[0];
+
+  // streaks: longest run of consecutive calendar days trained + longest layoff
+  let longest=0, cur=0, prev=null;
+  for(const ds of activeDays){ const n=dnum(ds);
+    cur = (prev!==null && n===prev+1) ? cur+1 : 1; if(cur>longest) longest=cur; prev=n; }
+  let gap=0; for(let i=1;i<activeDays.length;i++){ const g=dnum(activeDays[i])-dnum(activeDays[i-1]); if(g>gap) gap=g; }
+
+  // real-world equivalences for the fun-fact row
+  const equator=a.dist/40075, moonPct=a.dist/384400*100, marathons=runKm/42.195, totalDays=a.dur/86400;
+  const fact=(icon,big,sub)=>`<div class="card stat fact"><span class="big">${icon}</span><span class="ftxt"><b>${big}</b><span>${sub}</span></span></div>`;
+
+  if(_insightsYear===null || !years.includes(_insightsYear))
+    _insightsYear = topYear ? +topYear[0] : years[years.length-1];
+
+  // weekly + seasonal training patterns
+  const dow = WEEKDAYS.map(w=>({label:w, value:0}));
+  real.forEach(r=>{ const d=new Date(r.d+"T00:00:00Z").getUTCDay(); dow[(d+6)%7].value++; });
+  const mon = MONTHS.map(m=>({label:m, value:0}));
+  real.forEach(r=>{ mon[monthOf(r)-1].value++; });
+
+  // shoe mileage leaderboard (running km attributed to each shoe)
+  const shoes={};
+  for(const r of real){ if(r.s!=="run"||!r.sh||!r.k) continue; shoes[r.sh]=(shoes[r.sh]||0)+r.k; }
+  const topShoes=Object.entries(shoes).sort((x,y)=>y[1]-x[1]).slice(0,10);
+  const shoeMax=topShoes.length?topShoes[0][1]:1;
+
+  app.innerHTML=`
+   <h2 class="section">Insights</h2>
+
+   <div class="grid facts" style="margin-bottom:18px">
+     ${fact("🌍", fmtNum(equator,1)+"×", "around the Earth — "+fmtNum(a.dist)+" km logged")}
+     ${fact("🌙", fmtNum(moonPct,1)+"%", "of the way to the Moon")}
+     ${fact("🏅", fmtNum(marathons), "marathons' worth of running")}
+     ${fact("⏱️", fmtNum(totalDays,1)+" days", "spent training, non-stop")}
+     ${fact("📅", fmtNum(perWeek,1)+"/wk", "avg sessions over "+years.length+" years")}
+     ${fact("🔥", longest+" days", "longest daily training streak")}
+   </div>
+
+   <div class="card" style="margin-bottom:18px">
+     <div class="cardhead" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+       <h3>Activity calendar</h3>
+       <label class="fld" style="max-width:120px">Year
+         <select id="hm-year">${years.slice().reverse().map(y=>`<option ${y===_insightsYear?"selected":""}>${y}</option>`).join("")}</select></label>
+     </div>
+     <div id="hm-out">${activityHeatmap(_insightsYear)}</div>
+   </div>
+
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
+     <div class="card"><h3>By day of week</h3>${columnChart(dow)}</div>
+     <div class="card"><h3>By month (all years)</h3>${columnChart(mon,{shortLabel:l=>l[0]})}</div>
+   </div>
+
+   ${topShoes.length?`<div class="card" style="margin-bottom:18px">
+     <h3>Top running shoes by distance</h3>
+     <div class="shoebar">
+       ${topShoes.map(([nm,km])=>`<div class="shoe">
+         <span class="nm" title="${escapeHTML(nm)}">${escapeHTML(nm)}</span>
+         <span class="track"><span class="fill" style="width:${(km/shoeMax*100).toFixed(1)}%"></span></span>
+         <span class="km">${fmtNum(km)} km</span></div>`).join("")}
+     </div>
+     <div class="note-sm">Distance attributed to the shoe noted on each run.</div>
+   </div>`:""}
+
+   <div class="card" style="line-height:1.7">
+     <h3>Consistency</h3>
+     <div class="kvgrid">
+       <div><b>Most active year</b>${topYear?topYear[0]+" — "+fmtNum(topYear[1])+" sessions":"—"}</div>
+       <div><b>Busiest day</b>${busiest?busiest[0]+" — "+busiest[1]+" sessions":"—"}</div>
+       <div><b>Distinct active days</b>${fmtNum(activeDays.length)}</div>
+       <div><b>Longest streak</b>${longest} days</div>
+       <div><b>Longest layoff</b>${gap} days between sessions</div>
+       <div><b>Training span</b>${(Math.round(spanDays/365.25*10)/10)} years</div>
+     </div>
+   </div>`;
+
+  const ysel=document.getElementById("hm-year");
+  if(ysel) ysel.onchange=()=>{ _insightsYear=+ysel.value; document.getElementById("hm-out").innerHTML=activityHeatmap(_insightsYear); };
+}
+
+// GitHub-style activity heatmap for one year: a Monday-top week grid coloured by
+// each day's total training time (empty cells are rest days).
+function activityHeatmap(year){
+  const day={};
+  for(const r of DATA){ if(r.s==="note"||yearOf(r)!==year) continue;
+    const m=day[r.d]||(day[r.d]={c:0,dur:0}); m.c++; if(r.t)m.dur+=r.t; }
+  const start=new Date(Date.UTC(year,0,1));
+  start.setUTCDate(start.getUTCDate()-((start.getUTCDay()+6)%7));   // back to Monday
+  const end=new Date(Date.UTC(year,11,31));
+  end.setUTCDate(end.getUTCDate()+(6-((end.getUTCDay()+6)%7)));     // forward to Sunday
+  const weeks=[]; const cur=new Date(start);
+  while(cur<=end){
+    const wk=[];
+    for(let i=0;i<7;i++){
+      const ds=cur.toISOString().slice(0,10), inYear=cur.getUTCFullYear()===year, d=day[ds]||{c:0,dur:0};
+      wk.push({ds,inYear,c:d.c,dur:d.dur});
+      cur.setUTCDate(cur.getUTCDate()+1);
+    }
+    weeks.push(wk);
+  }
+  const color=d=>{
+    if(!d.inYear) return "transparent";
+    if(!d.c) return "var(--panel2)";
+    const h=d.dur/3600, a=!d.dur?.35:h<0.75?.4:h<1.5?.6:h<2.5?.8:1;
+    return `rgba(54,194,168,${a})`;
+  };
+  const months=weeks.map(wk=>{ const f=wk.find(d=>d.inYear&&d.ds.slice(8)==="01"); return f?MONTHS[+f.ds.slice(5,7)-1]:""; });
+  const tip=d=>d.inYear?`${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}`:"";
+  const sw=a=>`<span class="hm-cell" style="background:rgba(54,194,168,${a})"></span>`;
+  return `<div class="hm-scroll">
+    <div class="hm-months">${months.map(m=>`<div class="hm-mlabel">${m}</div>`).join("")}</div>
+    <div class="hm">${weeks.map(wk=>`<div class="hm-week">${wk.map(d=>`<div class="hm-cell" style="background:${color(d)}" title="${tip(d)}"></div>`).join("")}</div>`).join("")}</div>
+    <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span>${sw(.4)}${sw(.6)}${sw(.8)}${sw(1)} More</div>
+  </div>`;
+}
 
 //============================================================ ABOUT
 function renderAbout(app){
