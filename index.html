@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1419">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Mike's Training Log</title>
 <style>
   :root{
@@ -69,6 +72,8 @@
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
   .sportlabel{display:inline-flex;align-items:center;gap:7px}
+  .ic{font-size:14px;line-height:1;width:18px;text-align:center;flex:none;filter:saturate(.9)}
+  .sportcard .head .ic{font-size:20px;width:24px}
   .pill{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
   .pill.d{color:#e0b15a;border-color:#5a4a26}
   .pill.u{color:#d98b8b;border-color:#5a3030}
@@ -128,6 +133,58 @@
     table{font-size:12.5px}
     th,td{padding:6px 8px}
   }
+
+  /* ============================================================
+     iPhone / touch UX layer (kept last so these rules win)
+     ============================================================ */
+  *{-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  header.top{padding-top:env(safe-area-inset-top)}
+  .tablewrap{-webkit-overflow-scrolling:touch}
+  /* Bottom tab bar: hidden on desktop, shown on phones. */
+  .bottomnav{display:none}
+
+  @media(max-width:640px){
+    /* Move primary navigation to a fixed, thumb-reachable bottom bar. */
+    nav.tabs{display:none}
+    .bottomnav{
+      display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
+      background:rgba(16,21,28,.97);backdrop-filter:blur(12px);
+      border-top:1px solid var(--line);
+      padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+    }
+    .bottomnav button{
+      flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+      background:none;border:none;color:var(--muted);
+      font-size:10px;font-weight:600;line-height:1;padding:6px 2px;
+      cursor:pointer;min-height:46px;
+    }
+    .bottomnav button svg{width:23px;height:23px;stroke:currentColor;fill:none;
+      stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .bottomnav button.active{color:var(--accent)}
+    .bottomnav button:active{opacity:.55}
+    /* Keep content clear of the fixed bottom bar. */
+    main{padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+
+    /* Bigger, zoom-proof controls — iOS Safari zooms inputs under 16px on focus. */
+    select,input[type=text],input[type=number],input[type=date]{font-size:16px;padding:10px 12px}
+    .btn{font-size:15px;padding:11px 16px}
+    .seg button{padding:9px 13px}
+    .pager button{padding:9px 16px;font-size:14px}
+    .checks label{padding:8px 11px;font-size:13.5px}
+
+    /* Touch feedback in place of hover. */
+    .sportcard:active{transform:scale(.985);border-color:var(--accent)}
+    tbody tr:active{background:var(--panel2)}
+    .btn:active{filter:brightness(.92)}
+
+    /* Raw Data: show only the essentials and let a tap reveal the rest.
+       Cols: 1 Date 2 Sport 3 Duration 4 Distance 5 Pace 6 HR 7 Source 8 Conf 9 Notes */
+    #x-table th:nth-child(n+5):nth-child(-n+8),
+    #x-table td:nth-child(n+5):nth-child(-n+8){display:none}
+    #x-table td:nth-child(9){max-width:40vw;overflow:hidden;text-overflow:ellipsis}
+    #x-count::after{content:" · tap any row for full details";color:var(--muted)}
+  }
 </style>
 </head>
 <body>
@@ -138,37 +195,46 @@
   </div>
 </header>
 <main id="app"><div class="loading">Loading training data…</div></main>
+<nav class="bottomnav" id="bottomnav"></nav>
 
 <script>
 //============================================================ data + config
 const SPORTS = {
-  run:        {name:"Run",          color:"#4d9fff", metric:"pace"},
-  bike:       {name:"Bike",         color:"#36c2a8", metric:"speed"},
-  swim:       {name:"Swim",         color:"#7c5cff", metric:"swimpace"},
-  hockey:     {name:"Hockey",       color:"#ff7a59", metric:"time"},
-  karate:     {name:"Karate",       color:"#e0556e", metric:"time"},
-  xcski:      {name:"XC Ski",       color:"#56c2e0", metric:"dist"},
-  skate:      {name:"Skate",        color:"#5ad0ff", metric:"time"},
-  snowboard:  {name:"Snowboard",    color:"#9aa7ff", metric:"time"},
-  snowshoe:   {name:"Snowshoe",     color:"#86b6c9", metric:"dist"},
-  ski:        {name:"Alpine Ski",   color:"#7fb0d6", metric:"time"},
-  weights:    {name:"Weights",      color:"#c9a14a", metric:"time"},
-  elliptical: {name:"Elliptical",   color:"#b08fd0", metric:"time"},
-  row:        {name:"Row",          color:"#5fb38f", metric:"dist"},
-  yoga:       {name:"Yoga",         color:"#d08fb8", metric:"time"},
-  walk:       {name:"Walk",         color:"#8fae6f", metric:"dist"},
-  hike:       {name:"Hike",         color:"#9c7b4f", metric:"dist"},
-  squash:     {name:"Squash",       color:"#e0a14a", metric:"time"},
-  golf:       {name:"Golf",         color:"#6fb86f", metric:"time"},
-  canoe:      {name:"Canoe/Kayak",  color:"#4ab0b0", metric:"dist"},
-  soccer:     {name:"Soccer",       color:"#6fd06f", metric:"time"},
-  tennis:     {name:"Tennis",       color:"#d0d04a", metric:"time"},
-  physio:     {name:"Physio",       color:"#9aa6b2", metric:"time"},
-  other:      {name:"Other",        color:"#9aa6b2", metric:"time"},
-  note:       {name:"Note / rest",  color:"#5e6b78", metric:"none"},
+  run:        {name:"Run",          color:"#4d9fff", metric:"pace",     icon:"🏃"},
+  bike:       {name:"Bike",         color:"#36c2a8", metric:"speed",    icon:"🚴"},
+  swim:       {name:"Swim",         color:"#7c5cff", metric:"swimpace", icon:"🏊"},
+  hockey:     {name:"Hockey",       color:"#ff7a59", metric:"time",     icon:"🏒"},
+  karate:     {name:"Karate",       color:"#e0556e", metric:"time",     icon:"🥋"},
+  xcski:      {name:"XC Ski",       color:"#56c2e0", metric:"dist",     icon:"🎿"},
+  skate:      {name:"Skate",        color:"#5ad0ff", metric:"time",     icon:"⛸️"},
+  snowboard:  {name:"Snowboard",    color:"#9aa7ff", metric:"time",     icon:"🏂"},
+  snowshoe:   {name:"Snowshoe",     color:"#86b6c9", metric:"dist",     icon:""},
+  ski:        {name:"Alpine Ski",   color:"#7fb0d6", metric:"time",     icon:"⛷️"},
+  weights:    {name:"Weights",      color:"#c9a14a", metric:"time",     icon:"🏋️"},
+  elliptical: {name:"Elliptical",   color:"#b08fd0", metric:"time",     icon:""},
+  row:        {name:"Row",          color:"#5fb38f", metric:"dist",     icon:"🚣"},
+  yoga:       {name:"Yoga",         color:"#d08fb8", metric:"time",     icon:"🧘"},
+  walk:       {name:"Walk",         color:"#8fae6f", metric:"dist",     icon:"🚶"},
+  hike:       {name:"Hike",         color:"#9c7b4f", metric:"dist",     icon:"🥾"},
+  squash:     {name:"Squash",       color:"#e0a14a", metric:"time",     icon:""},
+  golf:       {name:"Golf",         color:"#6fb86f", metric:"time",     icon:"⛳"},
+  canoe:      {name:"Canoe/Kayak",  color:"#4ab0b0", metric:"dist",     icon:"🛶"},
+  soccer:     {name:"Soccer",       color:"#6fd06f", metric:"time",     icon:"⚽"},
+  tennis:     {name:"Tennis",       color:"#d0d04a", metric:"time",     icon:"🎾"},
+  physio:     {name:"Physio",       color:"#9aa6b2", metric:"time",     icon:""},
+  other:      {name:"Other",        color:"#9aa6b2", metric:"time",     icon:""},
+  note:       {name:"Note / rest",  color:"#5e6b78", metric:"none",     icon:""},
 };
 const sportName = s => (SPORTS[s]||{name:s}).name;
 const sportColor = s => (SPORTS[s]||{color:"#888"}).color;
+const sportIcon = s => (SPORTS[s]||{}).icon || "";
+// one cohesive marker per sport: emoji icon where a clean one fits, else the color chip
+function sportMark(s){
+  const ic=sportIcon(s);
+  return ic ? `<span class="ic">${ic}</span>`
+            : `<span class="chip" style="background:${sportColor(s)}"></span>`;
+}
+function sportTag(s){ return `<span class="sportlabel">${sportMark(s)}${sportName(s)}</span>`; }
 const CONF = {x:"confirmed", d:"deduced", u:"uncertain"};
 
 let DATA = [], META = null;
@@ -336,7 +402,7 @@ function renderDash(app){
    <div class="grid sportcards">
      ${ranked.map(([s,t])=>`
        <div class="card sportcard" data-sport="${s}">
-         <div class="head"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</div>
+         <div class="head">${sportMark(s)}${sportName(s)}</div>
          <div class="kv"><span>Sessions</span><b>${fmtNum(t.count)}</b></div>
          ${t.dist>5?`<div class="kv"><span>Distance</span><b>${fmtNum(t.dist)} km</b></div>`:""}
          ${t.dur?`<div class="kv"><span>Time</span><b>${Math.round(t.dur/3600).toLocaleString()} h</b></div>`:""}
@@ -418,7 +484,7 @@ function reportYear(y){
    <div class="card"><h3>${y} by sport</h3>
      <div class="tablewrap"><table><thead><tr><th>Sport</th><th class="num">Sessions</th><th class="num">Distance</th><th class="num">Time</th></tr></thead>
      <tbody>${ranked.map(([s,t])=>`<tr>
-        <td><span class="sportlabel"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</span></td>
+        <td>${sportTag(s)}</td>
         <td class="num">${fmtNum(t.count)}</td>
         <td class="num">${t.dist?fmtNum(t.dist)+" km":"—"}</td>
         <td class="num">${t.dur?fmtDurShort(t.dur):"—"}</td></tr>`).join("")}</tbody></table></div></div>`;
@@ -454,7 +520,7 @@ function reportMatrix(metric){
   const sports=Object.keys(SPORTS).filter(s=>s!=="note"&&DATA.some(r=>r.s===s));
   const val=(rows)=>{ const a=agg(rows); return metric==="count"?a.count:metric==="dist"?Math.round(a.dist):Math.round(a.dur/3600); };
   const cell=(y,s)=>val(DATA.filter(r=>yearOf(r)===y&&r.s===s));
-  const head=`<th>Year</th>`+sports.map(s=>`<th class="num"><span class="sportlabel"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</span></th>`).join("")+`<th class="num">Total</th>`;
+  const head=`<th>Year</th>`+sports.map(s=>`<th class="num">${sportTag(s)}</th>`).join("")+`<th class="num">Total</th>`;
   const body=years.slice().reverse().map(y=>{
     let tot=0; const cells=sports.map(s=>{const v=cell(y,s);tot+=v;return `<td class="num">${v||""}</td>`;}).join("");
     return `<tr><td><b>${y}</b></td>${cells}<td class="num"><b>${tot||""}</b></td></tr>`;
@@ -488,7 +554,7 @@ function bestsFor(s){
 function reportBests(){
   const sports=["run","bike","swim","xcski","hockey"].filter(s=>DATA.some(r=>r.s===s));
   return sports.map(s=>{const h=bestsFor(s); return h?`<div class="card" style="margin-bottom:14px">
-    <h3><span class="sportlabel"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</span></h3>
+    <h3>${sportTag(s)}</h3>
     <div class="kvgrid">${h}</div></div>`:"";}).join("");
 }
 
@@ -512,7 +578,7 @@ function renderBuilder(app){
      <h3>Sports</h3>
      <div class="checks" id="b-sports">
        <label><input type="checkbox" value="__all" checked> All</label>
-       ${sports.map(s=>`<label><input type="checkbox" value="${s}"><span class="chip" style="background:${sportColor(s)}"></span>${sportName(s)}</label>`).join("")}
+       ${sports.map(s=>`<label><input type="checkbox" value="${s}">${sportMark(s)}${sportName(s)}</label>`).join("")}
      </div>
    </div>
    <div class="card" style="margin-bottom:16px">
@@ -740,7 +806,7 @@ function drawBrowse(){
   if(next)next.onclick=()=>{BROWSE.page++;drawBrowse();window.scrollTo(0,0);};
 }
 function rowHTML(r,idx){
-  const sp=`<span class="sportlabel"><span class="chip" style="background:${sportColor(r.s)}"></span>${sportName(r.s)}</span>`;
+  const sp=sportTag(r.s);
   const confPill=r.c==="x"?"":`<span class="pill ${r.c}">${CONF[r.c]}</span>`;
   return `<tr class="datarow" data-idx="${idx}">
     <td>${r.d}</td><td>${sp}</td>
@@ -824,6 +890,34 @@ fetch("data.json").then(r=>r.json()).then(j=>{
      (<code>python -m http.server</code>) in this folder.</p>
      <div class="rawbox">${e}</div></div>`;
 });
+
+//============================================================ mobile bottom nav
+// A fixed, thumb-reachable tab bar for phones. Built additively: it drives the
+// existing go() router and mirrors its active state, so it needs no changes to
+// the routing code above.
+(function(){
+  const ICONS = {
+    dash:    '<path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.6V21h13V9.6"/>',
+    reports: '<path d="M4 21V10"/><path d="M10 21V4"/><path d="M16 21v-7"/><path d="M21 21H3"/>',
+    builder: '<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="12" r="2.2"/><circle cx="8" cy="17" r="2.2"/>',
+    browse:  '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    about:   '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1.1" fill="currentColor" stroke="none"/>',
+  };
+  const SHORT = {dash:"Home", reports:"Reports", builder:"Builder", browse:"Data", about:"About"};
+  const nav = document.getElementById("bottomnav");
+  if(!nav || typeof TABS==="undefined") return;
+  nav.innerHTML = TABS.map(([id])=>
+    `<button data-tab="${id}" aria-label="${SHORT[id]||id}">
+       <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id]||""}</svg>
+       <span>${SHORT[id]||id}</span></button>`).join("");
+  const sync = ()=>nav.querySelectorAll("button").forEach(b=>
+    b.classList.toggle("active", b.dataset.tab===current));
+  nav.querySelectorAll("button").forEach(b=>b.onclick=()=>{ go(b.dataset.tab); sync(); });
+  // Wrap go() so the bar tracks navigation triggered anywhere (tabs, drill-ins).
+  if(typeof go==="function"){ const _go=go; window.go=function(t){ _go(t); sync(); }; }
+  window.addEventListener("hashchange", sync);
+  sync();
+})();
 </script>
 </body>
 </html>
