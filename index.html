@@ -78,8 +78,8 @@
   .bar:hover{opacity:.8}
   .bar .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:4px 8px;border-radius:6px;font-size:12px;white-space:nowrap;margin-bottom:4px;z-index:5}
   .bar:hover .tip{display:block}
-  .xlab{display:flex;gap:3px;margin-top:6px}
-  .xlab span{flex:1;text-align:center;font-size:10px;color:var(--muted);overflow:hidden}
+  .xlab{position:relative;height:15px;margin-top:7px}
+  .xlab span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px}
   .legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
   .checks{display:flex;flex-wrap:wrap;gap:8px}
@@ -197,7 +197,20 @@ function columnChart(data, opts={}){
     return `<div class="bar" style="height:${h}%;${style}" data-v="${d.value}">
       <span class="tip">${d.label}: ${fmt(d.value)}${d.sub?" · "+d.sub:""}</span></div>`;
   }).join("");
-  const labs = data.map(d=>`<span>${opts.shortLabel?opts.shortLabel(d.label):d.label}</span>`).join("");
+  // evenly-spaced, thinned x-axis labels so they stay readable with many bars
+  const n = data.length;
+  const maxLabels = opts.maxLabels || (window.innerWidth<560 ? 7 : 14);
+  const step = Math.max(1, Math.ceil(n/maxLabels));
+  const lastShown = Math.floor((n-1)/step)*step;     // index of final step tick
+  const showLast = (n-1) - lastShown >= step*0.6;     // only add the last label if it won't crowd
+  let labs = "";
+  data.forEach((d,i)=>{
+    const isTick = (i%step===0) || (i===n-1 && showLast);
+    if(!isTick) return;
+    const left=((i+0.5)/n*100).toFixed(2);
+    const text=opts.shortLabel?opts.shortLabel(d.label):d.label;
+    labs+=`<span style="left:${left}%">${text}</span>`;
+  });
   return `<div class="chart">${bars}</div><div class="xlab">${labs}</div>`;
 }
 
