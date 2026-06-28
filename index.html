@@ -248,6 +248,26 @@ function sportMark(s){
             : `<span class="chip" style="background:${sportColor(s)}"></span>`;
 }
 function sportTag(s){ return `<span class="sportlabel">${sportMark(s)}${sportName(s)}</span>`; }
+// Canonical sport ordering used in every sport list/dropdown/card in the app:
+// the core triathlon sports lead as the most relevant, then everything else by
+// training volume (total time, then session count). Keeps the page consistent.
+const SPORT_PRIORITY = ["run","bike","swim"];
+function cmpSport(a,b,totals){
+  const pa=SPORT_PRIORITY.indexOf(a), pb=SPORT_PRIORITY.indexOf(b);
+  if(pa>=0&&pb>=0) return pa-pb;            // both core → fixed run, bike, swim order
+  if(pa>=0) return -1;                       // a core, b not → a leads
+  if(pb>=0) return 1;                        // b core, a not → b leads
+  return (totals[b].dur-totals[a].dur) || (totals[b].count-totals[a].count); // rest by volume
+}
+function sportRank(totals){ return Object.keys(totals).sort((a,b)=>cmpSport(a,b,totals)); }
+// Sport keys present in `rows` (default: all data), ordered by the rule above.
+function sportsByVolume(rows=DATA){
+  const v={};
+  for(const r of rows){ const t=v[r.s]||(v[r.s]={dur:0,count:0}); t.count++; if(r.t)t.dur+=r.t; }
+  return sportRank(v);
+}
+let _globalSportOrder=null;
+function globalSportOrder(){ return _globalSportOrder||(_globalSportOrder=sportsByVolume(DATA)); }
 const CONF = {x:"confirmed", d:"deduced", u:"uncertain"};
 
 let DATA = [], META = null;
@@ -409,7 +429,7 @@ function renderDash(app){
   const sportTotals = {};
   for(const r of real){ const t=sportTotals[r.s]||(sportTotals[r.s]={count:0,dist:0,dur:0});
     t.count++; if(r.k)t.dist+=r.k; if(r.t)t.dur+=r.t; }
-  const ranked = Object.entries(sportTotals).sort((x,y)=>y[1].count-x[1].count);
+  const ranked = sportRank(sportTotals).map(s=>[s,sportTotals[s]]);
 
   // per-year aggregates (reused for the metric toggle)
   const byYearAgg = years.map(y=>({y, a:agg(real.filter(r=>yearOf(r)===y))}));
@@ -471,7 +491,7 @@ function renderDash(app){
 //============================================================ REPORTS (premade)
 function renderReports(app){
   const years=[...new Set(DATA.map(yearOf))].sort((a,b)=>b-a);
-  const sports=Object.keys(SPORTS).filter(s=>DATA.some(r=>r.s===s));
+  const sports=globalSportOrder().filter(s=>SPORTS[s]);
   app.innerHTML=`
    <h2 class="section">Reports</h2>
    <div class="card controls" style="margin-bottom:18px">
@@ -541,7 +561,7 @@ function reportYear(y){
   const sportTotals={};
   for(const r of rows){ const t=sportTotals[r.s]||(sportTotals[r.s]={count:0,dist:0,dur:0});
     t.count++; if(r.k)t.dist+=r.k; if(r.t)t.dur+=r.t; }
-  const ranked=Object.entries(sportTotals).sort((x,y)=>y[1].count-x[1].count);
+  const ranked=sportRank(sportTotals).map(s=>[s,sportTotals[s]]);
   // monthly stacked-ish (count) chart
   const byMonth=MONTHS.map((m,i)=>({label:m,value:rows.filter(r=>monthOf(r)===i+1).length}));
   return yearNavHeader(y)+`
@@ -588,7 +608,7 @@ function reportSport(s){
 
 function reportMatrix(metric){
   const years=[...new Set(DATA.map(yearOf))].sort();
-  const sports=Object.keys(SPORTS).filter(s=>s!=="note"&&DATA.some(r=>r.s===s));
+  const sports=globalSportOrder().filter(s=>s!=="note"&&SPORTS[s]);
   const val=(rows)=>{ const a=agg(rows); return metric==="count"?a.count:metric==="dist"?Math.round(a.dist):Math.round(a.dur/3600); };
   const cell=(y,s)=>val(DATA.filter(r=>yearOf(r)===y&&r.s===s));
   const head=`<th>Year</th>`+sports.map(s=>`<th class="num">${sportTag(s)}</th>`).join("")+`<th class="num">Total</th>`;
@@ -633,7 +653,7 @@ function reportBests(){
 const BUILDER={f:{}};
 function renderBuilder(app){
   const years=[...new Set(DATA.map(yearOf))].sort((a,b)=>b-a);
-  const sports=Object.keys(SPORTS).filter(s=>DATA.some(r=>r.s===s));
+  const sports=globalSportOrder().filter(s=>SPORTS[s]);
   app.innerHTML=`
    <h2 class="section">Custom Report Builder</h2>
    <div class="card" style="margin-bottom:16px">
@@ -788,7 +808,7 @@ function prefillBrowseFromURL(){
 }
 function renderBrowse(app){
   const years=[...new Set(DATA.map(yearOf))].sort((a,b)=>b-a);
-  const sports=Object.keys(SPORTS).filter(s=>DATA.some(r=>r.s===s));
+  const sports=globalSportOrder().filter(s=>SPORTS[s]);
   app.innerHTML=`
    <h2 class="section">Raw Data</h2>
    <div class="card controls" style="margin-bottom:14px">
