@@ -87,6 +87,9 @@
   .gline.base{opacity:.85}
   .bar{flex:1;background:linear-gradient(var(--accent),#1d6e60);border-radius:4px 4px 0 0;min-height:2px;position:relative;z-index:1;cursor:pointer;transition:opacity .1s}
   .bar:hover{opacity:.8}
+  /* Lift the active bar (and its tooltip) above later sibling bars, which each
+     create their own stacking context via z-index:1 and would otherwise clip it. */
+  .bar:hover,.bar.show{z-index:6}
   .bar .val{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;pointer-events:none;transition:opacity .1s}
   .bar:hover .val{opacity:0}
   .bar .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:4px 8px;border-radius:6px;font-size:12px;white-space:nowrap;margin-bottom:4px;z-index:5}
@@ -119,6 +122,28 @@
   .matrix td.num{cursor:default}
   .matrix tr:hover td{background:var(--panel2)}
   .note-sm{font-size:12px;color:var(--muted);margin-top:4px}
+  /* calendar heatmap */
+  .cal-wrap{overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+  .cal-inner{display:inline-block;min-width:max-content}
+  .cal-months{display:flex;gap:2px;margin:0 0 4px 0;height:13px}
+  .cal-months span{width:13px;flex:none;font-size:10px;color:var(--muted);white-space:nowrap;overflow:visible}
+  .cal{display:flex;gap:2px}
+  .cal-col{display:flex;flex-direction:column;gap:2px}
+  .cal-cell{width:13px;height:13px;border-radius:3px;background:var(--panel2);flex:none}
+  .cal-cell[data-d]{cursor:pointer}
+  .cal-cell[data-d]:hover{outline:2px solid var(--text);outline-offset:-1px}
+  .cal-cell.sel{outline:2px solid var(--accent);outline-offset:-1px}
+  .cal-legend{display:flex;align-items:center;gap:6px 14px;margin-top:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+  .cal-legend .chip{width:11px;height:11px;border-radius:3px}
+  .cal-detail{margin-top:12px}
+  .cal-detail .e{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap}
+  .cal-detail .e .meta{color:var(--muted)}
+  .factnum{font-size:24px;font-weight:800}
+  .factsub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .wd-bars{display:flex;align-items:flex-end;gap:6px;height:90px;margin-top:6px}
+  .wd-bars .wd{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%}
+  .wd-bars .wd .b{width:60%;background:linear-gradient(var(--accent),#1d6e60);border-radius:4px 4px 0 0;min-height:2px}
+  .wd-bars .wd .l{font-size:11px;color:var(--muted)}
   @media(max-width:640px){
     th{position:static}
     .top-inner{padding:10px 12px}
@@ -381,8 +406,8 @@ function columnChart(data, opts={}){
 
 //============================================================ tabs / routing
 const TABS = [
-  ["dash","Dashboard"], ["reports","Reports"], ["builder","Report Builder"],
-  ["browse","Raw Data"], ["about","About"],
+  ["dash","Dashboard"], ["insights","Insights"], ["reports","Reports"],
+  ["builder","Report Builder"], ["browse","Raw Data"], ["about","About"],
 ];
 let current="dash";
 function renderTabs(){
@@ -415,6 +440,7 @@ document.addEventListener("click",e=>{
 function route(){
   const app=document.getElementById("app");
   if(current==="dash") renderDash(app);
+  else if(current==="insights") renderInsights(app);
   else if(current==="reports") renderReports(app);
   else if(current==="builder") renderBuilder(app);
   else if(current==="browse") renderBrowse(app);
