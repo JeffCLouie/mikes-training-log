@@ -1055,6 +1055,21 @@ function renderInsights(app){
   const topShoes=Object.entries(shoes).sort((x,y)=>y[1]-x[1]).slice(0,10);
   const shoeMax=topShoes.length?topShoes[0][1]:1;
 
+  // complementary insight cards (on-this-day / by-decade / fitness trends)
+  const _today=new Date(), _md=pad(_today.getMonth()+1)+"-"+pad(_today.getDate());
+  const otd=real.filter(r=>r.d.slice(5)===_md).sort((x,y)=>x.d<y.d?-1:1);
+  const dec={};
+  for(const r of real){ const k=Math.floor(yearOf(r)/10)*10;
+    const o=dec[k]||(dec[k]={count:0,dist:0,dur:0,sp:{}});
+    o.count++; o.dist+=r.k||0; o.dur+=r.t||0; o.sp[r.s]=(o.sp[r.s]||0)+1; }
+  const decRows=Object.keys(dec).sort().map(k=>{const o=dec[k];
+    return {dec:k,count:o.count,dist:o.dist,dur:o.dur,top:Object.entries(o.sp).sort((x,y)=>y[1]-x[1])[0][0]};});
+  const _trend=(sp,kind)=>{ const ys=[...new Set(real.filter(r=>r.s===sp).map(yearOf))].sort(); const out=[];
+    for(const y of ys){ const rs=real.filter(r=>r.s===sp&&yearOf(r)===y&&r.t&&r.k); if(rs.length<8) continue;
+      const t=rs.reduce((a,r)=>a+r.t,0),k=rs.reduce((a,r)=>a+r.k,0);
+      out.push({label:String(y),value:kind==="pace"?(t/60)/k:k/(t/3600)}); } return out; };
+  const runTrend=_trend("run","pace"), bikeTrend=_trend("bike","speed");
+
   app.innerHTML=`
    <h2 class="section">Insights</h2>
 
@@ -1102,6 +1117,20 @@ function renderInsights(app){
        <div><b>Longest layoff</b>${gap} days between sessions</div>
        <div><b>Training span</b>${(Math.round(spanDays/365.25*10)/10)} years</div>
      </div>
+   </div>
+
+   <div class="card" style="margin-top:18px"><h3>On this day — ${MONTHS[_today.getMonth()]} ${_today.getDate()}</h3>
+     ${otd.length?`<div class="kvgrid" style="grid-template-columns:1fr">${otd.map(r=>`<div><b style="display:inline-block;width:42px">${r.d.slice(0,4)}</b>${sportTag(r.s)} <span class="muted">${[fmtDur(r.t),r.k!=null?fmtNum(r.k,1)+" km":"",perf(r)].filter(Boolean).join(" · ")}</span></div>`).join("")}</div>`:`<div class="muted">No workouts recorded on this date in any year.</div>`}
+   </div>
+
+   <div class="card" style="margin-top:18px"><h3>By decade</h3>
+     <div class="tablewrap"><table><thead><tr><th>Decade</th><th class="num">Workouts</th><th class="num">Distance</th><th class="num">Hours</th><th>Top sport</th></tr></thead>
+     <tbody>${decRows.map(o=>`<tr><td><b>${o.dec}s</b></td><td class="num">${fmtNum(o.count)}</td><td class="num">${fmtNum(Math.round(o.dist))} km</td><td class="num">${Math.round(o.dur/3600)}</td><td>${sportTag(o.top)}</td></tr>`).join("")}</tbody></table></div>
+   </div>
+
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:18px">
+     <div class="card"><h3>Avg run pace by year</h3>${runTrend.length?columnChart(runTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtPace(v)+"/km"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Shorter = faster · years with &ge;8 runs</div></div>
+     <div class="card"><h3>Avg bike speed by year</h3>${bikeTrend.length?columnChart(bikeTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>v.toFixed(1)+" km/h"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Years with &ge;8 rides</div></div>
    </div>`;
 
   const ysel=document.getElementById("hm-year");
