@@ -78,9 +78,17 @@
   .pill.d{color:#e0b15a;border-color:#5a4a26}
   .pill.u{color:#d98b8b;border-color:#5a3030}
   /* chart */
-  .chart{display:flex;align-items:flex-end;gap:3px;height:200px;padding-top:10px}
-  .bar{flex:1;background:linear-gradient(var(--accent),#1d6e60);border-radius:4px 4px 0 0;min-height:2px;position:relative;cursor:pointer;transition:opacity .1s}
+  .chartwrap{display:flex;gap:8px;align-items:flex-start;padding-top:15px}
+  .yaxis{position:relative;width:34px;height:200px;flex:none}
+  .yaxis span{position:absolute;right:0;bottom:0;transform:translateY(50%);font-size:10.5px;color:var(--muted);white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums}
+  .plot{flex:1;min-width:0}
+  .chart{position:relative;display:flex;align-items:flex-end;gap:3px;height:200px}
+  .gline{position:absolute;left:0;right:0;height:1px;background:var(--line);opacity:.45;pointer-events:none}
+  .gline.base{opacity:.85}
+  .bar{flex:1;background:linear-gradient(var(--accent),#1d6e60);border-radius:4px 4px 0 0;min-height:2px;position:relative;z-index:1;cursor:pointer;transition:opacity .1s}
   .bar:hover{opacity:.8}
+  .bar .val{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;pointer-events:none;transition:opacity .1s}
+  .bar:hover .val{opacity:0}
   .bar .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:4px 8px;border-radius:6px;font-size:12px;white-space:nowrap;margin-bottom:4px;z-index:5}
   .bar:hover .tip{display:block}
   .bar.show .tip{display:block}            /* tap-to-pin on touch devices */
@@ -132,6 +140,11 @@
     /* Denser data tables. */
     table{font-size:12.5px}
     th,td{padding:6px 8px}
+    /* Slimmer chart y-axis + value labels so bars keep room on phones. */
+    .chartwrap{gap:5px}
+    .yaxis{width:24px}
+    .yaxis span{font-size:9px}
+    .bar .val{font-size:8.5px}
   }
 
   /* ============================================================
@@ -280,19 +293,42 @@ function agg(rows){
 }
 
 //============================================================ tiny chart (column)
+// Rounded "nice" axis ticks (0 → ≥max) so the y-axis reads in clean steps.
+function niceTicks(max, target=4, integer=false){
+  if(max<=0) return [0,1];
+  const rawStep = max/target;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep/mag;
+  let step = (norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10)*mag;
+  if(integer) step = Math.max(1, Math.ceil(step));   // whole-number steps for count data
+  const ticks=[];
+  for(let v=0; v<=max+step*1e-6; v+=step) ticks.push(Math.round(v*1e6)/1e6);
+  if(ticks[ticks.length-1] < max) ticks.push(Math.round((ticks[ticks.length-1]+step)*1e6)/1e6);
+  return ticks;
+}
 function columnChart(data, opts={}){
   // data: [{label, value, color?, sub?}]
-  const max = Math.max(1, ...data.map(d=>d.value));
+  const rawMax = Math.max(1, ...data.map(d=>d.value));
   const fmt = opts.fmt || (v=>fmtNum(v));
+  // rounded axis ticks drive the y-axis labels, the gridlines, and bar heights
+  const allInt = data.every(d=>Number.isInteger(d.value));
+  const ticks = niceTicks(rawMax, 4, allInt);
+  const axisMax = ticks[ticks.length-1];
+  const n = data.length;
+  // value labels above each bar — only when bars are few enough to stay legible
+  const showVals = opts.values!==false && n <= (opts.maxValues || (window.innerWidth<560 ? 7 : 18));
   const bars = data.map(d=>{
-    const h = (d.value/max*100).toFixed(1);
+    const h = (d.value/axisMax*100).toFixed(1);
     const col = d.color||"";
     const style = col? `background:linear-gradient(${col},${col}99)`:"";
+    const val = showVals && d.value>0 ? `<span class="val">${fmt(d.value)}</span>` : "";
     return `<div class="bar" style="height:${h}%;${style}" data-v="${d.value}">
-      <span class="tip">${d.label}: ${fmt(d.value)}${d.sub?" · "+d.sub:""}</span></div>`;
+      ${val}<span class="tip">${d.label}: ${fmt(d.value)}${d.sub?" · "+d.sub:""}</span></div>`;
   }).join("");
+  // horizontal gridlines + matching y-axis tick labels
+  const grid = ticks.map(t=>`<div class="gline${t===0?' base':''}" style="bottom:${(t/axisMax*100).toFixed(2)}%"></div>`).join("");
+  const yax = ticks.map(t=>`<span style="bottom:${(t/axisMax*100).toFixed(2)}%">${fmt(t)}</span>`).join("");
   // evenly-spaced, thinned x-axis labels so they stay readable with many bars
-  const n = data.length;
   const maxLabels = opts.maxLabels || (window.innerWidth<560 ? 7 : 14);
   const step = Math.max(1, Math.ceil(n/maxLabels));
   const lastShown = Math.floor((n-1)/step)*step;     // index of final step tick
@@ -305,7 +341,13 @@ function columnChart(data, opts={}){
     const text=opts.shortLabel?opts.shortLabel(d.label):d.label;
     labs+=`<span style="left:${left}%">${text}</span>`;
   });
-  return `<div class="chart">${bars}</div><div class="xlab">${labs}</div>`;
+  return `<div class="chartwrap">
+    <div class="yaxis">${yax}</div>
+    <div class="plot">
+      <div class="chart">${grid}${bars}</div>
+      <div class="xlab">${labs}</div>
+    </div>
+  </div>`;
 }
 
 //============================================================ tabs / routing
