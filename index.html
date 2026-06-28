@@ -792,7 +792,11 @@ function exportCSV(entries,group){
 }
 
 //============================================================ RAW DATA BROWSE
-const BROWSE={page:0,per:50,sort:"d",dir:-1,rows:null};
+// Rows-per-page choices for the data tab. 250 default so scanning 12k+ entries
+// isn't a 50-at-a-time slog; "All" (1e9) drops the cap entirely.
+const PER_CHOICES=[50,100,250,500,1000000000];
+const perLabel=v=>v>=1e9?"All":String(v);
+const BROWSE={page:0,per:250,sort:"d",dir:-1,rows:null};
 const BROWSE_FIELDS=[["x-q","q"],["x-sport","sport"],["x-year","year"],["x-src","src"],["x-conf","conf"]];
 // reflect current filters into the URL so refresh / sharing keeps them
 function syncBrowseURL(){
@@ -894,21 +898,30 @@ function drawBrowse(){
     : "No entries match these filters.";
   const th=BROWSE_COLS.map(([k,lbl,num])=>`<th class="sortable ${num?'num':''}" data-k="${k}">${lbl}${BROWSE.sort===k?(BROWSE.dir>0?" ▲":" ▼"):""}</th>`).join("");
   const body=slice.map((r,i)=>rowHTML(r,start+i)).join("");
-  document.getElementById("x-table").innerHTML=`<thead><tr>${th}</tr></thead><tbody>${body}</tbody>`;
-  document.querySelectorAll("#x-table th.sortable").forEach(t=>t.onclick=()=>{
-    const k=t.dataset.k;
-    if(BROWSE.sort===k)BROWSE.dir*=-1; else {BROWSE.sort=k;BROWSE.dir=(k==="d")?-1:1;}
-    drawBrowse();
-  });
-  document.querySelectorAll("#x-table tbody tr.datarow").forEach(tr=>tr.onclick=()=>toggleDetail(tr));
-  // pager
+  const tbl=document.getElementById("x-table");
+  tbl.innerHTML=`<thead><tr>${th}</tr></thead><tbody>${body}</tbody>`;
+  // One delegated handler covers header sorting + row expand, so large page
+  // sizes (250/500/All) don't bind thousands of per-row listeners.
+  tbl.onclick=e=>{
+    const h=e.target.closest("th.sortable");
+    if(h){
+      const k=h.dataset.k;
+      if(BROWSE.sort===k)BROWSE.dir*=-1; else {BROWSE.sort=k;BROWSE.dir=(k==="d")?-1:1;}
+      drawBrowse(); return;
+    }
+    const tr=e.target.closest("tr.datarow");
+    if(tr) toggleDetail(tr);
+  };
+  // pager + rows-per-page picker
   const pg=document.getElementById("x-pager");
   pg.innerHTML=`<button ${BROWSE.page===0?"disabled":""} id="pg-prev">‹ Prev</button>
     <span class="muted">Page ${BROWSE.page+1} / ${pages}</span>
-    <button ${BROWSE.page>=pages-1?"disabled":""} id="pg-next">Next ›</button>`;
-  const prev=document.getElementById("pg-prev"),next=document.getElementById("pg-next");
+    <button ${BROWSE.page>=pages-1?"disabled":""} id="pg-next">Next ›</button>
+    <label class="muted" style="margin-left:14px">Rows&nbsp;<select id="pg-per">${PER_CHOICES.map(v=>`<option value="${v}" ${BROWSE.per===v?"selected":""}>${perLabel(v)}</option>`).join("")}</select></label>`;
+  const prev=document.getElementById("pg-prev"),next=document.getElementById("pg-next"),per=document.getElementById("pg-per");
   if(prev)prev.onclick=()=>{BROWSE.page--;drawBrowse();window.scrollTo(0,0);};
   if(next)next.onclick=()=>{BROWSE.page++;drawBrowse();window.scrollTo(0,0);};
+  if(per)per.onchange=()=>{BROWSE.per=+per.value;BROWSE.page=0;drawBrowse();window.scrollTo(0,0);};
 }
 function rowHTML(r,idx){
   const sp=sportTag(r.s);
