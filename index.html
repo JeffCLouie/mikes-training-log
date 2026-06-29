@@ -670,13 +670,18 @@ function renderReports(app){
      <label class="fld" style="max-width:240px">Report
        <select id="rep-type">
          <option value="year">Year summary</option>
+         <option value="compare">Year comparison</option>
          <option value="sport">Sport summary</option>
          <option value="matrix">Year × Sport matrix</option>
          <option value="bests">Personal bests</option>
+         <option value="consistency">Consistency &amp; streaks</option>
+         <option value="milestones">Distance milestones</option>
          <option value="custom">Custom report…</option>
        </select></label>
      <label class="fld" id="wrap-year" style="max-width:160px">Year
        <select id="rep-year">${years.map(y=>`<option>${y}</option>`).join("")}</select></label>
+     <label class="fld hidden" id="wrap-year2" style="max-width:160px">vs Year
+       <select id="rep-year2">${years.map((y,i)=>`<option ${i===1?"selected":""}>${y}</option>`).join("")}</select></label>
      <label class="fld hidden" id="wrap-sport" style="max-width:200px">Sport
        <select id="rep-sport">${sports.map(s=>`<option value="${s}">${sportName(s)}</option>`).join("")}</select></label>
      <label class="fld hidden" id="wrap-metric" style="max-width:180px">Metric
@@ -688,15 +693,19 @@ function renderReports(app){
    </div>
    <div id="rep-out"></div>`;
   const type=document.getElementById("rep-type");
-  const wYear=document.getElementById("wrap-year"), wSport=document.getElementById("wrap-sport"), wMetric=document.getElementById("wrap-metric");
+  const wYear=document.getElementById("wrap-year"), wYear2=document.getElementById("wrap-year2"),
+        wSport=document.getElementById("wrap-sport"), wMetric=document.getElementById("wrap-metric");
   function syncControls(){
     // The custom builder brings its own filter controls, so hide the preset ones.
-    wYear.classList.toggle("hidden", type.value!=="year");
-    wSport.classList.toggle("hidden", type.value!=="sport");
-    wMetric.classList.toggle("hidden", type.value!=="matrix");
+    const t=type.value;
+    wYear.classList.toggle("hidden", t!=="year" && t!=="compare");
+    wYear2.classList.toggle("hidden", t!=="compare");
+    wSport.classList.toggle("hidden", t!=="sport");
+    wMetric.classList.toggle("hidden", t!=="matrix");
   }
   type.onchange=()=>{ syncControls(); draw(); };
   document.getElementById("rep-year").onchange=draw;
+  document.getElementById("rep-year2").onchange=draw;
   document.getElementById("rep-sport").onchange=draw;
   document.getElementById("rep-metric").onchange=draw;
   const yearSel=document.getElementById("rep-year");
@@ -712,6 +721,9 @@ function renderReports(app){
       if(prev) prev.onclick=()=>{ if(i>0) setYear(av[i-1]); };
       if(next) next.onclick=()=>{ if(i>=0&&i<av.length-1) setYear(av[i+1]); };
     }
+    else if(type.value==="compare") out.innerHTML=reportCompare(+yearSel.value, +document.getElementById("rep-year2").value);
+    else if(type.value==="consistency") out.innerHTML=reportConsistency();
+    else if(type.value==="milestones") out.innerHTML=reportMilestones();
     else if(type.value==="sport") out.innerHTML=reportSport(document.getElementById("rep-sport").value);
     else if(type.value==="matrix") out.innerHTML=reportMatrix(document.getElementById("rep-metric").value);
     else out.innerHTML=reportBests();
@@ -823,6 +835,102 @@ function reportBests(){
   return `<div class="note-sm" style="margin:0 0 12px">Your single best efforts in each sport, with the date each was set in parentheses. Pace and speed records require a minimum distance so short, fast bursts don't dominate.</div>`+sports.map(s=>{const h=bestsFor(s); return h?`<div class="card" style="margin-bottom:14px">
     <h3>${sportTag(s)}</h3>
     <div class="kvgrid">${h}</div></div>`:"";}).join("");
+}
+
+// ── Year comparison: two years side by side, with deltas ──
+function reportCompare(yA, yB){
+  if(!yA || !yB || yA===yB) return `<div class="card">Pick two different years to compare.</div>`;
+  const rowsA=DATA.filter(r=>yearOf(r)===yA && r.s!=="note");
+  const rowsB=DATA.filter(r=>yearOf(r)===yB && r.s!=="note");
+  if(!rowsA.length && !rowsB.length) return `<div class="card">No data for either year.</div>`;
+  const A=agg(rowsA), B=agg(rowsB);
+  // a coloured delta chip: green when yA beats yB, red when behind
+  const dl=(a,b,fmt,suf)=>{ const d=a-b; if(!d) return `<span style="color:var(--muted);font-size:12px;font-weight:600;margin-left:6px">±0</span>`;
+    const c=d>0?"#5ad08f":"#e07a8a", s=d>0?"+":"";
+    return `<span style="color:${c};font-size:12px;font-weight:600;margin-left:6px">${s}${fmt(d)}${suf||""}</span>`; };
+  const tile=(label,a,b,fmt,suf)=>`<div class="card stat">
+     <div class="num">${fmt(a)}${suf||""}</div>
+     <div class="lbl">${label} · ${yA}${dl(a,b,fmt,suf)}</div>
+     <div class="note-sm" style="margin-top:4px">${yB}: ${fmt(b)}${suf||""}</div></div>`;
+  const sports=globalSportOrder().filter(s=>SPORTS[s] && (rowsA.some(r=>r.s===s)||rowsB.some(r=>r.s===s)));
+  const cnt=(rows,s)=>rows.filter(r=>r.s===s).length;
+  const body=sports.map(s=>{ const ca=cnt(rowsA,s), cb=cnt(rowsB,s), d=ca-cb;
+    const dcell = d>0?`<span style="color:#5ad08f">+${d}</span>`:d<0?`<span style="color:#e07a8a">${d}</span>`:"—";
+    return `<tr><td>${sportTag(s)}</td><td class="num">${ca||"—"}</td><td class="num">${cb||"—"}</td><td class="num">${dcell}</td></tr>`;
+  }).join("");
+  const num=v=>fmtNum(v);
+  return `<div class="cardhead" style="margin-bottom:14px"><h2 class="section" style="margin:0">${yA} vs ${yB}</h2></div>
+   <div class="note-sm" style="margin:0 0 12px">Side-by-side totals for the two selected years. The big number is ${yA}; the coloured chip is the change vs ${yB} (green = ${yA} higher), and the small line shows the ${yB} value.</div>
+   <div class="grid stat-row" style="margin-bottom:16px">
+     ${tile("Workouts",A.count,B.count,num,"")}
+     ${tile("Distance",Math.round(A.dist),Math.round(B.dist),num," km")}
+     ${tile("Hours",Math.round(A.dur/3600),Math.round(B.dur/3600),num,"")}
+   </div>
+   <div class="card"><h3>By sport — sessions</h3>
+     <div class="tablewrap"><table><thead><tr><th>Sport</th><th class="num">${yA}</th><th class="num">${yB}</th><th class="num">Δ</th></tr></thead>
+     <tbody>${body}</tbody></table></div></div>`;
+}
+
+// ── Consistency & streaks: active days, streaks, layoffs, rest reasons ──
+function reportConsistency(){
+  const real=DATA.filter(r=>r.s!=="note");
+  if(!real.length) return `<div class="card">No data.</div>`;
+  const dnum=ds=>Math.floor(Date.parse(ds+"T00:00:00Z")/864e5);
+  const activeDays=[...new Set(real.map(r=>r.d))].sort();
+  let longest=0,cur=0,prev=null,lEnd=null;
+  for(const ds of activeDays){ const n=dnum(ds); cur=(prev!==null&&n===prev+1)?cur+1:1; if(cur>longest){longest=cur;lEnd=ds;} prev=n; }
+  let gap=0,gapAt=null; for(let i=1;i<activeDays.length;i++){ const g=dnum(activeDays[i])-dnum(activeDays[i-1]); if(g>gap){gap=g;gapAt=activeDays[i-1];} }
+  const spanDays=activeDays.length>1?dnum(activeDays[activeDays.length-1])-dnum(activeDays[0])+1:1;
+  const years=[...new Set(real.map(yearOf))].sort();
+  const activeByYear=years.map(y=>({label:String(y),value:new Set(real.filter(r=>yearOf(r)===y).map(r=>r.d)).size}));
+  const restCnt={injury:0,illness:0,rest:0,recovery:0,travel:0,home:0,other:0};
+  for(const r of DATA){ if(r.s!=="note")continue; const txt=noteText(r); if(noteWeight(txt)!=null)continue; const c=classifyNote(txt); if(restCnt[c]!=null)restCnt[c]++; }
+  const restRows=[["Injury","injury"],["Illness","illness"],["Rest day","rest"],["Recovery","recovery"],["Travel","travel"],["Home project","home"],["Other","other"]]
+    .filter(([,k])=>restCnt[k]).map(([l,k])=>`<tr><td>${l}</td><td class="num">${fmtNum(restCnt[k])}</td></tr>`).join("");
+  return `<div class="note-sm" style="margin:0 0 12px">How regularly Mike trained — active days, daily streaks, and the gaps between sessions — plus why no-workout days were logged.</div>
+   <div class="grid stat-row" style="margin-bottom:16px">
+     <div class="card stat"><div class="num">${fmtNum(activeDays.length)}</div><div class="lbl">active days</div></div>
+     <div class="card stat"><div class="num">${longest}</div><div class="lbl">longest streak (days)</div></div>
+     <div class="card stat"><div class="num">${gap}</div><div class="lbl">longest layoff (days)</div></div>
+     <div class="card stat"><div class="num">${(Math.round(spanDays/365.25*10)/10)}</div><div class="lbl">years tracked</div></div>
+   </div>
+   <div class="card" style="margin-bottom:16px"><h3>Active days per year</h3>
+     ${columnChart(activeByYear,{shortLabel:l=>"'"+l.slice(2),unit:"days"})}
+     <div class="note-sm">Distinct calendar days with at least one workout, year by year.</div></div>
+   <div class="card" style="margin-bottom:16px"><h3>Streak details</h3>
+     <div class="kvgrid">
+       <div><b>Longest streak</b>${longest} days${lEnd?`, ending ${lEnd}`:""}</div>
+       <div><b>Longest layoff</b>${gap} days${gapAt?`, from ${gapAt}`:""}</div>
+       <div><b>Training span</b>${activeDays[0]} → ${activeDays[activeDays.length-1]}</div>
+       <div><b>Active rate</b>${fmtNum(activeDays.length/spanDays*100)}% of all days</div>
+     </div></div>
+   ${restRows?`<div class="card"><h3>Why days had no workout</h3>
+     <div class="note-sm" style="margin-bottom:8px">Diary-note days with no session, keyword-matched to a likely reason (medium confidence).</div>
+     <div class="tablewrap"><table><thead><tr><th>Reason</th><th class="num">Days</th></tr></thead><tbody>${restRows}</tbody></table></div></div>`:""}`;
+}
+
+// ── Distance milestones: lifetime totals, cumulative curve, equivalences ──
+function reportMilestones(){
+  const real=DATA.filter(r=>r.s!=="note");
+  if(!real.length) return `<div class="card">No data.</div>`;
+  const years=[...new Set(real.map(yearOf))].sort();
+  let cum=0; const cumByYear=years.map(y=>{ cum+=real.filter(r=>yearOf(r)===y).reduce((s,r)=>s+(r.k||0),0); return {label:String(y),value:Math.round(cum)}; });
+  const total=cum;
+  const bySport={}; for(const r of real){ if(r.k) bySport[r.s]=(bySport[r.s]||0)+r.k; }
+  const sportRows=Object.entries(bySport).sort((a,b)=>b[1]-a[1])
+    .map(([s,k])=>`<tr><td>${sportTag(s)}</td><td class="num">${fmtNum(Math.round(k))} km</td></tr>`).join("");
+  const equator=total/40075, moon=total/384400*100;
+  return `<div class="note-sm" style="margin:0 0 12px">Lifetime distance across every sport, how it accumulated over the years, and a few fun real-world equivalences.</div>
+   <div class="grid stat-row" style="margin-bottom:16px">
+     <div class="card stat"><div class="num">${fmtNum(Math.round(total))}</div><div class="lbl">total km logged</div></div>
+     <div class="card stat"><div class="num">${fmtNum(equator,1)}×</div><div class="lbl">around the equator</div></div>
+     <div class="card stat"><div class="num">${fmtNum(moon,1)}%</div><div class="lbl">of the way to the Moon</div></div>
+   </div>
+   <div class="card" style="margin-bottom:16px"><h3>Cumulative distance over time</h3>
+     ${cumByYear.length>1?lineChart(cumByYear,{unit:"km",fmt:v=>fmtNum(v)+" km",shortLabel:l=>"'"+l.slice(2)}):`<div class="muted">Not enough data.</div>`}
+     <div class="note-sm">Running total of every kilometre logged, added up year by year.</div></div>
+   ${sportRows?`<div class="card"><h3>Lifetime distance by sport</h3>
+     <div class="tablewrap"><table><thead><tr><th>Sport</th><th class="num">Total distance</th></tr></thead><tbody>${sportRows}</tbody></table></div></div>`:""}`;
 }
 
 //============================================================ REPORT BUILDER
