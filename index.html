@@ -1194,17 +1194,6 @@ function renderInsights(app){
      <div class="card"><h3>By month (all years)</h3>${columnChart(mon,{shortLabel:l=>l[0]})}</div>
    </div>
 
-   ${topShoes.length?`<div class="card" style="margin-bottom:18px">
-     <h3>Top running shoes by distance</h3>
-     <div class="shoebar">
-       ${topShoes.map(([nm,km])=>`<div class="shoe">
-         <span class="nm" title="${escapeHTML(nm)}">${escapeHTML(nm)}</span>
-         <span class="track"><span class="fill" style="width:${(km/shoeMax*100).toFixed(1)}%"></span></span>
-         <span class="km">${fmtNum(km)} km</span></div>`).join("")}
-     </div>
-     <div class="note-sm">Distance attributed to the shoe noted on each run.</div>
-   </div>`:""}
-
    <div class="card" style="line-height:1.7">
      <h3>Consistency</h3>
      <div class="kvgrid">
@@ -1217,10 +1206,6 @@ function renderInsights(app){
      </div>
    </div>
 
-   <div class="card" style="margin-top:18px"><h3>On this day — ${MONTHS[_today.getMonth()]} ${_today.getDate()}</h3>
-     ${otd.length?`<div class="kvgrid" style="grid-template-columns:1fr">${otd.map(r=>`<div><b style="display:inline-block;width:42px">${r.d.slice(0,4)}</b>${sportTag(r.s)} <span class="muted">${[fmtDur(r.t),r.k!=null?fmtNum(r.k,1)+" km":"",perf(r)].filter(Boolean).join(" · ")}</span></div>`).join("")}</div>`:`<div class="muted">No workouts recorded on this date in any year.</div>`}
-   </div>
-
    <div class="card" style="margin-top:18px"><h3>By decade</h3>
      <div class="tablewrap"><table><thead><tr><th>Decade</th><th class="num">Workouts</th><th class="num">Distance</th><th class="num">Hours</th><th>Top sport</th></tr></thead>
      <tbody>${decRows.map(o=>`<tr><td><b>${o.dec}s</b></td><td class="num">${fmtNum(o.count)}</td><td class="num">${fmtNum(Math.round(o.dist))} km</td><td class="num">${Math.round(o.dur/3600)}</td><td>${sportTag(o.top)}</td></tr>`).join("")}</tbody></table></div>
@@ -1229,7 +1214,22 @@ function renderInsights(app){
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:18px">
      <div class="card"><h3>Avg run pace by year</h3>${runTrend.length?columnChart(runTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtPace(v)+"/km",unit:"min/km"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Shorter = faster · years with &ge;8 runs</div></div>
      <div class="card"><h3>Avg bike speed by year</h3>${bikeTrend.length?columnChart(bikeTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>v.toFixed(1)+" km/h",unit:"km/h"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Years with &ge;8 rides</div></div>
-   </div>`;
+   </div>
+
+   <div class="card" style="margin-top:18px"><h3>On this day — ${MONTHS[_today.getMonth()]} ${_today.getDate()}</h3>
+     ${otd.length?`<div class="kvgrid" style="grid-template-columns:1fr">${otd.map(r=>`<div><b style="display:inline-block;width:42px">${r.d.slice(0,4)}</b>${sportTag(r.s)} <span class="muted">${[fmtDur(r.t),r.k!=null?fmtNum(r.k,1)+" km":"",perf(r)].filter(Boolean).join(" · ")}</span></div>`).join("")}</div>`:`<div class="muted">No workouts recorded on this date in any year.</div>`}
+   </div>
+
+   ${topShoes.length?`<div class="card" style="margin-top:18px">
+     <h3>Top running shoes by distance</h3>
+     <div class="shoebar">
+       ${topShoes.map(([nm,km])=>`<div class="shoe">
+         <span class="nm" title="${escapeHTML(nm)}">${escapeHTML(nm)}</span>
+         <span class="track"><span class="fill" style="width:${(km/shoeMax*100).toFixed(1)}%"></span></span>
+         <span class="km">${fmtNum(km)} km</span></div>`).join("")}
+     </div>
+     <div class="note-sm">Distance attributed to the shoe noted on each run.</div>
+   </div>`:""}`;
 
   // The heatmap is one continuous all-years strip. The Year dropdown scrolls it
   // to that year; scrolling updates the dropdown to match.
