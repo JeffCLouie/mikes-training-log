@@ -342,7 +342,8 @@ function fmtDurShort(sec){
   return m+"m";
 }
 function fmtKm(k){ return k==null? "" : (Math.round(k*10)/10)+" km"; }
-function fmtNum(n,d=0){ return n==null?"":n.toLocaleString(undefined,{maximumFractionDigits:d}); }
+// Pad to exactly d decimals so units shown together read consistently (13.0, not 13)
+function fmtNum(n,d=0){ return n==null?"":n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
 // Compact number for tight spots like chart axes: 15000 -> "15k", 1.2e6 -> "1.2M".
 function fmtK(n){
   if(n==null) return "";
