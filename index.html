@@ -125,8 +125,17 @@
   .hm{display:flex;gap:3px}
   .hm-week{display:flex;flex-direction:column;gap:3px;flex:none}
   .hm-cell{width:13px;height:13px;border-radius:3px;background:var(--panel2)}
+  .hm-cell[data-d]{cursor:pointer}
+  .hm-cell[data-d]:hover{outline:2px solid var(--text);outline-offset:-1px}
   .hm-legend{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:11.5px;color:var(--muted)}
   .hm-legend .hm-cell{width:12px;height:12px}
+  /* day-detail overlay (tap a calendar square) */
+  .overlay{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.55);backdrop-filter:blur(2px)}
+  .overlay.show{display:flex}
+  .day-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:15px 17px;width:100%;max-width:420px;max-height:80vh;overflow:auto}
+  .day-x{background:var(--panel2);border:1px solid var(--line);color:var(--text);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px;line-height:1;flex:none}
+  .day-tot{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 4px;font-size:12.5px;color:var(--muted)}
+  .day-tot b{color:var(--text);font-weight:700}
   /* insights: shoe leaderboard */
   .shoebar{display:grid;grid-template-columns:1fr;gap:7px}
   .shoe{display:flex;align-items:center;gap:10px;font-size:13px}
@@ -1190,7 +1199,7 @@ function renderInsights(app){
        <div class="hm-yearbadge" id="hm-yearbadge">${_insightsYear}</div>
        <div class="hm-scroll" id="hm-scroll">${activityHeatmap()}</div>
      </div>
-     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 5%</div>
+     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%</div>
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
@@ -1248,10 +1257,35 @@ function renderInsights(app){
     const sync=()=>{ const y=yearAt(); if(badge)badge.textContent=y; if(ysel&&+ysel.value!==y)ysel.value=y; _insightsYear=y; };
     const scrollToYear=y=>{ for(let i=0;i<kids.length;i++){ if(+kids[i].dataset.year===y){ scroll.scrollTo({left:i*step(),behavior:"smooth"}); break; } } };
     scroll.addEventListener("scroll",sync,{passive:true});
+    grid.addEventListener("click",e=>{ const c=e.target.closest(".hm-cell[data-d]"); if(c) showDayOverlay(c.dataset.d); });
     if(ysel) ysel.onchange=()=>scrollToYear(+ysel.value);
     // jump to the most-active year on open (no smooth animation for the initial jump)
     requestAnimationFrame(()=>{ for(let i=0;i<kids.length;i++){ if(+kids[i].dataset.year===_insightsYear){ scroll.scrollLeft=i*step(); break; } } sync(); });
   }
+}
+
+// Tap a calendar square → overlay that day's sessions and totals.
+function dayPopup(ds){
+  const rows=DATA.filter(r=>r.d===ds && r.s!=="note");
+  const dt=new Date(ds+"T00:00:00Z");
+  const title=WEEKDAYS[(dt.getUTCDay()+6)%7]+", "+MONTHS[dt.getUTCMonth()]+" "+dt.getUTCDate()+", "+dt.getUTCFullYear();
+  let totDur=0,totKm=0; rows.forEach(r=>{ if(r.t)totDur+=r.t; if(r.k)totKm+=r.k; });
+  const body=rows.length?rows.map(r=>`<div class="e">${sportTag(r.s)}<span class="meta">${[r.t?fmtDur(r.t):"",r.k!=null?fmtNum(r.k,1)+" km":"",perf(r)].filter(Boolean).join(" · ")||"—"}</span>${r.n?`<div class="note-sm" style="flex-basis:100%;margin-top:2px">${escapeHTML(r.n)}</div>`:""}</div>`).join("")
+    :`<div class="muted">No workouts recorded.</div>`;
+  const tot=rows.length>1?`<div class="day-tot"><span><b>${rows.length}</b> sessions</span><span><b>${fmtDurShort(totDur)}</b> total</span>${totKm?`<span><b>${fmtNum(totKm,1)}</b> km</span>`:""}</div>`:"";
+  return `<div class="day-card">
+    <div class="cardhead" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">${title}</h3><button class="day-x" aria-label="Close">✕</button></div>
+    ${tot}<div class="cal-detail">${body}</div>
+  </div>`;
+}
+function showDayOverlay(ds){
+  let ov=document.getElementById("day-overlay");
+  if(!ov){ ov=document.createElement("div"); ov.id="day-overlay"; ov.className="overlay"; document.body.appendChild(ov);
+    ov.addEventListener("click",e=>{ if(e.target===ov||e.target.closest(".day-x")) ov.classList.remove("show"); });
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape") ov.classList.remove("show"); });
+  }
+  ov.innerHTML=dayPopup(ds);
+  ov.classList.add("show");
 }
 
 // GitHub-style activity heatmap spanning ALL years as one continuous Monday-top
@@ -1268,7 +1302,7 @@ function activityHeatmap(){
   if(!isFinite(minY)) return `<div class="muted">No activity recorded.</div>`;
   // 95th-percentile day by training time → the top ~5% of days get a warm highlight
   const durs=Object.values(day).map(d=>d.dur).filter(v=>v>0).sort((x,y)=>x-y);
-  const hot = durs.length>=2 ? durs[Math.floor(durs.length*0.95)] : Infinity;
+  const hot = durs.length>=2 ? durs[Math.floor(durs.length*0.99)] : Infinity;
   const start=new Date(Date.UTC(minY,0,1));
   start.setUTCDate(start.getUTCDate()-((start.getUTCDay()+6)%7));   // back to Monday
   const end=new Date(Date.UTC(maxY,11,31));
@@ -1287,16 +1321,16 @@ function activityHeatmap(){
   const color=d=>{
     if(!d.inSpan) return "transparent";
     if(!d.c) return "var(--panel2)";
-    if(d.dur>0 && d.dur>=hot) return "rgba(255,178,90,.95)";   // top ~5% of days by training time
+    if(d.dur>0 && d.dur>=hot) return "rgba(255,178,90,.95)";   // top ~1% of days by training time
     const h=d.dur/3600, a=!d.dur?.35:h<0.75?.4:h<1.5?.6:h<2.5?.8:1;
     return `rgba(54,194,168,${a})`;
   };
   // Month label sits on the week containing the 1st; January also shows the year.
   const months=weeks.map(w=>{ const f=w.cells.find(d=>d.inSpan&&d.ds.slice(8)==="01");
     if(!f) return ""; const mo=+f.ds.slice(5,7); return mo===1?"'"+f.ds.slice(2,4):MONTHS[mo-1]; });
-  const tip=d=>d.inSpan?`${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}${d.dur>0&&d.dur>=hot?" · top 5%":""}`:"";
+  const tip=d=>d.inSpan?`${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}${d.dur>0&&d.dur>=hot?" · top 1%":""}`:"";
   return `<div class="hm-months">${months.map(m=>`<div class="hm-mlabel">${m}</div>`).join("")}</div>
-    <div class="hm">${weeks.map(w=>`<div class="hm-week" data-year="${w.year}">${w.cells.map(d=>`<div class="hm-cell" style="background:${color(d)}" title="${tip(d)}"></div>`).join("")}</div>`).join("")}</div>`;
+    <div class="hm">${weeks.map(w=>`<div class="hm-week" data-year="${w.year}">${w.cells.map(d=>`<div class="hm-cell"${d.inSpan&&d.c?` data-d="${d.ds}"`:""} style="background:${color(d)}" title="${tip(d)}"></div>`).join("")}</div>`).join("")}</div>`;
 }
 
 //============================================================ ABOUT
