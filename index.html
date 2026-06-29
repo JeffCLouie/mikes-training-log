@@ -519,15 +519,45 @@ function renderDash(app){
          <button data-m="count" class="on">Sessions</button>
          <button data-m="dist">Distance</button>
          <button data-m="dur">Hours</button>
+       </div>
+       <div class="seg" id="dash-view">
+         <button data-v="chart" class="on">Chart</button>
+         <button data-v="table">Table</button>
        </div></div>
      <div id="dash-chart">${dashChart("count")}</div>
-     <div class="note-sm">Tip: tap a bar to read its value · click a sport below to drill in.</div>
+     <div class="note-sm" id="dash-tip">Tip: tap a bar to read its value · click a sport below to drill in.</div>
    </div>
 
    <h3>By sport</h3>`;
+  // The "Per year" card flips between the chart and a table of the same data.
+  let dashMetric="count", dashViewMode="chart";
+  function dashTable(){
+    const head=`<thead><tr><th>Year</th><th class="num">Sessions</th><th class="num">Distance</th><th class="num">Hours</th></tr></thead>`;
+    const body=byYearAgg.slice().reverse().map(o=>`<tr>
+       <td>${o.y}</td>
+       <td class="num">${fmtNum(o.a.count)}</td>
+       <td class="num">${o.a.dist?fmtNum(Math.round(o.a.dist))+" km":"—"}</td>
+       <td class="num">${o.a.dur?fmtNum(Math.round(o.a.dur/3600))+" h":"—"}</td></tr>`).join("");
+    const tot=`<tr><td><b>Total</b></td>
+       <td class="num"><b>${fmtNum(a.count)}</b></td>
+       <td class="num"><b>${fmtNum(Math.round(a.dist))} km</b></td>
+       <td class="num"><b>${fmtNum(Math.round(a.dur/3600))} h</b></td></tr>`;
+    return `<div class="tablewrap"><table>${head}<tbody>${body}${tot}</tbody></table></div>`;
+  }
+  function paintDash(){
+    document.getElementById("dash-chart").innerHTML = dashViewMode==="table" ? dashTable() : dashChart(dashMetric);
+    const seg=document.getElementById("dash-seg"); if(seg) seg.style.display = dashViewMode==="table" ? "none" : "";
+    const tip=document.getElementById("dash-tip"); if(tip) tip.style.display = dashViewMode==="table" ? "none" : "";
+  }
   app.querySelectorAll("#dash-seg button").forEach(b=>b.onclick=()=>{
+    dashMetric=b.dataset.m;
     app.querySelectorAll("#dash-seg button").forEach(x=>x.classList.toggle("on",x===b));
-    document.getElementById("dash-chart").innerHTML=dashChart(b.dataset.m);
+    paintDash();
+  });
+  app.querySelectorAll("#dash-view button").forEach(b=>b.onclick=()=>{
+    dashViewMode=b.dataset.v;
+    app.querySelectorAll("#dash-view button").forEach(x=>x.classList.toggle("on",x===b));
+    paintDash();
   });
   app.insertAdjacentHTML("beforeend",`
    <div class="grid sportcards">
