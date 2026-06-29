@@ -1693,6 +1693,22 @@ function renderAbout(app){
        <li><span class="pill u">open</span> <b>Raw per-ride pace / speed.</b> The
          Pace / Speed column in the <b>Raw Data</b> tab still shows the unfiltered
          value for those mis-parsed entries, so individual rows can still look off.</li>
+       <li><span class="pill d">mitigated</span> <b>Interval splits read as run distance.</b>
+         Interval shorthand like <code>8x400on77 7</code> (eight 400 m reps "on 77 s",
+         ~7 km) had the rep time <b>77</b> parsed as a <b>77 km run</b> — producing
+         phantom 73–77 km "ultras" and impossible sub-3:00/km paces. The
+         <b>Records</b> page now ignores &gt;60 km runs with no recorded time and
+         floors run pace at 3:00/km, so personal bests stay realistic; the source
+         rows still need correcting.</li>
+       <li><span class="pill u">open</span> <b>Swim distances from interval sets.</b>
+         Swim shorthand such as <code>3x.5</code> (3×500 m = 1.5 km) or <code>3on2of</code>
+         is sometimes parsed at double the real distance, making swim pace look
+         elite (e.g. 1:14 /100 m). Swim records should be read with caution until
+         the source is reparsed.</li>
+       <li><span class="pill u">open</span> <b>Duplicate rows inflate weekly counts.</b>
+         The weekly training-log grid and the running log overlap, so some days carry
+         both a confirmed run and a near-identical deduced copy. Combined with a few
+         junk cells parsed as sessions, this can overstate "most sessions in a week."</li>
        <li><span class="pill u">open</span> <b>Distance vs. time mix-ups.</b>
          Shorthand containing two numbers (e.g. <code>9.2 47</code>) sometimes
          stores the time where the distance should be. Being audited.</li>
@@ -1805,7 +1821,9 @@ function cumulativeChart(rows){
 const _pace = r => (r.t/60)/r.k;          // min/km
 const _kmh  = r => r.k/(r.t/3600);        // km/h
 const _per100 = r => r.t/(r.k*10);        // sec/100 m
-const saneRun  = r => r.s==="run"  && r.t>0 && r.k>0 && _pace(r)>=2.6 && _pace(r)<=10;
+// 3.0 min/km floor: the source has runs where an interval split or a wrong time
+// yields impossible sub-3:00/km paces; nobody in this log actually runs that fast.
+const saneRun  = r => r.s==="run"  && r.t>0 && r.k>0 && _pace(r)>=3.0 && _pace(r)<=10;
 const saneBike = r => r.s==="bike" && r.t>0 && r.k>0 && _kmh(r)>=8  && _kmh(r)<=55;
 const saneSwim = r => r.s==="swim" && r.t>0 && r.k>0 && _per100(r)>=55 && _per100(r)<=200;
 const dayNum = ds => Math.floor(Date.parse(ds+"T00:00:00Z")/864e5);
@@ -1910,7 +1928,10 @@ function buildMilestones(rows){
   return ev.sort((a,b)=>a.date<b.date?-1:1);
 }
 function renderRecords(app){
-  const rows=filtered(DATA).filter(r=>r.s!=="note");
+  // Drop interval-artifact "ultras": "8x400on77 7" parsed the rep split (77) as a
+  // 77 km distance. Real long runs record a duration, so a >60 km run with no time
+  // is a parse error, not an ultramarathon.
+  const rows=filtered(DATA).filter(r=>r.s!=="note").filter(r=>!(r.s==="run"&&r.k>60&&!r.t));
   const recs=[], prs=distancePRs(rows);
   for(const p of prs) recs.push({v:fmtDur(Math.round(p.sec)),l:p.name,sub:fmtPace(_pace(p.row))+"/km · "+fmtNum(p.row.k,1)+" km",d:p.row.d});
   const longestBy=pred=>{ const a=rows.filter(pred); return a.length?a.reduce((x,y)=>(y.k||0)>(x.k||0)?y:x):null; };
