@@ -202,6 +202,47 @@
   .wd-bars .wd{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%}
   .wd-bars .wd .b{width:60%;background:linear-gradient(var(--accent),#1d6e60);border-radius:4px 4px 0 0;min-height:2px}
   .wd-bars .wd .l{font-size:11px;color:var(--muted)}
+  /* global filter bar (dashboard / insights / records) */
+  .fbar{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .fbar .fld{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .fbar select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px}
+  .fbar .fclear{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+  .fbar .fclear:hover{border-color:var(--accent);color:var(--text)}
+  /* records: personal-best cards */
+  .recgrid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  .rec{display:flex;flex-direction:column}
+  .rec .v{font-size:22px;font-weight:800;letter-spacing:.3px}
+  .rec .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+  .rec .sub{font-size:12px;color:var(--text);margin-top:4px}
+  .rec .d{font-size:11.5px;color:var(--muted);margin-top:6px}
+  /* records: achievement badges */
+  .badges{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .badge{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:16px 12px}
+  .badge .bic{font-size:30px;line-height:1}
+  .badge .bn{font-weight:700;font-size:13.5px}
+  .badge .bd{font-size:11.5px;color:var(--muted);line-height:1.35}
+  .badge.locked{opacity:.45;filter:grayscale(1)}
+  .badge.earned{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  /* records: milestones timeline */
+  .tl{position:relative;padding-left:26px}
+  .tl::before{content:"";position:absolute;left:9px;top:5px;bottom:5px;width:2px;background:var(--line)}
+  .tl .ev{position:relative;padding:0 0 15px}
+  .tl .ev:last-child{padding-bottom:0}
+  .tl .ev::before{content:"";position:absolute;left:-21px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--panel)}
+  .tl .ev .dt{font-size:11.5px;color:var(--muted);font-weight:700;letter-spacing:.3px}
+  .tl .ev .tx{font-size:14px;margin-top:1px}
+  .tl .ev .ic{margin-right:6px}
+  /* year in review */
+  .wrap-hero{text-align:center;padding:24px 18px}
+  .wrap-hero .yr{font-size:42px;font-weight:800;letter-spacing:1px;line-height:1}
+  .wrap-hero .sub{color:var(--muted);margin-top:6px;font-size:13.5px}
+  .delta{font-size:11.5px;font-weight:700}
+  .delta.up{color:var(--accent)}
+  .delta.down{color:#e0556e}
+  /* cumulative chart legend */
+  .cumlegend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+  .cumlegend span{display:inline-flex;align-items:center;gap:5px}
+  .cumlegend i{width:14px;height:3px;border-radius:2px;display:inline-block}
   @media(max-width:640px){
     th{position:static}
     .top-inner{padding:10px 12px}
@@ -535,8 +576,9 @@ function lineChart(points, opts={}){
 
 //============================================================ tabs / routing
 const TABS = [
-  ["dash","Dashboard"], ["insights","Insights"], ["reports","Reports"],
-  ["browse","Raw Data"], ["about","About"],
+  ["dash","Dashboard"], ["insights","Insights"], ["records","Records"],
+  ["wrapped","Year in Review"], ["reports","Reports"], ["browse","Raw Data"],
+  ["about","About"],
 ];
 // The custom report builder used to be its own tab; it now lives inside Reports.
 // Keep old #builder deep links working by routing them to Reports.
@@ -574,6 +616,8 @@ function route(){
   const app=document.getElementById("app");
   if(current==="dash") renderDash(app);
   else if(current==="insights") renderInsights(app);
+  else if(current==="records") renderRecords(app);
+  else if(current==="wrapped") renderWrapped(app);
   else if(current==="reports") renderReports(app);
   else if(current==="browse") renderBrowse(app);
   else renderAbout(app);
@@ -581,9 +625,10 @@ function route(){
 
 //============================================================ DASHBOARD
 function renderDash(app){
-  const real = DATA.filter(r=>r.s!=="note");
+  const base = filtered(DATA);
+  const real = base.filter(r=>r.s!=="note");
   const a = agg(real);
-  const years = [...new Set(DATA.map(yearOf))].sort();
+  const years = [...new Set(base.map(yearOf))].sort();
   const sportTotals = {};
   for(const r of real){ const t=sportTotals[r.s]||(sportTotals[r.s]={count:0,dist:0,dur:0});
     t.count++; if(r.k)t.dist+=r.k; if(r.t)t.dur+=r.t; }
@@ -605,6 +650,7 @@ function renderDash(app){
 
   app.innerHTML = `
    <h2 class="section">Lifetime Overview</h2>
+   ${filterBar()}
    <div class="grid stat-row" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:18px">
      <div class="card stat"><div class="num">${fmtNum(a.count)}</div><div class="lbl">Workouts</div></div>
      <div class="card stat"><div class="num">${fmtNum(a.dist)}</div><div class="lbl">Total km</div></div>
@@ -625,6 +671,12 @@ function renderDash(app){
        </div></div>
      <div id="dash-chart">${dashChart("count")}</div>
      <div class="note-sm" id="dash-tip">Tip: tap a bar to read its value · click a sport below to drill in.</div>
+   </div>
+
+   <div class="card" style="margin-bottom:18px">
+     <h3>Cumulative distance — year vs year</h3>
+     ${cumulativeChart(real)}
+     <div class="note-sm">Each line is one year's running distance total as the year progresses — see if you're ahead of your usual pace.</div>
    </div>
 
    <h3>By sport</h3>`;
@@ -674,6 +726,7 @@ function renderDash(app){
     if(sel){ sel.value="sport"; sel.onchange();
       const ss=document.getElementById("rep-sport"); if(ss){ ss.value=c.dataset.sport; ss.onchange(); } }
   });
+  wireFilter();
 }
 
 //============================================================ REPORTS (premade)
@@ -1292,7 +1345,7 @@ const NOTE_LABEL= { race:"race / event", injury:"injury", illness:"illness", wea
 
 let _insightsYear = null;
 function renderInsights(app){
-  const real = DATA.filter(r=>r.s!=="note");
+  const real = filtered(DATA).filter(r=>r.s!=="note");
   const a = agg(real);
   const years = [...new Set(real.map(yearOf))].sort((x,y)=>x-y);
   const dnum = ds => Math.floor(Date.parse(ds+"T00:00:00Z")/864e5);
@@ -1400,6 +1453,7 @@ function renderInsights(app){
 
   app.innerHTML=`
    <h2 class="section">Insights</h2>
+   ${filterBar()}
 
    <div class="grid facts" style="margin-bottom:18px">
      ${fact("🌍", fmtNum(equator,1)+"×", "around the Earth — "+fmtNum(a.dist)+" km logged")}
@@ -1515,6 +1569,7 @@ function renderInsights(app){
     // jump to the most-active year on open (no smooth animation for the initial jump)
     requestAnimationFrame(()=>{ for(let i=0;i<kids.length;i++){ if(+kids[i].dataset.year===_insightsYear){ scroll.scrollLeft=i*step(); break; } } sync(); });
   }
+  wireFilter();
 }
 
 // Tap a calendar square → overlay that day's sessions and totals.
@@ -1670,6 +1725,271 @@ function renderAbout(app){
    <div class="note-sm" style="margin-top:14px">Generated ${META.generated}. Span ${META.span[0]} → ${META.span[1]}.</div>`;
 }
 
+//============================================================ GLOBAL FILTER
+// A site-wide scope (year range + sport) applied to the Dashboard, Insights and
+// Records pages. Kept in one place so switching tabs preserves the selection.
+let FILTER = {fromY:null, toY:null, sport:""};
+function allYears(){ return [...new Set(DATA.map(yearOf))].sort((a,b)=>a-b); }
+function filtered(rows=DATA){
+  return rows.filter(r=>{
+    const y=yearOf(r);
+    if(FILTER.fromY!=null && y<FILTER.fromY) return false;
+    if(FILTER.toY!=null && y>FILTER.toY) return false;
+    if(FILTER.sport && r.s!==FILTER.sport) return false;
+    return true;
+  });
+}
+function filterActive(){
+  const ys=allYears();
+  return !!FILTER.sport || (FILTER.fromY!=null&&FILTER.fromY!==ys[0]) || (FILTER.toY!=null&&FILTER.toY!==ys[ys.length-1]);
+}
+function filterBar(){
+  const ys=allYears(); if(!ys.length) return "";
+  const lo=ys[0], hi=ys[ys.length-1];
+  const fromY=FILTER.fromY??lo, toY=FILTER.toY??hi;
+  const yopt=sel=>ys.map(y=>`<option ${y===sel?"selected":""}>${y}</option>`).join("");
+  const sports=sportsByVolume(DATA).filter(s=>s!=="note"&&SPORTS[s]);
+  const sopt=`<option value="">All sports</option>`+sports.map(s=>`<option value="${s}" ${FILTER.sport===s?"selected":""}>${sportName(s)}</option>`).join("");
+  return `<div class="fbar">
+    <label class="fld">From<select id="f-from">${yopt(fromY)}</select></label>
+    <label class="fld">To<select id="f-to">${yopt(toY)}</select></label>
+    <label class="fld">Sport<select id="f-sport">${sopt}</select></label>
+    ${filterActive()?`<button class="fclear" id="f-clear">Clear filter</button>`:""}
+  </div>`;
+}
+function wireFilter(){
+  const from=document.getElementById("f-from"), to=document.getElementById("f-to"),
+        sp=document.getElementById("f-sport"), cl=document.getElementById("f-clear");
+  if(!from) return;
+  const apply=()=>{ let a=+from.value, b=+to.value; if(a>b){const t=a;a=b;b=t;}
+    FILTER.fromY=a; FILTER.toY=b; FILTER.sport=sp.value; route(); };
+  from.onchange=apply; to.onchange=apply; sp.onchange=apply;
+  if(cl) cl.onclick=()=>{ FILTER={fromY:null,toY:null,sport:""}; route(); };
+}
+
+//============================================================ CUMULATIVE CHART
+// Cumulative distance through the year, one line per year overlaid, so you can
+// see whether a year is running ahead of or behind your usual pace. Recent years
+// are drawn brightest; older years fade into the background.
+function cumulativeChart(rows){
+  const byYear={};
+  for(const r of rows){ if(!r.k) continue; (byYear[yearOf(r)]||(byYear[yearOf(r)]=[])).push(r); }
+  const years=Object.keys(byYear).map(Number).sort((a,b)=>a-b);
+  if(!years.length) return `<div class="muted">No distance data in range.</div>`;
+  const W=660,H=240,padL=46,padR=12,padT=12,padB=22;
+  const doy=ds=>{ const dt=new Date(ds+"T00:00:00Z"); return Math.floor((dt-Date.UTC(dt.getUTCFullYear(),0,1))/864e5); };
+  let maxKm=0;
+  const series=years.map(y=>{
+    const rs=byYear[y].slice().sort((a,b)=>a.d<b.d?-1:1);
+    let cum=0; const pts=[];
+    for(const r of rs){ cum+=r.k; pts.push([doy(r.d),cum]); }
+    if(cum>maxKm) maxKm=cum;
+    return {y,pts,total:cum};
+  });
+  const ticks=niceTicks(Math.max(1,maxKm),4); const tmax=ticks[ticks.length-1];
+  const X=d=>padL+(d/365)*(W-padL-padR);
+  const Y=v=>padT+(1-v/tmax)*(H-padT-padB);
+  const recent=years.slice(-6);
+  const PAL=["#2b5a52","#2f7d76","#36a890","#43c2a8","#5fd6bf","#8af0dd"];
+  const colorFor=y=>{ const ri=recent.indexOf(y); return ri<0 ? "rgba(138,160,181,.16)" : PAL[Math.round(ri/Math.max(1,recent.length-1)*(PAL.length-1))]; };
+  const grid=ticks.map(t=>`<line x1="${padL}" x2="${W-padR}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" class="lc-grid"/><text x="${padL-6}" y="${(Y(t)+3).toFixed(1)}" text-anchor="end" class="lc-ax">${fmtK(t)}</text>`).join("");
+  const mlab=["Jan","Mar","May","Jul","Sep","Nov"].map((m,i)=>`<text x="${X([0,59,120,181,243,304][i]).toFixed(1)}" y="${H-6}" text-anchor="middle" class="lc-ax">${m}</text>`).join("");
+  const paths=series.map(s=>{
+    const col=colorFor(s.y), w=recent.includes(s.y)?2:1;
+    const d=s.pts.map((p,j)=>`${j?'L':'M'}${X(p[0]).toFixed(1)} ${Y(p[1]).toFixed(1)}`).join(" ");
+    return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"><title>${s.y}: ${fmtNum(Math.round(s.total))} km</title></path>`;
+  }).join("");
+  const legend=`<div class="cumlegend">`+recent.slice().reverse().map(y=>`<span><i style="background:${colorFor(y)}"></i>${y} · ${fmtNum(Math.round(byYear[y].reduce((a,r)=>a+r.k,0)))} km</span>`).join("")+(years.length>recent.length?`<span><i style="background:rgba(138,160,181,.16)"></i>earlier years</span>`:"")+`</div>`;
+  return `<div class="yunit" style="position:static;margin-bottom:2px">km</div><svg class="linechart" viewBox="0 0 ${W} ${H}" role="img">${grid}${paths}${mlab}</svg>${legend}`;
+}
+
+//============================================================ RECORDS / BADGES / MILESTONES
+// The source has some mis-parsed times (impossible paces/speeds), so pace/speed
+// records use sanity guards; raw distance/duration records don't need them.
+const _pace = r => (r.t/60)/r.k;          // min/km
+const _kmh  = r => r.k/(r.t/3600);        // km/h
+const _per100 = r => r.t/(r.k*10);        // sec/100 m
+const saneRun  = r => r.s==="run"  && r.t>0 && r.k>0 && _pace(r)>=2.6 && _pace(r)<=10;
+const saneBike = r => r.s==="bike" && r.t>0 && r.k>0 && _kmh(r)>=8  && _kmh(r)<=55;
+const saneSwim = r => r.s==="swim" && r.t>0 && r.k>0 && _per100(r)>=55 && _per100(r)<=200;
+const dayNum = ds => Math.floor(Date.parse(ds+"T00:00:00Z")/864e5);
+
+const RACE_DISTS = [["5K",5],["10K",10],["Half",21.0975],["Marathon",42.195]];
+// Best avg pace over runs that covered at least each distance → an estimated time.
+function distancePRs(rows){
+  const runs=rows.filter(saneRun), out=[];
+  for(const [name,D] of RACE_DISTS){
+    const c=runs.filter(r=>r.k>=D-0.05); if(!c.length) continue;
+    let b=c[0]; for(const r of c) if(_pace(r)<_pace(b)) b=r;
+    out.push({name,D,row:b,sec:_pace(b)*60*D});
+  }
+  return out;
+}
+function streakInfo(rows){
+  const days=[...new Set(rows.map(r=>r.d))].sort();
+  let longest=0,cur=0,prev=null,curStart=null,bestStart=null,bestEnd=null;
+  for(const ds of days){ const n=dayNum(ds);
+    if(prev!==null&&n===prev+1){cur++;} else {cur=1;curStart=ds;}
+    if(cur>longest){longest=cur;bestStart=curStart;bestEnd=ds;}
+    prev=n;
+  }
+  let gap=0; for(let i=1;i<days.length;i++){const g=dayNum(days[i])-dayNum(days[i-1]); if(g>gap)gap=g;}
+  return {longest,start:bestStart,end:bestEnd,gap,activeDays:days.length};
+}
+function dailyMap(rows){ const m={}; for(const r of rows){ const o=m[r.d]||(m[r.d]={k:0,c:0,dur:0}); o.c++; if(r.k)o.k+=r.k; if(r.t)o.dur+=r.t; } return m; }
+// Max total over any rolling N-day window (key "k" distance or "c" sessions).
+function rollingMax(rows,key,win){
+  const m=dailyMap(rows), days=Object.keys(m).sort(); if(!days.length) return null;
+  const dn=days.map(dayNum); let best=0,bestEnd=null,lo=0,sum=0;
+  for(let hi=0;hi<days.length;hi++){
+    sum+=m[days[hi]][key];
+    while(dn[hi]-dn[lo]>win-1){ sum-=m[days[lo]][key]; lo++; }
+    if(sum>best){best=sum;bestEnd=days[hi];}
+  }
+  return {val:best,end:bestEnd};
+}
+function monthMax(rows,key){ const m={}; for(const r of rows){ const k=r.d.slice(0,7); m[k]=(m[k]||0)+(key==="k"?(r.k||0):1);} let bk=null; for(const k in m) if(bk===null||m[k]>m[bk])bk=k; return bk?{val:m[bk],ym:bk}:null; }
+function distMilestones(rows,thresholds){
+  const rs=rows.filter(r=>r.k>0).slice().sort((a,b)=>a.d<b.d?-1:1);
+  let cum=0,ti=0; const out=[];
+  for(const r of rs){ cum+=r.k; while(ti<thresholds.length&&cum>=thresholds[ti]){ out.push({km:thresholds[ti],date:r.d}); ti++; } }
+  return out;
+}
+// Riegel race-time projection from the fastest recent run (last ~2 years of data).
+function predictRaces(rows){
+  const sane=rows.filter(r=>saneRun(r)&&r.k>=3); if(!sane.length) return null;
+  const latest=sane.reduce((a,b)=>a.d>b.d?a:b).d;
+  const cut=new Date(latest+"T00:00:00Z"); cut.setUTCFullYear(cut.getUTCFullYear()-2);
+  const cutS=cut.toISOString().slice(0,10);
+  let pool=sane.filter(r=>r.d>=cutS&&r.k>=5);
+  if(!pool.length) pool=sane.filter(r=>r.k>=5);
+  if(!pool.length) pool=sane;
+  let basis=pool[0]; for(const r of pool) if(_pace(r)<_pace(basis)) basis=r;
+  return {basis, preds:RACE_DISTS.map(([n,D])=>({n,D,sec:basis.t*Math.pow(D/basis.k,1.06)}))};
+}
+function buildBadges(rows,prs){
+  const total=rows.reduce((a,r)=>a+(r.k||0),0);
+  const hours=rows.reduce((a,r)=>a+(r.t||0),0)/3600;
+  const bikeKm=rows.filter(r=>r.s==="bike").reduce((a,r)=>a+(r.k||0),0);
+  const swimKm=rows.filter(r=>r.s==="swim").reduce((a,r)=>a+(r.k||0),0);
+  const sportsN=new Set(rows.map(r=>r.s)).size, yearsN=new Set(rows.map(yearOf)).size;
+  const century=rows.some(r=>r.s==="bike"&&r.k>=100), dcentury=rows.some(r=>r.s==="bike"&&r.k>=200);
+  const marathon=rows.some(r=>r.s==="run"&&r.k>=42.195);
+  const st=streakInfo(rows);
+  const prBy={}; for(const p of prs) prBy[p.name]=p.sec; const get=n=>prBy[n]??Infinity;
+  const byDay={}; for(const r of rows){ (byDay[r.d]||(byDay[r.d]=new Set())).add(r.s); }
+  const triDay=Object.values(byDay).some(s=>s.has("run")&&s.has("bike")&&s.has("swim"));
+  const B=(ic,name,desc,earned,detail)=>({ic,name,desc,earned,detail});
+  return [
+    B("🌍","Globetrotter","Cover 40,075 km — once around the Earth",total>=40075,fmtNum(Math.round(total))+" km logged"),
+    B("💯","Century Club","Ride 100 km in a single day",century,century?"Done":""),
+    B("🚵","Double Century","Ride 200 km in a single day",dcentury,dcentury?"Done":""),
+    B("🏅","Marathoner","Run a marathon distance (42.2 km)",marathon,marathon?"Done":""),
+    B("⚡","Sub-20 5K","Best 5K under 20:00",get("5K")<1200,get("5K")<Infinity?"Best "+fmtDur(Math.round(get("5K"))):""),
+    B("🔥","Sub-40 10K","Best 10K under 40:00",get("10K")<2400,get("10K")<Infinity?"Best "+fmtDur(Math.round(get("10K"))):""),
+    B("🏆","Sub-1:30 Half","Best half-marathon under 1:30",get("Half")<5400,get("Half")<Infinity?"Best "+fmtDur(Math.round(get("Half"))):""),
+    B("👑","Sub-3 Marathon","Best marathon under 3:00",get("Marathon")<10800,get("Marathon")<Infinity?"Best "+fmtDur(Math.round(get("Marathon"))):""),
+    B("📅","Century Streak","Train 100 days in a row",st.longest>=100,st.longest+"-day best streak"),
+    B("🗓️","Iron Month","Train 30 days in a row",st.longest>=30,st.longest+"-day best streak"),
+    B("🚴","Le Tour","Bike 3,360 km — a Tour de France",bikeKm>=3360,fmtNum(Math.round(bikeKm))+" km biked"),
+    B("🏊","Channel Crossing","Swim 33.8 km lifetime",swimKm>=33.8,fmtNum(Math.round(swimKm))+" km swum"),
+    B("💪","Triathlete","Run, bike and swim on the same day",triDay,triDay?"Done":""),
+    B("🤸","All-Rounder","Log 10+ different sports",sportsN>=10,sportsN+" sports logged"),
+    B("⏳","10,000 Hours","Train 10,000 hours total",hours>=10000,fmtNum(Math.round(hours))+" h trained"),
+    B("🎂","Decade Strong","Train across 10+ years",yearsN>=10,yearsN+" years active"),
+  ];
+}
+function buildMilestones(rows){
+  const sorted=rows.slice().sort((a,b)=>a.d<b.d?-1:1); if(!sorted.length) return [];
+  const ev=[{date:sorted[0].d,ic:"🎉",text:`First logged workout — ${sportName(sorted[0].s)}`}];
+  const firstOf=(s,text,ic)=>{ const r=sorted.find(x=>x.s===s); if(r) ev.push({date:r.d,ic,text}); };
+  firstOf("run","First run","🏃"); firstOf("bike","First ride","🚴"); firstOf("swim","First swim","🏊");
+  const f10=sorted.find(r=>r.s==="run"&&r.k>=10); if(f10) ev.push({date:f10.d,ic:"🏃",text:"First 10 km run"});
+  const fM=sorted.find(r=>r.s==="run"&&r.k>=42.195); if(fM) ev.push({date:fM.d,ic:"🏅",text:"First marathon-distance run"});
+  const fC=sorted.find(r=>r.s==="bike"&&r.k>=100); if(fC) ev.push({date:fC.d,ic:"💯",text:"First 100 km ride"});
+  for(const m of distMilestones(rows,[1000,5000,10000,25000,50000,75000,100000,150000,200000]))
+    ev.push({date:m.date,ic:"📍",text:`${fmtNum(m.km)} km lifetime total reached`});
+  const st=streakInfo(rows); if(st.longest>=7&&st.start) ev.push({date:st.start,ic:"🔥",text:`Longest streak begins — ${st.longest} days straight (through ${st.end})`});
+  ev.push({date:sorted[sorted.length-1].d,ic:"⏱️",text:`Most recent workout — ${sportName(sorted[sorted.length-1].s)}`});
+  return ev.sort((a,b)=>a.date<b.date?-1:1);
+}
+function renderRecords(app){
+  const rows=filtered(DATA).filter(r=>r.s!=="note");
+  const recs=[], prs=distancePRs(rows);
+  for(const p of prs) recs.push({v:fmtDur(Math.round(p.sec)),l:p.name,sub:fmtPace(_pace(p.row))+"/km · "+fmtNum(p.row.k,1)+" km",d:p.row.d});
+  const longestBy=pred=>{ const a=rows.filter(pred); return a.length?a.reduce((x,y)=>(y.k||0)>(x.k||0)?y:x):null; };
+  const lr=longestBy(r=>r.s==="run"&&r.k>0), lb=longestBy(r=>r.s==="bike"&&r.k>0), lsw=longestBy(r=>r.s==="swim"&&r.k>0);
+  if(lr) recs.push({v:fmtNum(lr.k,1)+" km",l:"Longest run",sub:lr.t?fmtDurShort(lr.t):"",d:lr.d});
+  if(lb) recs.push({v:fmtNum(lb.k,1)+" km",l:"Longest ride",sub:lb.t?fmtDurShort(lb.t):"",d:lb.d});
+  if(lsw) recs.push({v:fmtNum(lsw.k,2)+" km",l:"Longest swim",sub:lsw.t?fmtDurShort(lsw.t):"",d:lsw.d});
+  const ride40=rows.filter(r=>saneBike(r)&&r.k>=40);
+  if(ride40.length){ const b=ride40.reduce((x,y)=>_kmh(y)>_kmh(x)?y:x); recs.push({v:_kmh(b).toFixed(1)+" km/h",l:"Fastest 40K+ ride",sub:fmtNum(b.k,1)+" km",d:b.d}); }
+  const sw=rows.filter(saneSwim);
+  if(sw.length){ const b=sw.reduce((x,y)=>_per100(y)<_per100(x)?y:x); recs.push({v:fmtMMSS(_per100(b))+"/100m",l:"Best swim pace",sub:fmtNum(b.k,2)+" km",d:b.d}); }
+  const timed=rows.filter(r=>r.t>0);
+  if(timed.length){ const b=timed.reduce((x,y)=>y.t>x.t?y:x); recs.push({v:fmtDurShort(b.t),l:"Longest session",sub:sportName(b.s),d:b.d}); }
+  const dm=dailyMap(rows); let bd=null; for(const d in dm) if(!bd||dm[d].k>dm[bd].k)bd=d;
+  if(bd&&dm[bd].k>0) recs.push({v:fmtNum(dm[bd].k,1)+" km",l:"Biggest day",d:bd});
+  const wk=rollingMax(rows,"k",7); if(wk&&wk.val>0) recs.push({v:fmtNum(Math.round(wk.val))+" km",l:"Biggest week",d:"week to "+wk.end});
+  const mo=monthMax(rows,"k"); if(mo&&mo.val>0) recs.push({v:fmtNum(Math.round(mo.val))+" km",l:"Biggest month",d:MONTHS[+mo.ym.slice(5,7)-1]+" "+mo.ym.slice(0,4)});
+  const wkc=rollingMax(rows,"c",7); if(wkc&&wkc.val>0) recs.push({v:wkc.val+" sessions",l:"Most in a week",d:"week to "+wkc.end});
+
+  const recCards=recs.length?recs.map(r=>`<div class="card stat rec"><div class="v">${r.v}</div><div class="l">${r.l}</div>${r.sub?`<div class="sub">${r.sub}</div>`:""}<div class="d">${r.d}</div></div>`).join(""):`<div class="muted">No records in this range.</div>`;
+  const pred=predictRaces(rows);
+  const predHtml=pred?`<div class="card" style="margin-top:18px"><h3>Predicted race times</h3>
+     <div class="grid recgrid">${pred.preds.map(p=>`<div class="card stat rec"><div class="v">${fmtDur(Math.round(p.sec))}</div><div class="l">${p.n}</div></div>`).join("")}</div>
+     <div class="note-sm">Riegel projection from your fastest recent run: ${fmtNum(pred.basis.k,1)} km @ ${fmtPace(_pace(pred.basis))}/km (${pred.basis.d}). An estimate, not a guarantee.</div></div>`:"";
+  const badges=buildBadges(rows,prs);
+  const earned=badges.filter(b=>b.earned).length;
+  const badgeHtml=`<h3 style="margin-top:22px">Achievements <span class="muted" style="font-weight:600;text-transform:none;letter-spacing:0">· ${earned}/${badges.length} unlocked</span></h3>
+     <div class="grid badges">${badges.map(b=>`<div class="card badge ${b.earned?"earned":"locked"}"><div class="bic">${b.ic}</div><div class="bn">${b.name}</div><div class="bd">${b.earned?(b.detail||"Unlocked"):b.desc}</div></div>`).join("")}</div>`;
+  const mileHtml=`<h3 style="margin-top:22px">Milestones</h3><div class="card"><div class="tl">${buildMilestones(rows).map(e=>`<div class="ev"><div class="dt">${e.date}</div><div class="tx"><span class="ic">${e.ic}</span>${e.text}</div></div>`).join("")}</div></div>`;
+
+  app.innerHTML=`<h2 class="section">Records &amp; Achievements</h2>${filterBar()}
+    <h3>Personal records</h3><div class="grid recgrid">${recCards}</div>
+    ${predHtml}${badgeHtml}${mileHtml}`;
+  wireFilter();
+}
+
+//============================================================ YEAR IN REVIEW
+let WRAP_YEAR=null;
+function renderWrapped(app){
+  const ys=allYears(); if(!ys.length){ app.innerHTML=`<div class="card" style="margin-top:20px">No data.</div>`; return; }
+  if(WRAP_YEAR==null||!ys.includes(WRAP_YEAR)) WRAP_YEAR=ys[ys.length-1];
+  const y=WRAP_YEAR;
+  const cur=DATA.filter(r=>r.s!=="note"&&yearOf(r)===y);
+  const prev=DATA.filter(r=>r.s!=="note"&&yearOf(r)===y-1);
+  const a=agg(cur), pa=agg(prev), hours=a.dur/3600, phours=pa.dur/3600;
+  const sp={}; for(const r of cur){ const o=sp[r.s]||(sp[r.s]={c:0,dur:0,k:0}); o.c++; o.dur+=r.t||0; o.k+=r.k||0; }
+  const topSport=Object.keys(sp).sort((m,n)=>sp[n].dur-sp[m].dur)[0];
+  const dm=dailyMap(cur); let bd=null; for(const d in dm) if(!bd||dm[d].k>dm[bd].k)bd=d;
+  const timed=cur.filter(r=>r.t>0); const ls=timed.length?timed.reduce((x,z)=>z.t>x.t?z:x):null;
+  const mc={}; cur.forEach(r=>{const m=monthOf(r)-1; mc[m]=(mc[m]||0)+1;});
+  const bm=Object.keys(mc).sort((m,n)=>mc[n]-mc[m])[0];
+  const st=streakInfo(cur);
+  const prsThisYear=distancePRs(DATA.filter(r=>r.s!=="note")).filter(p=>yearOf(p.row)===y);
+  const delta=(c,p)=>{ if(!p) return ""; const d=(c-p)/p*100, up=d>=0;
+    return `<span class="delta ${up?"up":"down"}">${up?"▲":"▼"} ${Math.abs(d).toFixed(0)}% vs ${y-1}</span>`; };
+  app.innerHTML=`<h2 class="section">Year in Review</h2>
+   <div class="fbar"><label class="fld">Year<select id="wrap-year">${ys.slice().reverse().map(yy=>`<option ${yy===y?"selected":""}>${yy}</option>`).join("")}</select></label></div>
+   <div class="card wrap-hero"><div class="yr">${y}</div><div class="sub">${fmtNum(a.count)} workouts · ${fmtNum(Math.round(a.dist))} km · ${fmtNum(Math.round(hours))} hours${topSport?` · most: ${sportName(topSport)}`:""}</div></div>
+   <div class="grid stat-row" style="margin:16px 0">
+     <div class="card stat"><div class="num">${fmtNum(a.count)}</div><div class="lbl">Workouts</div><div class="note-sm">${delta(a.count,pa.count)}</div></div>
+     <div class="card stat"><div class="num">${fmtNum(Math.round(a.dist))}</div><div class="lbl">Total km</div><div class="note-sm">${delta(a.dist,pa.dist)}</div></div>
+     <div class="card stat"><div class="num">${fmtNum(Math.round(hours))}</div><div class="lbl">Hours</div><div class="note-sm">${delta(hours,phours)}</div></div>
+     <div class="card stat"><div class="num">${st.longest}</div><div class="lbl">Best streak (days)</div></div>
+   </div>
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+     ${topSport?`<div class="card"><h3>Top sport</h3><div class="factnum">${sportMark(topSport)} ${sportName(topSport)}</div><div class="factsub">${fmtNum(sp[topSport].c)} sessions · ${fmtDurShort(sp[topSport].dur)}</div></div>`:""}
+     ${bd&&dm[bd].k>0?`<div class="card"><h3>Biggest day</h3><div class="factnum">${fmtNum(dm[bd].k,1)} km</div><div class="factsub">${bd}</div></div>`:""}
+     ${ls?`<div class="card"><h3>Longest session</h3><div class="factnum">${fmtDurShort(ls.t)}</div><div class="factsub">${sportName(ls.s)} · ${ls.d}</div></div>`:""}
+     ${bm!=null?`<div class="card"><h3>Busiest month</h3><div class="factnum">${MONTHS[bm]}</div><div class="factsub">${mc[bm]} sessions</div></div>`:""}
+     <div class="card"><h3>Personal records set</h3><div class="factnum">${prsThisYear.length}</div><div class="factsub">${prsThisYear.length?prsThisYear.map(p=>p.name).join(", "):"No new distance PRs this year"}</div></div>
+   </div>
+   <div class="card" style="margin-top:16px"><h3>Sessions by month</h3>${columnChart(MONTHS.map((m,i)=>({label:m,value:mc[i]||0})),{shortLabel:l=>l[0]})}</div>`;
+  const sel=document.getElementById("wrap-year"); if(sel) sel.onchange=e=>{ WRAP_YEAR=+e.target.value; renderWrapped(app); };
+}
+
 //============================================================ boot
 fetch("data.json").then(r=>r.json()).then(j=>{
   META=j.meta; DATA=j.rows;
@@ -1694,10 +2014,12 @@ fetch("data.json").then(r=>r.json()).then(j=>{
     dash:    '<path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.6V21h13V9.6"/>',
     insights:'<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.8 10.6c.6.5.8 1 .8 2.4h6c0-1.4.2-1.9.8-2.4A6 6 0 0 0 12 3Z"/>',
     reports: '<path d="M4 21V10"/><path d="M10 21V4"/><path d="M16 21v-7"/><path d="M21 21H3"/>',
+    records: '<path d="M7 4h10v3a5 5 0 0 1-10 0Z"/><path d="M7 5H4v1a3 3 0 0 0 3 3"/><path d="M17 5h3v1a3 3 0 0 1-3 3"/><path d="M10 17h4v3h-4z"/><path d="M9 20h6"/><path d="M12 12v5"/>',
+    wrapped: '<path d="M12 3l2.3 5.4L20 9l-4 3.6L17.2 19 12 16l-5.2 3L8 12.6 4 9l5.7-.6z"/>',
     browse:  '<path d="M4 6h16M4 12h16M4 18h16"/>',
     about:   '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1.1" fill="currentColor" stroke="none"/>',
   };
-  const SHORT = {dash:"Home", insights:"Insights", reports:"Reports", browse:"Data", about:"About"};
+  const SHORT = {dash:"Home", insights:"Insights", records:"Records", wrapped:"Recap", reports:"Reports", browse:"Data", about:"About"};
   const nav = document.getElementById("bottomnav");
   if(!nav || typeof TABS==="undefined") return;
   nav.innerHTML = TABS.map(([id])=>
