@@ -69,7 +69,9 @@
   /* table */
   table{border-collapse:collapse;width:100%;font-size:13.5px}
   th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
-  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;user-select:none;position:sticky;top:54px;background:var(--panel)}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;user-select:none;background:var(--panel)}
+  /* only the long Raw Data table gets a sticky header; small tables must not, or it floats over rows */
+  #x-table th{position:sticky;top:54px;z-index:2;cursor:pointer}
   th.sortable:hover{color:var(--text)}
   tbody tr:hover{background:var(--panel2)}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
@@ -1426,6 +1428,27 @@ fetch("data.json").then(r=>r.json()).then(j=>{
     const n=parseInt(e.key,10);
     if(n>=1 && n<=TABS.length) go(TABS[n-1][0]);
   });
+})();
+
+// Pin the fixed bottom nav to the VISUAL viewport. On iOS Safari the visual
+// viewport (URL bar collapsed) is taller than the layout viewport that
+// position:fixed;bottom:0 anchors to, so the bar drifts up and the page shows
+// through below it. visualViewport gives the real offset; translate to correct
+// it. No-op where unsupported (delta ~0 on desktop / standalone).
+(function(){
+  const vv = window.visualViewport;
+  const nav = document.getElementById("bottomnav");
+  if(!vv || !nav) return;
+  let raf = 0;
+  const pin = ()=>{ raf=0;
+    const delta = document.documentElement.clientHeight - (vv.height + vv.offsetTop);
+    nav.style.transform = `translateY(${-delta}px)`;
+  };
+  const sched = ()=>{ if(!raf) raf=requestAnimationFrame(pin); };
+  vv.addEventListener("resize", sched);
+  vv.addEventListener("scroll", sched);
+  window.addEventListener("orientationchange", sched);
+  pin();
 })();
 </script>
 </body>
