@@ -1404,6 +1404,39 @@ function renderAbout(app){
      distance- or pace-based figures only draw on entries that actually recorded
      those numbers.</p>
    </div>
+
+   <!-- Considerations: a living QA log of known data-quality issues. Add a <li>
+        with a status pill (d = mitigated, u = still open) as we find/fix things;
+        flip a pill to "confirmed" + reword once an item is fully resolved. -->
+   <div class="card" style="margin-bottom:14px;max-width:760px;line-height:1.7">
+     <h3>Considerations — known data issues</h3>
+     <p>QA on this dataset is ongoing. Below is a running list of quirks we've
+     found in the parsed data and how each is currently handled. It will be
+     updated as the source is audited and corrected.</p>
+     <ul>
+       <li><span class="pill d">mitigated</span> <b>Impossible cycling / running speeds.</b>
+         Some times written as <code>H:MM</code> were parsed as <code>M:SS</code>
+         (durations come out ~60× too short), and a few cells merged two numbers
+         into a single distance — together producing absurd figures (e.g. 140 km/h
+         "rides"). The yearly <b>Avg bike speed</b> and <b>Avg run pace</b> charts
+         now ignore physically impossible entries; a year left with fewer than 8
+         sane rides reads <i>“Not enough data.”</i></li>
+       <li><span class="pill u">open</span> <b>Raw per-ride pace / speed.</b> The
+         Pace / Speed column in the <b>Raw Data</b> tab still shows the unfiltered
+         value for those mis-parsed entries, so individual rows can still look off.</li>
+       <li><span class="pill u">open</span> <b>Distance vs. time mix-ups.</b>
+         Shorthand containing two numbers (e.g. <code>9.2 47</code>) sometimes
+         stores the time where the distance should be. Being audited.</li>
+       <li><span class="pill u">open</span> <b>Fix at the source.</b> The items
+         above are guards inside the app; the underlying data file should be
+         regenerated with corrected time parsing so the numbers are right at the
+         source, not just hidden from the charts.</li>
+     </ul>
+     <p class="note-sm">Spotted something off? It's almost certainly in the
+     original shorthand — open the <b>Raw Data</b> tab to see exactly what Mike
+     wrote for that entry.</p>
+   </div>
+
    <div class="grid stat-row" style="max-width:760px">
      <div class="card stat"><div class="num">${fmtNum(META.count)}</div><div class="lbl">total entries</div></div>
      <div class="card stat"><div class="num">${fmtNum(conf.x||0)}</div><div class="lbl">confirmed</div></div>
