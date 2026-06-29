@@ -486,8 +486,11 @@ function columnChart(data, opts={}){
 //============================================================ tabs / routing
 const TABS = [
   ["dash","Dashboard"], ["insights","Insights"], ["reports","Reports"],
-  ["builder","Report Builder"], ["browse","Raw Data"], ["about","About"],
+  ["browse","Raw Data"], ["about","About"],
 ];
+// The custom report builder used to be its own tab; it now lives inside Reports.
+// Keep old #builder deep links working by routing them to Reports.
+const aliasTab = t => t==="builder" ? "reports" : t;
 let current="dash";
 function renderTabs(){
   document.getElementById("tabs").innerHTML = TABS.map(([id,name])=>
@@ -495,9 +498,10 @@ function renderTabs(){
   document.querySelectorAll("#tabs button").forEach(b=>
     b.onclick=()=>go(b.dataset.tab));
 }
-const tabOf = h => (h||"").replace("#","").split("?")[0] || "dash";  // hash may carry ?filters
+const tabOf = h => aliasTab((h||"").replace("#","").split("?")[0] || "dash");  // hash may carry ?filters
 // navigate to a tab, syncing the URL hash (deep-linkable, survives refresh)
 function go(tab){
+  tab=aliasTab(tab);
   if(!TABS.some(t=>t[0]===tab)) tab="dash";
   current=tab;
   if(tabOf(location.hash)!==tab) location.hash=tab;  // fires hashchange (skipped: tab===current)
@@ -521,7 +525,6 @@ function route(){
   if(current==="dash") renderDash(app);
   else if(current==="insights") renderInsights(app);
   else if(current==="reports") renderReports(app);
-  else if(current==="builder") renderBuilder(app);
   else if(current==="browse") renderBrowse(app);
   else renderAbout(app);
 }
@@ -630,12 +633,13 @@ function renderReports(app){
   app.innerHTML=`
    <h2 class="section">Reports</h2>
    <div class="card controls" style="margin-bottom:18px">
-     <label class="fld" style="max-width:220px">Report
+     <label class="fld" style="max-width:240px">Report
        <select id="rep-type">
          <option value="year">Year summary</option>
          <option value="sport">Sport summary</option>
          <option value="matrix">Year × Sport matrix</option>
          <option value="bests">Personal bests</option>
+         <option value="custom">Custom report…</option>
        </select></label>
      <label class="fld" id="wrap-year" style="max-width:160px">Year
        <select id="rep-year">${years.map(y=>`<option>${y}</option>`).join("")}</select></label>
@@ -652,6 +656,7 @@ function renderReports(app){
   const type=document.getElementById("rep-type");
   const wYear=document.getElementById("wrap-year"), wSport=document.getElementById("wrap-sport"), wMetric=document.getElementById("wrap-metric");
   function syncControls(){
+    // The custom builder brings its own filter controls, so hide the preset ones.
     wYear.classList.toggle("hidden", type.value!=="year");
     wSport.classList.toggle("hidden", type.value!=="sport");
     wMetric.classList.toggle("hidden", type.value!=="matrix");
@@ -664,6 +669,7 @@ function renderReports(app){
   function setYear(y){ yearSel.value=y; draw(); }
   function draw(){
     const out=document.getElementById("rep-out");
+    if(type.value==="custom"){ renderBuilderInto(out); return; }
     if(type.value==="year"){
       const y=+yearSel.value;
       out.innerHTML=reportYear(y);
@@ -785,12 +791,13 @@ function reportBests(){
 }
 
 //============================================================ REPORT BUILDER
+// Lives inside the Reports tab as the "Custom report…" option. Renders its
+// filter/group controls + output into whatever container Reports hands it.
 const BUILDER={f:{}};
-function renderBuilder(app){
+function renderBuilderInto(target){
   const years=[...new Set(DATA.map(yearOf))].sort((a,b)=>b-a);
   const sports=globalSportOrder().filter(s=>SPORTS[s]);
-  app.innerHTML=`
-   <h2 class="section">Custom Report Builder</h2>
+  target.innerHTML=`
    <div class="card" style="margin-bottom:16px">
      <h3>1 · Filter</h3>
      <div class="controls" style="margin-bottom:14px">
@@ -1477,11 +1484,10 @@ fetch("data.json").then(r=>r.json()).then(j=>{
     dash:    '<path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.6V21h13V9.6"/>',
     insights:'<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.8 10.6c.6.5.8 1 .8 2.4h6c0-1.4.2-1.9.8-2.4A6 6 0 0 0 12 3Z"/>',
     reports: '<path d="M4 21V10"/><path d="M10 21V4"/><path d="M16 21v-7"/><path d="M21 21H3"/>',
-    builder: '<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="12" r="2.2"/><circle cx="8" cy="17" r="2.2"/>',
     browse:  '<path d="M4 6h16M4 12h16M4 18h16"/>',
     about:   '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1.1" fill="currentColor" stroke="none"/>',
   };
-  const SHORT = {dash:"Home", insights:"Insights", reports:"Reports", builder:"Builder", browse:"Data", about:"About"};
+  const SHORT = {dash:"Home", insights:"Insights", reports:"Reports", browse:"Data", about:"About"};
   const nav = document.getElementById("bottomnav");
   if(!nav || typeof TABS==="undefined") return;
   nav.innerHTML = TABS.map(([id])=>
