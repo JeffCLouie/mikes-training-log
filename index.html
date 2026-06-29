@@ -793,6 +793,7 @@ function reportMatrix(metric){
   }).join("");
   const unit=metric==="count"?"sessions":metric==="dist"?"km":"hours";
   return `<div class="card"><h3>Year × Sport — ${unit}</h3>
+    <div class="note-sm" style="margin-bottom:8px">Rows are years (newest first), columns are sports. Each cell is the ${unit} for that year &amp; sport — blank means none. The <b>Total</b> column sums the row across all sports.</div>
     <div class="tablewrap"><table class="matrix"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`;
 }
 
@@ -819,7 +820,7 @@ function bestsFor(s){
 
 function reportBests(){
   const sports=["run","bike","swim","xcski","hockey"].filter(s=>DATA.some(r=>r.s===s));
-  return sports.map(s=>{const h=bestsFor(s); return h?`<div class="card" style="margin-bottom:14px">
+  return `<div class="note-sm" style="margin:0 0 12px">Your single best efforts in each sport, with the date each was set in parentheses. Pace and speed records require a minimum distance so short, fast bursts don't dominate.</div>`+sports.map(s=>{const h=bestsFor(s); return h?`<div class="card" style="margin-bottom:14px">
     <h3>${sportTag(s)}</h3>
     <div class="kvgrid">${h}</div></div>`:"";}).join("");
 }
@@ -946,6 +947,7 @@ function runBuilder(csv){
    ${showChart?`<div class="card" style="margin-bottom:14px"><h3>Sessions by ${group.replace("_"," + ")}</h3>
       ${columnChart(chartData,{shortLabel:l=>l.length>6?l.slice(0,6):l})}</div>`:""}
    <div class="card"><h3>Results</h3>
+   <div class="note-sm" style="margin-bottom:8px">One row per ${group==="none"?"selection (all matches combined)":group.replace("_"," + ")}. <b>Avg km</b> and <b>Avg time</b> are per-session averages within the row; <b>Total time</b> is summed moving time.</div>
    <div class="tablewrap"><table><thead><tr>
      <th>${group==="none"?"Total":group.replace("_"," + ")}</th>
      <th class="num">Sessions</th><th class="num">Distance</th><th class="num">Avg km</th>
@@ -1296,8 +1298,8 @@ function renderInsights(app){
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
-     <div class="card"><h3>By day of week</h3>${columnChart(dow)}</div>
-     <div class="card"><h3>By month (all years)</h3>${columnChart(mon,{shortLabel:l=>l[0]})}</div>
+     <div class="card"><h3>By day of week</h3>${columnChart(dow,{unit:"sessions"})}<div class="note-sm">Total sessions on each weekday, all years combined — which days Mike trains most.</div></div>
+     <div class="card"><h3>By month (all years)</h3>${columnChart(mon,{shortLabel:l=>l[0],unit:"sessions"})}<div class="note-sm">Sessions in each calendar month, every year stacked together — reveals seasonal patterns.</div></div>
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
@@ -1319,6 +1321,7 @@ function renderInsights(app){
    </div>
 
    <div class="card" style="margin-top:18px"><h3>By decade</h3>
+     <div class="note-sm" style="margin-bottom:8px">Totals grouped into calendar decades (90s, 00s…). <b>Top sport</b> is the most-logged sport of that decade by session count. The 1990s and 2020s are partial decades.</div>
      <div class="tablewrap"><table><thead><tr><th>Decade</th><th class="num">Workouts</th><th class="num">Distance</th><th class="num">Hours</th><th>Top sport</th></tr></thead>
      <tbody>${decRows.map(o=>`<tr><td><b>${o.dec}s</b></td><td class="num">${fmtNum(o.count)}</td><td class="num">${fmtNum(Math.round(o.dist))} km</td><td class="num">${Math.round(o.dur/3600)}</td><td>${sportTag(o.top)}</td></tr>`).join("")}</tbody></table></div>
    </div>
