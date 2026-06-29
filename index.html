@@ -70,12 +70,16 @@
   table{border-collapse:collapse;width:100%;font-size:13.5px}
   th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
   th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;user-select:none;background:var(--panel)}
-  /* only the long Raw Data table gets a sticky header; small tables must not, or it floats over rows */
-  #x-table th{position:sticky;top:54px;z-index:2;cursor:pointer}
+  /* Sticky header for every table. .tablewrap is the scroll context (it has a
+     max-height), so the header pins to the top of the table's own scroll area —
+     top:0, not the viewport. The old top:54px assumed the page was the scroller,
+     so inside the overflow:auto wrapper it floated 54px down over the rows. */
+  .tablewrap th{position:sticky;top:0;z-index:2;box-shadow:inset 0 -1px 0 var(--line)}
+  #x-table th{cursor:pointer}
   th.sortable:hover{color:var(--text)}
   tbody tr:hover{background:var(--panel2)}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  .tablewrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
   .sportlabel{display:inline-flex;align-items:center;gap:7px}
   .ic{font-size:14px;line-height:1;width:18px;text-align:center;flex:none;filter:saturate(.9)}
   .sportcard .head .ic{font-size:20px;width:24px}
