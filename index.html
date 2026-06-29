@@ -113,6 +113,13 @@
   .cardhead h3{margin:0}
   .xlab{position:relative;height:15px;margin-top:7px}
   .xlab span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
+  /* compact SVG line chart (y-axis fitted to the data range, not forced to 0) */
+  .linechart{width:100%;height:auto;display:block;overflow:visible}
+  .lc-line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .lc-area{fill:rgba(54,194,168,.12);stroke:none}
+  .lc-dot{fill:var(--accent)}
+  .lc-grid{stroke:var(--line);stroke-width:1}
+  .lc-ax{fill:var(--muted);font-size:10px}
   /* insights: fun-fact callouts */
   .facts{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
   .fact{display:flex;gap:12px;align-items:center}
@@ -130,7 +137,7 @@
   .hm-cell{width:16px;height:16px;border-radius:3px;background:var(--panel2)}
   .hm-cell[data-d]{cursor:pointer}
   .hm-cell[data-d]:hover{outline:2px solid var(--text);outline-offset:-1px}
-  .hm-legend{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:11.5px;color:var(--muted)}
+  .hm-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 6px;margin-top:9px;font-size:11.5px;color:var(--muted)}
   .hm-legend .hm-cell{width:12px;height:12px}
   /* day-detail overlay (tap a calendar square) */
   .overlay{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.55);backdrop-filter:blur(2px)}
@@ -481,6 +488,32 @@ function columnChart(data, opts={}){
       <div class="xlab">${labs}</div>
     </div>
   </div>`;
+}
+
+// Compact SVG line chart for trends where the variation matters more than the
+// absolute level (e.g. body weight 178–196), so the y-axis fits the data range
+// instead of starting at zero. points: [{label, value}].
+function lineChart(points, opts={}){
+  if(points.length<2) return `<div class="muted">Not enough data.</div>`;
+  const fmt=opts.fmt||(v=>fmtNum(v,1));
+  const W=620,H=190,padL=44,padR=10,padT=12,padB=24;
+  const vals=points.map(p=>p.value);
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  if(lo===hi){lo-=1;hi+=1;}
+  const range=hi-lo, padv=range*0.12; lo-=padv; hi+=padv;
+  const X=i=>padL+(i/(points.length-1))*(W-padL-padR);
+  const Y=v=>padT+(1-(v-lo)/(hi-lo))*(H-padT-padB);
+  const linePath=points.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)} ${Y(p.value).toFixed(1)}`).join(" ");
+  const areaPath=`M${X(0).toFixed(1)} ${(H-padB).toFixed(1)} `+points.map((p,i)=>`L${X(i).toFixed(1)} ${Y(p.value).toFixed(1)}`).join(" ")+` L${X(points.length-1).toFixed(1)} ${(H-padB).toFixed(1)} Z`;
+  const ny=[0,0.5,1].map(f=>lo+(hi-lo)*f);
+  const grid=ny.map(v=>`<line x1="${padL}" x2="${W-padR}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="lc-grid"/>`).join("");
+  const yax=ny.map(v=>`<text x="${padL-6}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end" class="lc-ax">${fmt(v)}</text>`).join("");
+  const dots=points.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.value).toFixed(1)}" r="2.4" class="lc-dot"><title>${p.label}: ${fmt(p.value)}</title></circle>`).join("");
+  const n=points.length, maxL=opts.maxLabels||(window.innerWidth<560?6:12), stp=Math.max(1,Math.ceil(n/maxL));
+  let xl=""; points.forEach((p,i)=>{ if(i%stp && i!==n-1) return; const lab=opts.shortLabel?opts.shortLabel(p.label):p.label;
+    xl+=`<text x="${X(i).toFixed(1)}" y="${H-7}" text-anchor="middle" class="lc-ax">${lab}</text>`; });
+  return `<div class="yunit" style="position:static;margin-bottom:2px">${opts.unit||""}</div>
+    <svg class="linechart" viewBox="0 0 ${W} ${H}" role="img">${grid}<path d="${areaPath}" class="lc-area"/><path d="${linePath}" class="lc-line"/>${dots}${yax}${xl}</svg>`;
 }
 
 //============================================================ tabs / routing
@@ -1105,6 +1138,26 @@ function toggleDetail(tr){
 function escapeHTML(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
 //============================================================ INSIGHTS
+// ── Notes as data ─────────────────────────────────────────────────────────
+// Note-only rows (no sport/distance) are Mike's diary jottings. With medium/
+// high-confidence keyword matching we pull two useful things out of them: body-
+// weight readings (a bare 3-digit number in lb), and the likely reason a day
+// was skipped — injury, illness, travel or recovery. Everything else is "other".
+const NOTE_CATS = [
+  ["injury",   /\b(back|knee|foot|feet|ankle|hip|shin|calf|hamstring|groin|crotch|shoulder|heel|achilles|sore|hurt|injur|sprain|strain|pain|tendon|sciatic|blister)\b/i],
+  ["illness",  /\b(sick|flu|ill|fever|cold|chills|nausea|dizzy|tired|exhaust|cough|throat|stomach|migraine|headache|virus)\b/i],
+  ["travel",   /\b(mexico|camping|vacation|trip|cottage|florida|cuba|tremblant|stockholm|away|holiday|christmas|xmas|wedding|conference)\b/i],
+  ["recovery", /\b(massage|physio|chiro|acupunct|recovery|rest\s*day|day\s*off|stretch|art)\b/i],
+];
+function noteText(r){ return (r.n||r.r||"").trim(); }
+function noteWeight(t){ const m=/^\s*(\d{3}(?:\.\d)?)\s*$/.exec(t||""); if(!m) return null; const v=+m[1]; return (v>=150&&v<=230)?v:null; }  // adult body-weight band (lb); excludes stray 3-digit numbers
+function classifyNote(t){ if(noteWeight(t)!=null) return "weight"; for(const [c,re] of NOTE_CATS) if(re.test(t)) return c; return "other"; }
+// How note categories surface on the activity calendar (coarse buckets + colour).
+const NOTE_CAL  = { injury:"rest", illness:"rest", recovery:"rest", travel:"travel", weight:"weight" };
+const NOTE_COL  = { rest:"rgba(224,90,108,.74)", travel:"rgba(150,130,255,.66)", weight:"rgba(120,140,180,.5)" };
+const NOTE_RANK = { rest:3, travel:2, weight:1 };
+const NOTE_LABEL= { rest:"rest / unwell", travel:"travel", weight:"weight log" };
+
 let _insightsYear = null;
 function renderInsights(app){
   const real = DATA.filter(r=>r.s!=="note");
@@ -1188,6 +1241,21 @@ function renderInsights(app){
       out.push({label:String(y),value:kind==="pace"?(t/60)/k:k/(t/3600)}); } return out; };
   const runTrend=_trend("run","pace"), bikeTrend=_trend("bike","speed");
 
+  // Notes as data: body weight over time + the reasons days were skipped.
+  const weightByYear={}, restCnt={injury:0,illness:0,travel:0,recovery:0};
+  for(const r of DATA){ if(r.s!=="note") continue; const txt=noteText(r); const w=noteWeight(txt);
+    if(w!=null){ const y=yearOf(r); (weightByYear[y]||(weightByYear[y]=[])).push(w); continue; }
+    const c=classifyNote(txt); if(restCnt[c]!=null) restCnt[c]++; }
+  const weightSeries=Object.keys(weightByYear).sort().map(y=>({label:y,
+    value:+(weightByYear[y].reduce((a,b)=>a+b,0)/weightByYear[y].length).toFixed(1)}));
+  const weightAll=[].concat(...Object.values(weightByYear));
+  const restData=[
+    {label:"Injury",   value:restCnt.injury,   color:"#e05a6c"},
+    {label:"Illness",  value:restCnt.illness,  color:"#e8a33a"},
+    {label:"Travel",   value:restCnt.travel,   color:"#8a7dff"},
+    {label:"Recovery", value:restCnt.recovery, color:"#4db6e6"},
+  ];
+
   app.innerHTML=`
    <h2 class="section">Insights</h2>
 
@@ -1217,13 +1285,22 @@ function renderInsights(app){
      <div class="hm-box">
        <div class="hm-scroll" id="hm-scroll">${activityHeatmap()}</div>
      </div>
-     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%</div>
-     <div class="note-sm">Each square is one day. Colour shows the total <b>time trained</b> that day — darker green means more — and orange marks your busiest 1% of days. Tap any square for that day's workouts.</div>
+     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%<span class="hm-cell" style="background:rgba(224,90,108,.74);margin-left:12px"></span> rest/unwell<span class="hm-cell" style="background:rgba(150,130,255,.66);margin-left:8px"></span> travel<span class="hm-cell" style="background:rgba(120,140,180,.5);margin-left:8px"></span> weigh-in</div>
+     <div class="note-sm">Each square is one day. Green shows the total <b>time trained</b> that day — darker means more — and orange marks your busiest 1%. Days with no workout but a diary note are tinted instead: <b>red</b> for injury/illness, <b>purple</b> for travel, <b>slate</b> for a weigh-in. Tap any training day for its workouts.</div>
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
      <div class="card"><h3>By day of week</h3>${columnChart(dow)}</div>
      <div class="card"><h3>By month (all years)</h3>${columnChart(mon,{shortLabel:l=>l[0]})}</div>
+   </div>
+
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
+     <div class="card"><h3>Body weight by year</h3>
+       ${weightSeries.length>1?lineChart(weightSeries,{unit:"lb",fmt:v=>fmtNum(v,1)+" lb",shortLabel:l=>"'"+l.slice(2)}):`<div class="muted">Not enough weigh-ins recorded.</div>`}
+       <div class="note-sm">Pulled from the bare weight readings jotted on the calendar — ${fmtNum(weightAll.length)} weigh-ins${weightAll.length?", range "+fmtNum(Math.min(...weightAll))+"–"+fmtNum(Math.max(...weightAll))+" lb":""}.</div></div>
+     <div class="card"><h3>Why days were skipped</h3>
+       ${restData.some(d=>d.value)?columnChart(restData,{unit:"days"}):`<div class="muted">No rest-reason notes found.</div>`}
+       <div class="note-sm">Note-only days grouped by likely reason, keyword-matched from the diary jottings (medium confidence).</div></div>
    </div>
 
    <div class="card" style="line-height:1.7">
@@ -1312,9 +1389,11 @@ function showDayOverlay(ds){
 // horizontal scroller. Each week carries data-year (its Thursday's year,
 // ISO-week style) so scrolling can sync the year dropdown to the view.
 function activityHeatmap(){
-  const day={};
+  const day={}, noteDay={};
   let minY=Infinity, maxY=-Infinity;
-  for(const r of DATA){ if(r.s==="note") continue;
+  for(const r of DATA){
+    if(r.s==="note"){ const c=NOTE_CAL[classifyNote(noteText(r))]; if(!c) continue;
+      if(!noteDay[r.d] || NOTE_RANK[c]>NOTE_RANK[noteDay[r.d]]) noteDay[r.d]=c; continue; }
     const y=yearOf(r); if(y<minY)minY=y; if(y>maxY)maxY=y;
     const m=day[r.d]||(day[r.d]={c:0,dur:0}); m.c++; if(r.t)m.dur+=r.t; }
   if(!isFinite(minY)) return `<div class="muted">No activity recorded.</div>`;
@@ -1331,14 +1410,14 @@ function activityHeatmap(){
     for(let i=0;i<7;i++){
       const ds=cur.toISOString().slice(0,10), y=cur.getUTCFullYear();
       const inSpan=y>=minY&&y<=maxY, d=day[ds]||{c:0,dur:0};
-      wk.push({ds,y,inSpan,c:d.c,dur:d.dur});
+      wk.push({ds,y,inSpan,c:d.c,dur:d.dur,note:noteDay[ds]||null});
       cur.setUTCDate(cur.getUTCDate()+1);
     }
     weeks.push({cells:wk, year:wk[3].y});   // Thursday's year labels the week
   }
   const color=d=>{
     if(!d.inSpan) return "transparent";
-    if(!d.c) return "var(--panel2)";
+    if(!d.c) return d.note ? NOTE_COL[d.note] : "var(--panel2)";   // no workout: show a diary-note colour if any
     if(d.dur>0 && d.dur>=hot) return "rgba(255,178,90,.95)";   // top ~1% of days by training time
     const h=d.dur/3600, a=!d.dur?.35:h<0.75?.4:h<1.5?.6:h<2.5?.8:1;
     return `rgba(54,194,168,${a})`;
@@ -1346,7 +1425,9 @@ function activityHeatmap(){
   // Month label sits on the week containing the 1st; January also shows the year.
   const months=weeks.map(w=>{ const f=w.cells.find(d=>d.inSpan&&d.ds.slice(8)==="01");
     if(!f) return ""; const mo=+f.ds.slice(5,7); return mo===1?"'"+f.ds.slice(2,4):MONTHS[mo-1]; });
-  const tip=d=>d.inSpan?`${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}${d.dur>0&&d.dur>=hot?" · top 1%":""}`:"";
+  const tip=d=>{ if(!d.inSpan) return "";
+    if(!d.c) return d.note ? `${d.ds} · ${NOTE_LABEL[d.note]}` : "";
+    return `${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}${d.dur>0&&d.dur>=hot?" · top 1%":""}`; };
   return `<div class="hm-months">${months.map(m=>`<div class="hm-mlabel">${m}</div>`).join("")}</div>
     <div class="hm">${weeks.map(w=>`<div class="hm-week" data-year="${w.year}">${w.cells.map(d=>`<div class="hm-cell"${d.inSpan&&d.c?` data-d="${d.ds}"`:""} style="background:${color(d)}" title="${tip(d)}"></div>`).join("")}</div>`).join("")}</div>`;
 }
@@ -1445,6 +1526,12 @@ function renderAbout(app){
          above are guards inside the app; the underlying data file should be
          regenerated with corrected time parsing so the numbers are right at the
          source, not just hidden from the charts.</li>
+       <li><span class="pill d">interpreted</span> <b>Diary notes turned into data.</b>
+         Many "note" days are actually <b>weigh-ins</b> (a bare number in lb) or a
+         reason a day was skipped (injury, illness, travel, recovery). These power
+         the <i>Body weight</i> and <i>Why days were skipped</i> charts and the
+         tinted squares on the activity calendar. Classification is keyword-based
+         (medium confidence), so the odd note may be mis-bucketed.</li>
      </ul>
      <p class="note-sm">Spotted something off? It's almost certainly in the
      original shorthand — open the <b>Raw Data</b> tab to see exactly what Mike
