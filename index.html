@@ -1186,7 +1186,7 @@ function renderInsights(app){
        <div class="hm-yearbadge" id="hm-yearbadge">${_insightsYear}</div>
        <div class="hm-scroll" id="hm-scroll">${activityHeatmap()}</div>
      </div>
-     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More</div>
+     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 5%</div>
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
@@ -1262,6 +1262,9 @@ function activityHeatmap(){
     const y=yearOf(r); if(y<minY)minY=y; if(y>maxY)maxY=y;
     const m=day[r.d]||(day[r.d]={c:0,dur:0}); m.c++; if(r.t)m.dur+=r.t; }
   if(!isFinite(minY)) return `<div class="muted">No activity recorded.</div>`;
+  // 95th-percentile day by training time → the top ~5% of days get a warm highlight
+  const durs=Object.values(day).map(d=>d.dur).filter(v=>v>0).sort((x,y)=>x-y);
+  const hot = durs.length>=2 ? durs[Math.floor(durs.length*0.95)] : Infinity;
   const start=new Date(Date.UTC(minY,0,1));
   start.setUTCDate(start.getUTCDate()-((start.getUTCDay()+6)%7));   // back to Monday
   const end=new Date(Date.UTC(maxY,11,31));
@@ -1280,13 +1283,14 @@ function activityHeatmap(){
   const color=d=>{
     if(!d.inSpan) return "transparent";
     if(!d.c) return "var(--panel2)";
+    if(d.dur>0 && d.dur>=hot) return "rgba(255,178,90,.95)";   // top ~5% of days by training time
     const h=d.dur/3600, a=!d.dur?.35:h<0.75?.4:h<1.5?.6:h<2.5?.8:1;
     return `rgba(54,194,168,${a})`;
   };
   // Month label sits on the week containing the 1st; January also shows the year.
   const months=weeks.map(w=>{ const f=w.cells.find(d=>d.inSpan&&d.ds.slice(8)==="01");
     if(!f) return ""; const mo=+f.ds.slice(5,7); return mo===1?"'"+f.ds.slice(2,4):MONTHS[mo-1]; });
-  const tip=d=>d.inSpan?`${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}`:"";
+  const tip=d=>d.inSpan?`${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}${d.dur>0&&d.dur>=hot?" · top 5%":""}`:"";
   return `<div class="hm-months">${months.map(m=>`<div class="hm-mlabel">${m}</div>`).join("")}</div>
     <div class="hm">${weeks.map(w=>`<div class="hm-week" data-year="${w.year}">${w.cells.map(d=>`<div class="hm-cell" style="background:${color(d)}" title="${tip(d)}"></div>`).join("")}</div>`).join("")}</div>`;
 }
