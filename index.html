@@ -1445,8 +1445,6 @@ function renderInsights(app){
   const volYears=Object.keys(kmByYear).sort();
   let _cum=0; const cumDist=volYears.map(y=>({label:y, value:Math.round(_cum+=kmByYear[y])}));
   const distByYear=volYears.map(y=>({label:y, value:Math.round(kmByYear[y])}));
-  const dpy={}; activeDays.forEach(ds=>{ const y=ds.slice(0,4); dpy[y]=(dpy[y]||0)+1; });
-  const daysPerYear=Object.keys(dpy).sort().map(y=>({label:y, value:dpy[y]}));
   const sportCnt={}; for(const r of real) sportCnt[r.s]=(sportCnt[r.s]||0)+1;
   const topSports=Object.entries(sportCnt).sort((x,y)=>y[1]-x[1]).slice(0,12);
   const sportMax=topSports.length?topSports[0][1]:1;
@@ -1500,10 +1498,7 @@ function renderInsights(app){
      ${cumDist.length>1?lineChart(cumDist,{unit:"km",fmt:v=>fmtNum(v)+" km",shortLabel:l=>"'"+l.slice(2)}):`<div class="muted">Not enough data.</div>`}
      <div class="note-sm">Running total of every kilometre logged — all sports — across ${years.length} years.</div></div>
 
-   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
-     <div class="card"><h3>Distance by year</h3>${columnChart(distByYear,{unit:"km",shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtNum(v)+" km"})}<div class="note-sm">Total distance logged each year (all sports).</div></div>
-     <div class="card"><h3>Days trained per year</h3>${columnChart(daysPerYear,{unit:"days",shortLabel:l=>"'"+l.slice(2)})}<div class="note-sm">Distinct days with at least one workout — out of 365.</div></div>
-   </div>
+   <div class="card" style="margin-bottom:18px"><h3>Distance by year</h3>${columnChart(distByYear,{unit:"km",shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtNum(v)+" km"})}<div class="note-sm">Total distance logged each year, all sports. (Active days per year live in Reports → Consistency.)</div></div>
 
    <div class="card" style="margin-bottom:18px"><h3>Sessions by sport</h3>
      <div class="shoebar">
