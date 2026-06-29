@@ -1163,8 +1163,16 @@ function renderInsights(app){
     o.count++; o.dist+=r.k||0; o.dur+=r.t||0; o.sp[r.s]=(o.sp[r.s]||0)+1; }
   const decRows=Object.keys(dec).sort().map(k=>{const o=dec[k];
     return {dec:k,count:o.count,dist:o.dist,dur:o.dur,top:Object.entries(o.sp).sort((x,y)=>y[1]-x[1])[0][0]};});
-  const _trend=(sp,kind)=>{ const ys=[...new Set(real.filter(r=>r.s===sp).map(yearOf))].sort(); const out=[];
-    for(const y of ys){ const rs=real.filter(r=>r.s===sp&&yearOf(r)===y&&r.t&&r.k); if(rs.length<8) continue;
+  const _trend=(sp,kind)=>{
+    // Plausibility guard: the source shorthand sometimes mis-parses an H:MM time
+    // as M:SS (durations come out ~60x too short) or scrambles distance, which
+    // produces absurd implied speeds (e.g. 140 km/h bikes). Only count rides
+    // whose implied speed is physically sane so a few bad entries can't poison
+    // the yearly average. bike: 5–45 km/h · run: 4–22 km/h (~15:00 to ~2:43/km).
+    const sane=r=>{ if(!r.t||!r.k) return false; const v=r.k/(r.t/3600);
+      return sp==="bike" ? (v>=5&&v<=45) : (v>=4&&v<=22); };
+    const ys=[...new Set(real.filter(r=>r.s===sp).map(yearOf))].sort(); const out=[];
+    for(const y of ys){ const rs=real.filter(r=>r.s===sp&&yearOf(r)===y&&sane(r)); if(rs.length<8) continue;
       const t=rs.reduce((a,r)=>a+r.t,0),k=rs.reduce((a,r)=>a+r.k,0);
       out.push({label:String(y),value:kind==="pace"?(t/60)/k:k/(t/3600)}); } return out; };
   const runTrend=_trend("run","pace"), bikeTrend=_trend("bike","speed");
