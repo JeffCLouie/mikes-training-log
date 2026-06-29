@@ -521,7 +521,8 @@ function renderDash(app){
   const sportTotals = {};
   for(const r of real){ const t=sportTotals[r.s]||(sportTotals[r.s]={count:0,dist:0,dur:0});
     t.count++; if(r.k)t.dist+=r.k; if(r.t)t.dur+=r.t; }
-  const ranked = sportRank(sportTotals).map(s=>[s,sportTotals[s]]);
+  // dashboard "By sport" cards: order by total sessions, most first
+  const ranked = Object.entries(sportTotals).sort((x,y)=>y[1].count-x[1].count);
 
   // per-year aggregates (reused for the metric toggle)
   const byYearAgg = years.map(y=>({y, a:agg(real.filter(r=>yearOf(r)===y))}));
