@@ -1256,8 +1256,10 @@ function escapeHTML(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 // project. Each is its own category (colour). Order = match priority; the first
 // regex that hits wins. Anything unmatched is "other" and stays uncoloured.
 const NOTE_CATS = [
+  ["race",     /\b(triathlon|duathlon|biathlon|tri|relay|race|sprint|marathon|worlds?|championships?|champs|dnf|dns|oac|national capital|nat\.? ?cap|beat beethoven|rockland)\b/i],
   ["injury",   /\b(back|knee|foot|feet|ankle|hip|shin|calf|hamstring|groin|crotch|shoulder|heel|achilles|sore|hurt|injur|sprain|strain|pain|tendon|sciatic|blister)\b/i],
   ["illness",  /\b(sick|flu|ill|fever|cold|chills|nausea|dizzy|tired|exhaust|cough|throat|stomach|migraine|headache|virus)\b/i],
+  ["weather",  /\b(snow ?day|snow ?storm|storm|blizzard|flood(?:ed|ing)?|hurricane|ice ?storm|washout)\b/i],
   ["rest",     /\b(rest|day ?off|off day|easy day|lazy)\b/i],
   ["recovery", /\b(massage|physio|chiro|acupunct|recover|stretch|rehab|sauna|foam ?roll|ice ?bath|art)\b/i],
   ["travel",   /\b(mexico|camping|vacation|trip|cottage|florida|cuba|tremblant|stockholm|away|holiday|christmas|xmas|wedding|conference|flight|airport)\b/i],
@@ -1267,10 +1269,10 @@ function noteText(r){ return (r.n||r.r||"").trim(); }
 function classifyNote(t){ for(const [c,re] of NOTE_CATS) if(re.test(t)) return c; return "other"; }
 // How each note category surfaces on the activity calendar: a distinct colour, a
 // label, and a rank (when a day has several notes, the highest-rank one colours
-// the square — health first).
-const NOTE_COL  = { injury:"rgba(224,90,108,.80)", illness:"rgba(232,150,60,.80)", rest:"rgba(225,205,90,.72)", recovery:"rgba(80,180,220,.74)", travel:"rgba(150,130,255,.72)", home:"rgba(190,140,85,.76)" };
-const NOTE_RANK = { injury:6, illness:5, rest:4, recovery:3, travel:2, home:1 };
-const NOTE_LABEL= { injury:"injury", illness:"illness", rest:"rest day", recovery:"therapy / recovery", travel:"travel", home:"home project" };
+// the square — race/health first).
+const NOTE_COL  = { race:"rgba(236,94,170,.88)", injury:"rgba(224,90,108,.80)", illness:"rgba(232,150,60,.80)", weather:"rgba(200,212,224,.80)", rest:"rgba(225,205,90,.72)", recovery:"rgba(80,180,220,.74)", travel:"rgba(150,130,255,.72)", home:"rgba(190,140,85,.76)" };
+const NOTE_RANK = { race:7, injury:6, illness:5, weather:4.5, rest:4, recovery:3, travel:2, home:1 };
+const NOTE_LABEL= { race:"race / event", injury:"injury", illness:"illness", weather:"weather day", rest:"rest day", recovery:"therapy / recovery", travel:"travel", home:"home project" };
 
 let _insightsYear = null;
 function renderInsights(app){
@@ -1356,12 +1358,13 @@ function renderInsights(app){
   const runTrend=_trend("run","pace"), bikeTrend=_trend("bike","speed");
 
   // Notes as data: the reasons there was no workout.
-  const restCnt={injury:0,illness:0,rest:0,recovery:0,travel:0,home:0};
+  const restCnt={injury:0,illness:0,weather:0,rest:0,recovery:0,travel:0,home:0};
   for(const r of DATA){ if(r.s!=="note") continue;
     const c=classifyNote(noteText(r)); if(restCnt[c]!=null) restCnt[c]++; }
   const restData=[
     {label:"Injury",   value:restCnt.injury,   color:"#e05a6c"},
     {label:"Illness",  value:restCnt.illness,  color:"#e8963c"},
+    {label:"Weather",  value:restCnt.weather,  color:"#c8d4e0"},
     {label:"Rest",     value:restCnt.rest,     color:"#e1cd5a"},
     {label:"Recovery", value:restCnt.recovery, color:"#4db6e6"},
     {label:"Travel",   value:restCnt.travel,   color:"#8a7dff"},
@@ -1408,8 +1411,8 @@ function renderInsights(app){
      <div class="hm-box">
        <div class="hm-scroll" id="hm-scroll">${activityHeatmap()}</div>
      </div>
-     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%<span class="hm-cell" style="background:rgba(224,90,108,.80);margin-left:12px"></span> injury<span class="hm-cell" style="background:rgba(232,150,60,.80);margin-left:8px"></span> illness<span class="hm-cell" style="background:rgba(225,205,90,.72);margin-left:8px"></span> rest<span class="hm-cell" style="background:rgba(80,180,220,.74);margin-left:8px"></span> recovery<span class="hm-cell" style="background:rgba(150,130,255,.72);margin-left:8px"></span> travel<span class="hm-cell" style="background:rgba(190,140,85,.76);margin-left:8px"></span> home</div>
-     <div class="note-sm">Each square is one day. Green shows the total <b>time trained</b> that day — darker means more — and orange marks your busiest 1%. Days with no workout but a diary note are tinted by what Mike jotted — injury, illness, rest, therapy/recovery, travel, or a home project. <b>Tap any square</b> for that day's workouts and notes.</div>
+     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%<span class="hm-cell" style="background:rgba(224,90,108,.80);margin-left:12px"></span> injury<span class="hm-cell" style="background:rgba(232,150,60,.80);margin-left:8px"></span> illness<span class="hm-cell" style="background:rgba(225,205,90,.72);margin-left:8px"></span> rest<span class="hm-cell" style="background:rgba(80,180,220,.74);margin-left:8px"></span> recovery<span class="hm-cell" style="background:rgba(150,130,255,.72);margin-left:8px"></span> travel<span class="hm-cell" style="background:rgba(190,140,85,.76);margin-left:8px"></span> home<span class="hm-cell" style="background:rgba(236,94,170,.88);margin-left:8px"></span> race<span class="hm-cell" style="background:rgba(200,212,224,.80);margin-left:8px"></span> weather</div>
+     <div class="note-sm">Each square is one day. Green shows the total <b>time trained</b> that day — darker means more — and orange marks your busiest 1%. Days with no workout but a diary note are tinted by what Mike jotted — a race/event, injury, illness, weather, rest, therapy/recovery, travel, or a home project. <b>Tap any square</b> for that day's workouts and notes.</div>
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
