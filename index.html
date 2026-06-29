@@ -1422,6 +1422,12 @@ function renderAbout(app){
          "rides"). The yearly <b>Avg bike speed</b> and <b>Avg run pace</b> charts
          now ignore physically impossible entries; a year left with fewer than 8
          sane rides reads <i>“Not enough data.”</i></li>
+       <li><span class="pill d">mitigated</span> <b>Track intervals filed as cycling.</b>
+         Workouts written as track repeats (<code>8×475 @1:27</code>,
+         <code>6×800 on 2:41</code>) had been deduced as bike rides. 42 such
+         entries were moved to <b>run</b> at the source — their per-rep split
+         times (not session lengths) were dropped. Two ambiguous <code>p8-p9</code>
+         rows were left unchanged.</li>
        <li><span class="pill u">open</span> <b>Raw per-ride pace / speed.</b> The
          Pace / Speed column in the <b>Raw Data</b> tab still shows the unfiltered
          value for those mis-parsed entries, so individual rows can still look off.</li>
