@@ -1236,8 +1236,8 @@ function renderInsights(app){
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:18px">
-     <div class="card"><h3>Avg run pace by year</h3>${runTrend.length?columnChart(runTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtPace(v)+"/km",unit:"min/km"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Shorter = faster · years with &ge;8 runs</div></div>
-     <div class="card"><h3>Avg bike speed by year</h3>${bikeTrend.length?columnChart(bikeTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>v.toFixed(1)+" km/h",valFmt:v=>v.toFixed(1),unit:"km/h"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Years with &ge;8 rides</div></div>
+     <div class="card"><h3>🏃 Avg run pace by year</h3>${runTrend.length?columnChart(runTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtPace(v)+"/km",unit:"min/km"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Shorter = faster · years with &ge;8 runs</div></div>
+     <div class="card"><h3>🚴 Avg bike speed by year</h3>${bikeTrend.length?columnChart(bikeTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>v.toFixed(1)+" km/h",valFmt:v=>v.toFixed(1),unit:"km/h"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Years with &ge;8 rides</div></div>
    </div>
 
    <div class="card" style="margin-top:18px"><h3>On this day — ${MONTHS[_today.getMonth()]} ${_today.getDate()}</h3>
