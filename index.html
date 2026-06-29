@@ -1319,6 +1319,24 @@ function renderInsights(app){
        <div class="note-sm">Note-only days across all ${years.length} years (${years[0]}–${years[years.length-1]}), grouped by likely reason and keyword-matched from the diary jottings (medium confidence).</div></div>
    </div>
 
+   <div class="card" style="margin-bottom:18px"><h3>Lifetime distance</h3>
+     ${cumDist.length>1?lineChart(cumDist,{unit:"km",fmt:v=>fmtNum(v)+" km",shortLabel:l=>"'"+l.slice(2)}):`<div class="muted">Not enough data.</div>`}
+     <div class="note-sm">Running total of every kilometre logged — all sports — across ${years.length} years.</div></div>
+
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
+     <div class="card"><h3>Distance by year</h3>${columnChart(distByYear,{unit:"km",shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtNum(v)+" km"})}<div class="note-sm">Total distance logged each year (all sports).</div></div>
+     <div class="card"><h3>Days trained per year</h3>${columnChart(daysPerYear,{unit:"days",shortLabel:l=>"'"+l.slice(2)})}<div class="note-sm">Distinct days with at least one workout — out of 365.</div></div>
+   </div>
+
+   <div class="card" style="margin-bottom:18px"><h3>Sessions by sport</h3>
+     <div class="shoebar">
+       ${topSports.map(([s,cnt])=>`<div class="shoe">
+         <span class="nm">${sportTag(s)}</span>
+         <span class="track"><span class="fill" style="width:${(cnt/sportMax*100).toFixed(1)}%;background:linear-gradient(90deg,${sportColor(s)}88,${sportColor(s)})"></span></span>
+         <span class="km">${fmtNum(cnt)}</span></div>`).join("")}
+     </div>
+     <div class="note-sm">All-time session counts by activity (top ${topSports.length}).</div></div>
+
    <div class="card" style="line-height:1.7">
      <h3>Consistency</h3>
      <div class="kvgrid">
