@@ -120,6 +120,13 @@
   .lc-dot{fill:var(--accent)}
   .lc-grid{stroke:var(--line);stroke-width:1}
   .lc-ax{fill:var(--muted);font-size:10px}
+  /* line-chart hover/tap: invisible hit columns, focus guide + value bubble */
+  .lc-wrap{position:relative}
+  .lc-hit{fill:transparent;cursor:crosshair}
+  .lc-focus{display:none;stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.55}
+  .lc-fdot{display:none;fill:var(--accent);stroke:#04201a;stroke-width:1.5}
+  .lc-tip{position:absolute;transform:translate(-50%,calc(-100% - 10px));background:#000;color:#fff;font-size:12px;padding:4px 9px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:6;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+  .lc-tip[hidden]{display:none}
   /* insights: fun-fact callouts */
   .facts{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
   .fact{display:flex;gap:12px;align-items:center}
@@ -496,25 +503,34 @@ function columnChart(data, opts={}){
 // instead of starting at zero. points: [{label, value}].
 function lineChart(points, opts={}){
   if(points.length<2) return `<div class="muted">Not enough data.</div>`;
-  const fmt=opts.fmt||(v=>fmtNum(v,1));
-  const W=620,H=190,padL=44,padR=10,padT=12,padB=24;
+  const fmt=opts.fmt||(v=>fmtNum(v,1));          // full value — tooltips
+  const axisFmt=opts.axisFmt||(v=>fmtK(v));      // compact, round axis labels
+  const W=620,H=190,padL=40,padR=12,padT=12,padB=24;
   const vals=points.map(p=>p.value);
-  let lo=Math.min(...vals), hi=Math.max(...vals);
-  if(lo===hi){lo-=1;hi+=1;}
-  const range=hi-lo, padv=range*0.12; lo-=padv; hi+=padv;
+  // Baseline at zero (cumulative/positive series); clean round ticks up from there.
+  const lo=Math.min(0,...vals);
+  const ticks=niceTicks(Math.max(...vals)-lo,3).map(t=>t+lo);
+  const hi=Math.max(ticks[ticks.length-1],...vals);
   const X=i=>padL+(i/(points.length-1))*(W-padL-padR);
   const Y=v=>padT+(1-(v-lo)/(hi-lo))*(H-padT-padB);
+  const base=(H-padB).toFixed(1);
   const linePath=points.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)} ${Y(p.value).toFixed(1)}`).join(" ");
-  const areaPath=`M${X(0).toFixed(1)} ${(H-padB).toFixed(1)} `+points.map((p,i)=>`L${X(i).toFixed(1)} ${Y(p.value).toFixed(1)}`).join(" ")+` L${X(points.length-1).toFixed(1)} ${(H-padB).toFixed(1)} Z`;
-  const ny=[0,0.5,1].map(f=>lo+(hi-lo)*f);
-  const grid=ny.map(v=>`<line x1="${padL}" x2="${W-padR}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="lc-grid"/>`).join("");
-  const yax=ny.map(v=>`<text x="${padL-6}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end" class="lc-ax">${fmt(v)}</text>`).join("");
-  const dots=points.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.value).toFixed(1)}" r="2.4" class="lc-dot"><title>${p.label}: ${fmt(p.value)}</title></circle>`).join("");
+  const areaPath=`M${X(0).toFixed(1)} ${base} `+points.map((p,i)=>`L${X(i).toFixed(1)} ${Y(p.value).toFixed(1)}`).join(" ")+` L${X(points.length-1).toFixed(1)} ${base} Z`;
+  const grid=ticks.map(v=>`<line x1="${padL}" x2="${W-padR}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="lc-grid"/>`).join("");
+  const yax=ticks.map(v=>`<text x="${padL-6}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end" class="lc-ax">${axisFmt(v)}</text>`).join("");
+  const dots=points.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.value).toFixed(1)}" r="2.6" class="lc-dot"/>`).join("");
+  // wide transparent columns make every point easy to hover or tap
+  const colW=(W-padL-padR)/(points.length-1);
+  const hits=points.map((p,i)=>`<rect class="lc-hit" x="${(X(i)-colW/2).toFixed(1)}" y="${padT}" width="${colW.toFixed(1)}" height="${(H-padT-padB).toFixed(1)}" data-cx="${X(i).toFixed(1)}" data-cy="${Y(p.value).toFixed(1)}" data-label="${escapeHTML(String(p.label))}" data-value="${escapeHTML(fmt(p.value))}"/>`).join("");
+  const focus=`<line class="lc-focus" x1="0" x2="0" y1="${padT}" y2="${base}"/><circle class="lc-fdot" r="4"/>`;
   const n=points.length, maxL=opts.maxLabels||(window.innerWidth<560?6:12), stp=Math.max(1,Math.ceil(n/maxL));
   let xl=""; points.forEach((p,i)=>{ if(i%stp && i!==n-1) return; const lab=opts.shortLabel?opts.shortLabel(p.label):p.label;
     xl+=`<text x="${X(i).toFixed(1)}" y="${H-7}" text-anchor="middle" class="lc-ax">${lab}</text>`; });
   return `<div class="yunit" style="position:static;margin-bottom:2px">${opts.unit||""}</div>
-    <svg class="linechart" viewBox="0 0 ${W} ${H}" role="img">${grid}<path d="${areaPath}" class="lc-area"/><path d="${linePath}" class="lc-line"/>${dots}${yax}${xl}</svg>`;
+    <div class="lc-wrap">
+      <svg class="linechart" viewBox="0 0 ${W} ${H}" role="img">${grid}<path d="${areaPath}" class="lc-area"/><path d="${linePath}" class="lc-line"/>${dots}${focus}${yax}${xl}${hits}</svg>
+      <div class="lc-tip" hidden></div>
+    </div>`;
 }
 
 //============================================================ tabs / routing
@@ -1741,6 +1757,44 @@ fetch("data.json").then(r=>r.json()).then(j=>{
   vv.addEventListener("scroll", sched);
   window.addEventListener("orientationchange", sched);
   pin();
+})();
+
+//============================================================ QOL: line-chart hover/tap tooltips
+// Delegated so it works for any lineChart rendered later. Shows a value bubble +
+// focus guide for the hovered/tapped point.
+(function(){
+  let active=null;
+  function hide(){
+    if(!active) return;
+    const t=active.querySelector(".lc-tip"); if(t)t.hidden=true;
+    const fl=active.querySelector(".lc-focus"),fd=active.querySelector(".lc-fdot");
+    if(fl)fl.style.display="none"; if(fd)fd.style.display="none";
+    active=null;
+  }
+  function show(hit){
+    const w=hit.closest(".lc-wrap"); if(!w) return; active=w;
+    const tip=w.querySelector(".lc-tip");
+    const fl=w.querySelector(".lc-focus"), fd=w.querySelector(".lc-fdot");
+    const cx=hit.getAttribute("data-cx"), cy=hit.getAttribute("data-cy");
+    if(fl){ fl.setAttribute("x1",cx); fl.setAttribute("x2",cx); fl.style.display="block"; }
+    if(fd){ fd.setAttribute("cx",cx); fd.setAttribute("cy",cy); fd.style.display="block"; }
+    tip.innerHTML='<b>'+hit.getAttribute("data-label")+'</b> '+hit.getAttribute("data-value");
+    tip.hidden=false;
+    // Position the HTML bubble over the focus dot using its real on-screen rect
+    // (handles the SVG viewBox scaling for us).
+    const dr=fd.getBoundingClientRect(), wr=w.getBoundingClientRect();
+    tip.style.left=(dr.left-wr.left+dr.width/2)+"px";
+    tip.style.top=(dr.top-wr.top)+"px";
+  }
+  document.addEventListener("pointermove",e=>{
+    const hit=e.target.closest&&e.target.closest(".lc-hit");
+    if(hit) show(hit);
+    else if(!(e.target.closest&&e.target.closest(".lc-wrap"))) hide();
+  },{passive:true});
+  document.addEventListener("pointerdown",e=>{
+    const hit=e.target.closest&&e.target.closest(".lc-hit");
+    if(hit) show(hit);
+  },{passive:true});
 })();
 </script>
 </body>
