@@ -260,6 +260,29 @@
     #x-table td:nth-child(9){max-width:40vw;overflow:hidden;text-overflow:ellipsis}
     #x-count::after{content:" · tap any row for full details";color:var(--muted)}
   }
+
+  /* ============================================================
+     QOL: site-wide navigation & polish
+     ============================================================ */
+  html{scroll-behavior:smooth}
+  h2.section{scroll-margin-top:64px}
+  .brand{cursor:pointer}
+  ::selection{background:rgba(54,194,168,.32)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  /* Back-to-top: appears after scrolling; clears the mobile bottom bar. */
+  #toTop{
+    position:fixed;right:16px;bottom:18px;width:42px;height:42px;border-radius:50%;
+    z-index:55;background:var(--accent);color:#04201a;border:none;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.45);
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;visibility:hidden;transform:translateY(8px);
+    transition:opacity .18s,transform .18s,visibility .18s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #toTop.show{opacity:1;visibility:visible;transform:none}
+  #toTop:active{filter:brightness(.92)}
+  #toTop svg{width:22px;height:22px;stroke:#04201a;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  @media(max-width:640px){ #toTop{bottom:calc(70px + env(safe-area-inset-bottom));width:40px;height:40px} }
 </style>
 </head>
 <body>
@@ -1340,6 +1363,31 @@ fetch("data.json").then(r=>r.json()).then(j=>{
   if(typeof go==="function"){ const _go=go; window.go=function(t){ _go(t); sync(); }; }
   window.addEventListener("hashchange", sync);
   sync();
+})();
+
+//============================================================ QOL: nav helpers
+// Back-to-top button, tap-the-brand-to-go-home, and 1..N keyboard tab jumps.
+// Additive: relies on the existing go()/TABS, touches no render code.
+(function(){
+  const btn=document.createElement("button");
+  btn.id="toTop"; btn.type="button"; btn.setAttribute("aria-label","Back to top");
+  btn.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
+  btn.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
+  document.body.appendChild(btn);
+  const onScroll=()=>btn.classList.toggle("show",(window.scrollY||document.documentElement.scrollTop)>320);
+  window.addEventListener("scroll",onScroll,{passive:true}); onScroll();
+
+  const brand=document.querySelector(".brand");
+  if(brand){ brand.setAttribute("role","button"); brand.title="Back to Dashboard"; brand.onclick=()=>go("dash"); }
+
+  document.addEventListener("keydown",e=>{
+    if(e.metaKey||e.ctrlKey||e.altKey) return;
+    const tag=(e.target.tagName||"").toLowerCase();
+    if(tag==="input"||tag==="select"||tag==="textarea"||e.target.isContentEditable) return;
+    if(typeof TABS==="undefined") return;
+    const n=parseInt(e.key,10);
+    if(n>=1 && n<=TABS.length) go(TABS[n-1][0]);
+  });
 })();
 </script>
 </body>
