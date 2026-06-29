@@ -174,11 +174,13 @@
     h3{font-size:13px;margin-bottom:8px}
     .grid{gap:9px}
     .card{padding:11px 12px;border-radius:11px}
-    /* Compact stat tiles: ~3 per row with smaller numbers so the overview
-       fits the screen instead of forcing long scrolls. */
-    .stat-row{grid-template-columns:repeat(auto-fit,minmax(82px,1fr))}
-    .stat .num{font-size:18px}
-    .stat .lbl{font-size:10.5px;margin-top:1px}
+    /* Stat tiles: keep all 4–5 on ONE row instead of wrapping to "one and a
+       bit". Force a single row of equal columns and shrink the numbers/padding
+       so even long values (135,560) fit a narrow phone. */
+    .stat-row{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:7px}
+    .stat-row .card{padding:10px 9px}
+    .stat .num{font-size:16px;letter-spacing:.2px}
+    .stat .lbl{font-size:9.5px;margin-top:1px;letter-spacing:.3px}
     /* Sport tiles: 2 per row and tighter. */
     .sportcards{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
     .sportcard{gap:4px}
