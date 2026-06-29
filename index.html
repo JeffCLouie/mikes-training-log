@@ -426,6 +426,9 @@ function columnChart(data, opts={}){
   // data: [{label, value, color?, sub?}]
   const rawMax = Math.max(1, ...data.map(d=>d.value));
   const fmt = opts.fmt || (v=>fmtNum(v));
+  // Inline labels above bars stay compact (the axis already names the unit) so
+  // they don't collide; the hover tooltip still shows the full formatted value.
+  const valFmt = opts.valFmt || fmt;
   // rounded axis ticks drive the y-axis labels, the gridlines, and bar heights
   const allInt = data.every(d=>Number.isInteger(d.value));
   const ticks = niceTicks(rawMax, 4, allInt);
@@ -437,7 +440,7 @@ function columnChart(data, opts={}){
     const h = (d.value/axisMax*100).toFixed(1);
     const col = d.color||"";
     const style = col? `background:linear-gradient(${col},${col}99)`:"";
-    const val = showVals && d.value>0 ? `<span class="val">${fmt(d.value)}</span>` : "";
+    const val = showVals && d.value>0 ? `<span class="val">${valFmt(d.value)}</span>` : "";
     return `<div class="bar" style="height:${h}%;${style}" data-v="${d.value}">
       ${val}<span class="tip">${d.label}: ${fmt(d.value)}${d.sub?" · "+d.sub:""}</span></div>`;
   }).join("");
@@ -1213,7 +1216,7 @@ function renderInsights(app){
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:18px">
      <div class="card"><h3>Avg run pace by year</h3>${runTrend.length?columnChart(runTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtPace(v)+"/km",unit:"min/km"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Shorter = faster · years with &ge;8 runs</div></div>
-     <div class="card"><h3>Avg bike speed by year</h3>${bikeTrend.length?columnChart(bikeTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>v.toFixed(1)+" km/h",unit:"km/h"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Years with &ge;8 rides</div></div>
+     <div class="card"><h3>Avg bike speed by year</h3>${bikeTrend.length?columnChart(bikeTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>v.toFixed(1)+" km/h",valFmt:v=>v.toFixed(1),unit:"km/h"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Years with &ge;8 rides</div></div>
    </div>
 
    <div class="card" style="margin-top:18px"><h3>On this day — ${MONTHS[_today.getMonth()]} ${_today.getDate()}</h3>
