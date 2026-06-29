@@ -207,6 +207,11 @@
   .fbar .fld{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
   .fbar select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px}
   .fbar .fclear{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+  /* quick year picker: a wrapping row of tappable year pills (replaces a dropdown) */
+  .yearpicks{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+  .ypick{background:var(--panel2);border:1px solid var(--line);color:var(--muted);padding:6px 11px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;-webkit-tap-highlight-color:transparent}
+  .ypick:hover{color:var(--text);border-color:var(--accent)}
+  .ypick.sel{background:var(--accent);color:#04201a;border-color:var(--accent)}
   .fbar .fclear:hover{border-color:var(--accent);color:var(--text)}
   /* records: personal-best cards */
   .recgrid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
@@ -1962,7 +1967,7 @@ function renderWrapped(app){
   const delta=(c,p)=>{ if(!p) return ""; const d=(c-p)/p*100, up=d>=0;
     return `<span class="delta ${up?"up":"down"}">${up?"▲":"▼"} ${Math.abs(d).toFixed(0)}% vs ${y-1}</span>`; };
   app.innerHTML=`<h2 class="section">Year in Review</h2>
-   <div class="fbar"><label class="fld">Year<select id="wrap-year">${ys.slice().reverse().map(yy=>`<option ${yy===y?"selected":""}>${yy}</option>`).join("")}</select></label></div>
+   <div class="yearpicks" id="wrap-years">${ys.slice().reverse().map(yy=>`<button class="ypick ${yy===y?"sel":""}" data-y="${yy}">${yy}</button>`).join("")}</div>
    <div class="card wrap-hero"><div class="yr">${y}</div><div class="sub">${fmtNum(a.count)} workouts · ${fmtNum(Math.round(a.dist))} km · ${fmtNum(Math.round(hours))} hours${topSport?` · most: ${sportName(topSport)}`:""}</div></div>
    <div class="grid stat-row" style="margin:16px 0">
      <div class="card stat"><div class="num">${fmtNum(a.count)}</div><div class="lbl">Workouts</div><div class="note-sm">${delta(a.count,pa.count)}</div></div>
@@ -1978,7 +1983,8 @@ function renderWrapped(app){
      <div class="card"><h3>Personal records set</h3><div class="factnum">${prsThisYear.length}</div><div class="factsub">${prsThisYear.length?prsThisYear.map(p=>p.name).join(", "):"No new distance PRs this year"}</div></div>
    </div>
    <div class="card" style="margin-top:16px"><h3>Sessions by month</h3>${columnChart(MONTHS.map((m,i)=>({label:m,value:mc[i]||0})),{shortLabel:l=>l[0]})}</div>`;
-  const sel=document.getElementById("wrap-year"); if(sel) sel.onchange=e=>{ WRAP_YEAR=+e.target.value; renderWrapped(app); };
+  const yp=document.getElementById("wrap-years");
+  if(yp) yp.addEventListener("click",e=>{ const b=e.target.closest(".ypick"); if(b){ WRAP_YEAR=+b.dataset.y; renderWrapped(app); window.scrollTo(0,0); } });
 }
 
 //============================================================ boot
