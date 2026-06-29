@@ -187,6 +187,7 @@
   .cal-legend .chip{width:11px;height:11px;border-radius:3px}
   .cal-detail{margin-top:12px}
   .cal-detail .e{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap}
+  .note-tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#0c1116;flex:none}
   .cal-detail .e .meta{color:var(--muted)}
   .factnum{font-size:24px;font-weight:800}
   .factsub{color:var(--muted);font-size:12.5px;margin-top:2px}
@@ -1140,23 +1141,28 @@ function escapeHTML(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 //============================================================ INSIGHTS
 // ── Notes as data ─────────────────────────────────────────────────────────
 // Note-only rows (no sport/distance) are Mike's diary jottings. With medium/
-// high-confidence keyword matching we pull two useful things out of them: body-
-// weight readings (a bare 3-digit number in lb), and the likely reason a day
-// was skipped — injury, illness, travel or recovery. Everything else is "other".
+// high-confidence keyword matching we pull useful things out of them: body-
+// weight readings (a bare number in lb) and the reason a day had no workout —
+// injury, illness, a deliberate rest day, therapy/recovery, travel, or a home
+// project. Each is its own category (colour). Order = match priority; the first
+// regex that hits wins. Anything unmatched is "other" and stays uncoloured.
 const NOTE_CATS = [
   ["injury",   /\b(back|knee|foot|feet|ankle|hip|shin|calf|hamstring|groin|crotch|shoulder|heel|achilles|sore|hurt|injur|sprain|strain|pain|tendon|sciatic|blister)\b/i],
   ["illness",  /\b(sick|flu|ill|fever|cold|chills|nausea|dizzy|tired|exhaust|cough|throat|stomach|migraine|headache|virus)\b/i],
-  ["travel",   /\b(mexico|camping|vacation|trip|cottage|florida|cuba|tremblant|stockholm|away|holiday|christmas|xmas|wedding|conference)\b/i],
-  ["recovery", /\b(massage|physio|chiro|acupunct|recovery|rest\s*day|day\s*off|stretch|art)\b/i],
+  ["rest",     /\b(rest|day ?off|off day|easy day|lazy)\b/i],
+  ["recovery", /\b(massage|physio|chiro|acupunct|recover|stretch|rehab|sauna|foam ?roll|ice ?bath|art)\b/i],
+  ["travel",   /\b(mexico|camping|vacation|trip|cottage|florida|cuba|tremblant|stockholm|away|holiday|christmas|xmas|wedding|conference|flight|airport)\b/i],
+  ["home",     /\b(roof|porch|firewood|patio|kitchen|deck|fence|garage|paint|yard|lawn|mow|shovel|reno|drywall|basement|shed|gutter|boards|cables|garden|plant|aralia|weed|mulch|wood|floor|tile|shingle|caulk|stain|chores?)\b/i],
 ];
 function noteText(r){ return (r.n||r.r||"").trim(); }
 function noteWeight(t){ const m=/^\s*(\d{3}(?:\.\d)?)\s*$/.exec(t||""); if(!m) return null; const v=+m[1]; return (v>=150&&v<=230)?v:null; }  // adult body-weight band (lb); excludes stray 3-digit numbers
 function classifyNote(t){ if(noteWeight(t)!=null) return "weight"; for(const [c,re] of NOTE_CATS) if(re.test(t)) return c; return "other"; }
-// How note categories surface on the activity calendar (coarse buckets + colour).
-const NOTE_CAL  = { injury:"rest", illness:"rest", recovery:"rest", travel:"travel", weight:"weight" };
-const NOTE_COL  = { rest:"rgba(224,90,108,.74)", travel:"rgba(150,130,255,.66)", weight:"rgba(120,140,180,.5)" };
-const NOTE_RANK = { rest:3, travel:2, weight:1 };
-const NOTE_LABEL= { rest:"rest / unwell", travel:"travel", weight:"weight log" };
+// How each note category surfaces on the activity calendar: a distinct colour, a
+// label, and a rank (when a day has several notes, the highest-rank one colours
+// the square — health first, weigh-ins last).
+const NOTE_COL  = { injury:"rgba(224,90,108,.80)", illness:"rgba(232,150,60,.80)", rest:"rgba(225,205,90,.72)", recovery:"rgba(80,180,220,.74)", travel:"rgba(150,130,255,.72)", home:"rgba(190,140,85,.76)", weight:"rgba(120,140,180,.55)" };
+const NOTE_RANK = { injury:7, illness:6, rest:5, recovery:4, travel:3, home:2, weight:1 };
+const NOTE_LABEL= { injury:"injury", illness:"illness", rest:"rest day", recovery:"therapy / recovery", travel:"travel", home:"home project", weight:"weigh-in" };
 
 let _insightsYear = null;
 function renderInsights(app){
@@ -1242,7 +1248,7 @@ function renderInsights(app){
   const runTrend=_trend("run","pace"), bikeTrend=_trend("bike","speed");
 
   // Notes as data: body weight over time + the reasons days were skipped.
-  const weightByYear={}, restCnt={injury:0,illness:0,travel:0,recovery:0};
+  const weightByYear={}, restCnt={injury:0,illness:0,rest:0,recovery:0,travel:0,home:0};
   for(const r of DATA){ if(r.s!=="note") continue; const txt=noteText(r); const w=noteWeight(txt);
     if(w!=null){ const y=yearOf(r); (weightByYear[y]||(weightByYear[y]=[])).push(w); continue; }
     const c=classifyNote(txt); if(restCnt[c]!=null) restCnt[c]++; }
@@ -1251,9 +1257,11 @@ function renderInsights(app){
   const weightAll=[].concat(...Object.values(weightByYear));
   const restData=[
     {label:"Injury",   value:restCnt.injury,   color:"#e05a6c"},
-    {label:"Illness",  value:restCnt.illness,  color:"#e8a33a"},
-    {label:"Travel",   value:restCnt.travel,   color:"#8a7dff"},
+    {label:"Illness",  value:restCnt.illness,  color:"#e8963c"},
+    {label:"Rest",     value:restCnt.rest,     color:"#e1cd5a"},
     {label:"Recovery", value:restCnt.recovery, color:"#4db6e6"},
+    {label:"Travel",   value:restCnt.travel,   color:"#8a7dff"},
+    {label:"Home",     value:restCnt.home,     color:"#be8c55"},
   ];
 
   app.innerHTML=`
@@ -1285,8 +1293,8 @@ function renderInsights(app){
      <div class="hm-box">
        <div class="hm-scroll" id="hm-scroll">${activityHeatmap()}</div>
      </div>
-     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%<span class="hm-cell" style="background:rgba(224,90,108,.74);margin-left:12px"></span> rest/unwell<span class="hm-cell" style="background:rgba(150,130,255,.66);margin-left:8px"></span> travel<span class="hm-cell" style="background:rgba(120,140,180,.5);margin-left:8px"></span> weigh-in</div>
-     <div class="note-sm">Each square is one day. Green shows the total <b>time trained</b> that day — darker means more — and orange marks your busiest 1%. Days with no workout but a diary note are tinted instead: <b>red</b> for injury/illness, <b>purple</b> for travel, <b>slate</b> for a weigh-in. Tap any training day for its workouts.</div>
+     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%<span class="hm-cell" style="background:rgba(224,90,108,.80);margin-left:12px"></span> injury<span class="hm-cell" style="background:rgba(232,150,60,.80);margin-left:8px"></span> illness<span class="hm-cell" style="background:rgba(225,205,90,.72);margin-left:8px"></span> rest<span class="hm-cell" style="background:rgba(80,180,220,.74);margin-left:8px"></span> recovery<span class="hm-cell" style="background:rgba(150,130,255,.72);margin-left:8px"></span> travel<span class="hm-cell" style="background:rgba(190,140,85,.76);margin-left:8px"></span> home<span class="hm-cell" style="background:rgba(120,140,180,.55);margin-left:8px"></span> weigh-in</div>
+     <div class="note-sm">Each square is one day. Green shows the total <b>time trained</b> that day — darker means more — and orange marks your busiest 1%. Days with no workout but a diary note are tinted by what Mike jotted — injury, illness, rest, therapy/recovery, travel, home project, or a weigh-in. <b>Tap any square</b> for that day's workouts and notes.</div>
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
@@ -1361,12 +1369,19 @@ function renderInsights(app){
 
 // Tap a calendar square → overlay that day's sessions and totals.
 function dayPopup(ds){
-  const rows=DATA.filter(r=>r.d===ds && r.s!=="note");
+  const all=DATA.filter(r=>r.d===ds);
+  const rows=all.filter(r=>r.s!=="note");
+  const notes=all.filter(r=>r.s==="note");
   const dt=new Date(ds+"T00:00:00Z");
   const title=WEEKDAYS[(dt.getUTCDay()+6)%7]+", "+MONTHS[dt.getUTCMonth()]+" "+dt.getUTCDate()+", "+dt.getUTCFullYear();
   let totDur=0,totKm=0; rows.forEach(r=>{ if(r.t)totDur+=r.t; if(r.k)totKm+=r.k; });
-  const body=rows.length?rows.map(r=>`<div class="e">${sportTag(r.s)}<span class="meta">${[r.t?fmtDur(r.t):"",r.k!=null?fmtNum(r.k,1)+" km":"",perf(r)].filter(Boolean).join(" · ")||"—"}</span>${r.n?`<div class="note-sm" style="flex-basis:100%;margin-top:2px">${escapeHTML(r.n)}</div>`:""}</div>`).join("")
-    :`<div class="muted">No workouts recorded.</div>`;
+  const wbody=rows.map(r=>`<div class="e">${sportTag(r.s)}<span class="meta">${[r.t?fmtDur(r.t):"",r.k!=null?fmtNum(r.k,1)+" km":"",perf(r)].filter(Boolean).join(" · ")||"—"}</span>${r.n?`<div class="note-sm" style="flex-basis:100%;margin-top:2px">${escapeHTML(r.n)}</div>`:""}</div>`).join("");
+  // Diary notes (weigh-ins, injury, rest, travel, home projects…): show the
+  // detected category as a coloured tag next to whatever Mike actually wrote.
+  const nbody=notes.map(r=>{ const txt=noteText(r), c=classifyNote(txt);
+    const lab=NOTE_LABEL[c]||"note", col=NOTE_COL[c]||"var(--panel2)";
+    return `<div class="e"><span class="note-tag" style="background:${col}">${lab}</span><span class="meta">${escapeHTML(txt)||"—"}</span></div>`; }).join("");
+  const body=(wbody+nbody)||`<div class="muted">Nothing recorded.</div>`;
   const tot=rows.length>1?`<div class="day-tot"><span><b>${rows.length}</b> sessions</span><span><b>${fmtDurShort(totDur)}</b> total</span>${totKm?`<span><b>${fmtNum(totKm,1)}</b> km</span>`:""}</div>`:"";
   return `<div class="day-card">
     <div class="cardhead" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">${title}</h3><button class="day-x" aria-label="Close">✕</button></div>
@@ -1392,7 +1407,7 @@ function activityHeatmap(){
   const day={}, noteDay={};
   let minY=Infinity, maxY=-Infinity;
   for(const r of DATA){
-    if(r.s==="note"){ const c=NOTE_CAL[classifyNote(noteText(r))]; if(!c) continue;
+    if(r.s==="note"){ const c=classifyNote(noteText(r)); if(c==="other") continue;
       if(!noteDay[r.d] || NOTE_RANK[c]>NOTE_RANK[noteDay[r.d]]) noteDay[r.d]=c; continue; }
     const y=yearOf(r); if(y<minY)minY=y; if(y>maxY)maxY=y;
     const m=day[r.d]||(day[r.d]={c:0,dur:0}); m.c++; if(r.t)m.dur+=r.t; }
@@ -1429,7 +1444,7 @@ function activityHeatmap(){
     if(!d.c) return d.note ? `${d.ds} · ${NOTE_LABEL[d.note]}` : "";
     return `${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}${d.dur>0&&d.dur>=hot?" · top 1%":""}`; };
   return `<div class="hm-months">${months.map(m=>`<div class="hm-mlabel">${m}</div>`).join("")}</div>
-    <div class="hm">${weeks.map(w=>`<div class="hm-week" data-year="${w.year}">${w.cells.map(d=>`<div class="hm-cell"${d.inSpan&&d.c?` data-d="${d.ds}"`:""} style="background:${color(d)}" title="${tip(d)}"></div>`).join("")}</div>`).join("")}</div>`;
+    <div class="hm">${weeks.map(w=>`<div class="hm-week" data-year="${w.year}">${w.cells.map(d=>`<div class="hm-cell"${d.inSpan&&(d.c||d.note)?` data-d="${d.ds}"`:""} style="background:${color(d)}" title="${tip(d)}"></div>`).join("")}</div>`).join("")}</div>`;
 }
 
 //============================================================ ABOUT
@@ -1528,10 +1543,11 @@ function renderAbout(app){
          source, not just hidden from the charts.</li>
        <li><span class="pill d">interpreted</span> <b>Diary notes turned into data.</b>
          Many "note" days are actually <b>weigh-ins</b> (a bare number in lb) or a
-         reason a day was skipped (injury, illness, travel, recovery). These power
-         the <i>Body weight</i> and <i>Why days were skipped</i> charts and the
-         tinted squares on the activity calendar. Classification is keyword-based
-         (medium confidence), so the odd note may be mis-bucketed.</li>
+         reason there was no workout — <b>injury, illness, rest, therapy/recovery,
+         travel,</b> or a <b>home project</b>. These power the <i>Body weight</i>
+         and <i>Why days were skipped</i> charts and the tinted, tappable squares
+         on the activity calendar. Classification is keyword-based (medium
+         confidence), so the odd note may be mis-bucketed.</li>
      </ul>
      <p class="note-sm">Spotted something off? It's almost certainly in the
      original shorthand — open the <b>Raw Data</b> tab to see exactly what Mike
