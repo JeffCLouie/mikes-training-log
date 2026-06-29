@@ -1936,9 +1936,10 @@ function renderRecords(app){
      <div class="grid recgrid">${pred.preds.map(p=>`<div class="card stat rec"><div class="v">${fmtDur(Math.round(p.sec))}</div><div class="l">${p.n}</div></div>`).join("")}</div>
      <div class="note-sm">Riegel projection from your fastest recent run: ${fmtNum(pred.basis.k,1)} km @ ${fmtPace(_pace(pred.basis))}/km (${pred.basis.d}). An estimate, not a guarantee.</div></div>`:"";
   const badges=buildBadges(rows,prs);
-  const earned=badges.filter(b=>b.earned).length;
-  const badgeHtml=`<h3 style="margin-top:22px">Achievements <span class="muted" style="font-weight:600;text-transform:none;letter-spacing:0">· ${earned}/${badges.length} unlocked</span></h3>
-     <div class="grid badges">${badges.map(b=>`<div class="card badge ${b.earned?"earned":"locked"}"><div class="bic">${b.ic}</div><div class="bn">${b.name}</div><div class="bd">${b.earned?(b.detail||"Unlocked"):b.desc}</div></div>`).join("")}</div>`;
+  // Only show genuinely earned achievements — no greyed-out "unearned" ones.
+  const earnedBadges=badges.filter(b=>b.earned);
+  const badgeHtml=`<h3 style="margin-top:22px">Achievements <span class="muted" style="font-weight:600;text-transform:none;letter-spacing:0">· ${earnedBadges.length} unlocked</span></h3>
+     <div class="grid badges">${earnedBadges.map(b=>`<div class="card badge earned"><div class="bic">${b.ic}</div><div class="bn">${b.name}</div><div class="bd">${b.detail||"Unlocked"}</div></div>`).join("")}</div>`;
   const mileHtml=`<h3 style="margin-top:22px">Milestones</h3><div class="card"><div class="tl">${buildMilestones(rows).map(e=>`<div class="ev"><div class="dt">${e.date}</div><div class="tx"><span class="ic">${e.ic}</span>${e.text}</div></div>`).join("")}</div></div>`;
 
   app.innerHTML=`<h2 class="section">Records &amp; Achievements</h2>${filterBar()}
