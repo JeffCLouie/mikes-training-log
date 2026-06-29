@@ -1298,9 +1298,9 @@ function renderInsights(app){
      <div class="card"><h3>Body weight by year</h3>
        ${weightSeries.length>1?lineChart(weightSeries,{unit:"lb",fmt:v=>fmtNum(v,1)+" lb",shortLabel:l=>"'"+l.slice(2)}):`<div class="muted">Not enough weigh-ins recorded.</div>`}
        <div class="note-sm">Pulled from the bare weight readings jotted on the calendar — ${fmtNum(weightAll.length)} weigh-ins${weightAll.length?", range "+fmtNum(Math.min(...weightAll))+"–"+fmtNum(Math.max(...weightAll))+" lb":""}.</div></div>
-     <div class="card"><h3>Why days were skipped</h3>
+     <div class="card"><h3>Why days were skipped <span class="muted" style="font-weight:400;font-size:12px">· ${years[0]}–${years[years.length-1]}</span></h3>
        ${restData.some(d=>d.value)?columnChart(restData,{unit:"days"}):`<div class="muted">No rest-reason notes found.</div>`}
-       <div class="note-sm">Note-only days grouped by likely reason, keyword-matched from the diary jottings (medium confidence).</div></div>
+       <div class="note-sm">Note-only days across all ${years.length} years (${years[0]}–${years[years.length-1]}), grouped by likely reason and keyword-matched from the diary jottings (medium confidence).</div></div>
    </div>
 
    <div class="card" style="line-height:1.7">
