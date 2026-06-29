@@ -1247,14 +1247,12 @@ function renderInsights(app){
       out.push({label:String(y),value:kind==="pace"?(t/60)/k:k/(t/3600)}); } return out; };
   const runTrend=_trend("run","pace"), bikeTrend=_trend("bike","speed");
 
-  // Notes as data: body weight over time + the reasons days were skipped.
-  const weightByYear={}, restCnt={injury:0,illness:0,rest:0,recovery:0,travel:0,home:0};
-  for(const r of DATA){ if(r.s!=="note") continue; const txt=noteText(r); const w=noteWeight(txt);
-    if(w!=null){ const y=yearOf(r); (weightByYear[y]||(weightByYear[y]=[])).push(w); continue; }
+  // Notes as data: the reasons there was no workout. (Weigh-in notes are detected
+  // only so they're excluded here, not miscounted as a skipped-day reason.)
+  const restCnt={injury:0,illness:0,rest:0,recovery:0,travel:0,home:0};
+  for(const r of DATA){ if(r.s!=="note") continue; const txt=noteText(r);
+    if(noteWeight(txt)!=null) continue;   // a weigh-in, not a skip reason
     const c=classifyNote(txt); if(restCnt[c]!=null) restCnt[c]++; }
-  const weightSeries=Object.keys(weightByYear).sort().map(y=>({label:y,
-    value:+(weightByYear[y].reduce((a,b)=>a+b,0)/weightByYear[y].length).toFixed(1)}));
-  const weightAll=[].concat(...Object.values(weightByYear));
   const restData=[
     {label:"Injury",   value:restCnt.injury,   color:"#e05a6c"},
     {label:"Illness",  value:restCnt.illness,  color:"#e8963c"},
@@ -1303,9 +1301,6 @@ function renderInsights(app){
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
-     <div class="card"><h3>Body weight by year</h3>
-       ${weightSeries.length>1?lineChart(weightSeries,{unit:"lb",fmt:v=>fmtNum(v,1)+" lb",shortLabel:l=>"'"+l.slice(2)}):`<div class="muted">Not enough weigh-ins recorded.</div>`}
-       <div class="note-sm">Pulled from the bare weight readings jotted on the calendar — ${fmtNum(weightAll.length)} weigh-ins${weightAll.length?", range "+fmtNum(Math.min(...weightAll))+"–"+fmtNum(Math.max(...weightAll))+" lb":""}.</div></div>
      <div class="card"><h3>Why days were skipped <span class="muted" style="font-weight:400;font-size:12px">· ${years[0]}–${years[years.length-1]}</span></h3>
        ${restData.some(d=>d.value)?columnChart(restData,{unit:"days"}):`<div class="muted">No rest-reason notes found.</div>`}
        <div class="note-sm">Note-only days across all ${years.length} years (${years[0]}–${years[years.length-1]}), grouped by likely reason and keyword-matched from the diary jottings (medium confidence).</div></div>
@@ -1544,10 +1539,10 @@ function renderAbout(app){
        <li><span class="pill d">interpreted</span> <b>Diary notes turned into data.</b>
          Many "note" days are actually <b>weigh-ins</b> (a bare number in lb) or a
          reason there was no workout — <b>injury, illness, rest, therapy/recovery,
-         travel,</b> or a <b>home project</b>. These power the <i>Body weight</i>
-         and <i>Why days were skipped</i> charts and the tinted, tappable squares
-         on the activity calendar. Classification is keyword-based (medium
-         confidence), so the odd note may be mis-bucketed.</li>
+         travel,</b> or a <b>home project</b>. These power the <i>Why days were
+         skipped</i> chart and the tinted, tappable squares on the activity
+         calendar. Classification is keyword-based (medium confidence), so the
+         odd note may be mis-bucketed.</li>
      </ul>
      <p class="note-sm">Spotted something off? It's almost certainly in the
      original shorthand — open the <b>Raw Data</b> tab to see exactly what Mike
