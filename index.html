@@ -1295,22 +1295,60 @@ function renderAbout(app){
   app.innerHTML=`
    <h2 class="section">About this log</h2>
    <div class="card" style="margin-bottom:14px;max-width:760px;line-height:1.7">
-     <p>This site is built from two source files: a 32-year <b>training log</b> (a weekly
-     calendar grid) and a precise <b>running log</b>. Running entries that also appeared in
-     the training grid have been de-duplicated, keeping the detailed running-log version.</p>
-     <p>The training grid recorded workouts in shorthand. Each entry was parsed to recover the
-     sport, duration and distance. Sports were taken from explicit codes/words where present
-     (<code>r</code>=run, <code>s</code>=swim, <code>b</code>=bike, plus hockey, karate, XC ski,
-     snowboard, …). Where unmarked, the sport was deduced:</p>
+     <h3>The sources</h3>
+     <p>This site is built from two records Mike kept by hand: a decades-long
+     <b>training log</b> — a weekly calendar grid where each day's workout was
+     jotted in shorthand — and a separate, more precise <b>running log</b> with
+     exact distances and times. Together they span
+     ${META.span[0].slice(0,4)}–${META.span[1].slice(0,4)}, mostly predating GPS
+     watches, so every distance and time here is as Mike noted it at the time, not
+     a device reading.</p>
+
+     <h3 style="margin-top:18px">Merging the two logs</h3>
+     <p>Many runs appear in <i>both</i> records. Where a running-log entry matched
+     one in the training grid (same date, comparable distance and time), the
+     duplicate was dropped and the richer <b>running-log</b> version kept.
+     Everything else in the grid — swims, rides, hockey, ski days and the rest —
+     was carried over as recorded.</p>
+
+     <h3 style="margin-top:18px">Reading the shorthand</h3>
+     <p>The grid cells were terse — typically a distance, sometimes a time, and
+     occasionally a letter or word for the activity. Each cell was parsed to
+     recover three things: the <b>sport</b>, the <b>duration</b> and the
+     <b>distance</b>. Figures were normalised to common units (distances to
+     kilometres, times to seconds) so pace and speed could be derived
+     consistently across thirty-plus years of notation.</p>
+
+     <h3 style="margin-top:18px">Identifying the sport</h3>
+     <p>When a cell named the activity — a code or word such as <code>r</code>=run,
+     <code>s</code>=swim, <code>b</code>=bike, or spelled-out hockey, karate, XC
+     ski, snowboard and others — that was taken at face value. When it didn't, the
+     sport was <b>deduced</b> from the numbers:</p>
      <ul>
-       <li><b>Distance only</b> → usually a bike ride.</li>
-       <li><b>Distance + time</b> → classified by pace/speed
-         (bike ≈ 25–30 km/h, run ≈ 3:30–5:30 /km, swim ≈ 1:45 /100 m).</li>
+       <li><b>A distance with no time</b> → almost always a bike ride.</li>
+       <li><b>A distance and a time</b> → classified by the implied pace or speed —
+         roughly <b>bike</b> 25–30 km/h, <b>run</b> 3:30–5:30 /km, <b>swim</b>
+         ~1:45 /100 m. Entries that landed cleanly inside a band were labelled with
+         that sport; borderline ones were flagged rather than forced.</li>
      </ul>
-     <p>Each entry is tagged <span class="pill">confirmed</span>
-        <span class="pill d">deduced</span> or
-        <span class="pill u">uncertain</span>. The original shorthand is always shown in the
-        Raw Data view so nothing is lost.</p>
+
+     <h3 style="margin-top:18px">How sure each entry is</h3>
+     <p>Every entry carries a confidence tag so you can weigh it yourself:</p>
+     <ul>
+       <li><span class="pill">confirmed</span> — the sport was stated explicitly in the log.</li>
+       <li><span class="pill d">deduced</span> — inferred from pace/speed or context, with good confidence.</li>
+       <li><span class="pill u">uncertain</span> — genuinely ambiguous; the best available guess, so treat it loosely.</li>
+     </ul>
+     <p>Nothing is discarded in the process: the <b>original shorthand is kept on
+     every entry</b> and shown in the <b>Raw Data</b> tab, so any interpretation
+     can be checked against exactly what Mike wrote.</p>
+
+     <h3 style="margin-top:18px">Worth keeping in mind</h3>
+     <p>These are hand-kept records across more than three decades, so occasional
+     gaps, rounding, and the odd ambiguous cell come with the territory. Charts and
+     totals count only real workouts — rest days and plain notes are excluded — and
+     distance- or pace-based figures only draw on entries that actually recorded
+     those numbers.</p>
    </div>
    <div class="grid stat-row" style="max-width:760px">
      <div class="card stat"><div class="num">${fmtNum(META.count)}</div><div class="lbl">total entries</div></div>
