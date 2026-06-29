@@ -1272,12 +1272,12 @@ function escapeHTML(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 // project. Each is its own category (colour). Order = match priority; the first
 // regex that hits wins. Anything unmatched is "other" and stays uncoloured.
 const NOTE_CATS = [
-  ["race",     /\b(triathlon|duathlon|biathlon|tri|relay|race|sprint|marathon|worlds?|championships?|champs|dnf|dns|oac|national capital|nat\.? ?cap|beat beethoven|rockland)\b/i],
-  ["injury",   /\b(back|knee|foot|feet|ankle|hip|shin|calf|hamstring|groin|crotch|shoulder|heel|achilles|sore|hurt|injur|sprain|strain|pain|tendon|sciatic|blister)\b/i],
+  ["race",     /\b(triathlon|duathlon|biathlon|tri|relay|race|sprint|marathon|worlds?|championships?|champs|dnf|dns|oac|national capital|nat\.? ?cap|beat beethoven|rockland|shuffle)\b/i],
+  ["injury",   /\b(back|knee|foot|feet|ankle|hip|shin|calf|hamstring|hams|groin|crotch|shoulder|heel|achilles|wrist|numb|orthotics?|sore|hurt|injur|sprain|strain|pain|tendon|sciatic|blister)\b/i],
   ["illness",  /\b(sick|flu|ill|fever|cold|chills|nausea|dizzy|tired|exhaust|cough|throat|stomach|migraine|headache|virus)\b/i],
   ["weather",  /\b(snow ?day|snow ?storm|storm|blizzard|flood(?:ed|ing)?|hurricane|ice ?storm|washout)\b/i],
   ["rest",     /\b(rest|day ?off|off day|easy day|lazy)\b/i],
-  ["recovery", /\b(massage|physio|chiro|acupunct|recover|stretch|rehab|sauna|foam ?roll|ice ?bath|art)\b/i],
+  ["recovery", /\b(massage|physio|chiro|acupunct\w*|recover|stretch|rehab|sauna|foam ?roll|ice ?bath|art)\b/i],
   ["travel",   /\b(mexico|camping|vacation|trip|cottage|florida|cuba|tremblant|stockholm|away|holiday|christmas|xmas|wedding|conference|flight|airport)\b/i],
   ["home",     /\b(roof|porch|firewood|patio|kitchen|deck|fence|garage|paint|yard|lawn|mow|shovel|reno|drywall|basement|shed|gutter|boards|cables|garden|plant|aralia|weed|mulch|wood|floor|tile|shingle|caulk|stain|chores?)\b/i],
 ];
