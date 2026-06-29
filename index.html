@@ -678,12 +678,6 @@ function renderDash(app){
      <div class="note-sm" id="dash-tip">Tip: tap a bar to read its value · click a sport below to drill in.</div>
    </div>
 
-   <div class="card" style="margin-bottom:18px">
-     <h3>Cumulative distance — year vs year</h3>
-     ${cumulativeChart(real)}
-     <div class="note-sm">Each line is one year's running distance total as the year progresses — see if you're ahead of your usual pace.</div>
-   </div>
-
    <h3>By sport</h3>`;
   // The "Per year" card flips between the chart and a table of the same data.
   let dashMetric="count", dashViewMode="chart";
@@ -1501,6 +1495,12 @@ function renderInsights(app){
 
    <div class="card" style="margin-bottom:18px"><h3>Distance by year</h3>${columnChart(distByYear,{unit:"km",shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtNum(v)+" km"})}<div class="note-sm">Total distance logged each year, all sports. (Active days per year live in Reports → Consistency.)</div></div>
 
+   <div class="card" style="margin-bottom:18px">
+     <h3>Cumulative distance — year vs year</h3>
+     ${cumulativeChart(real)}
+     <div class="note-sm">Each line is one year's distance total as the year progresses — handy for spotting fast vs slow years.</div>
+   </div>
+
    <div class="card" style="margin-bottom:18px"><h3>Sessions by sport</h3>
      <div class="shoebar">
        ${topSports.map(([s,cnt])=>`<div class="shoe">
@@ -1802,7 +1802,9 @@ function cumulativeChart(rows){
   const X=d=>padL+(d/365)*(W-padL-padR);
   const Y=v=>padT+(1-v/tmax)*(H-padT-padB);
   const recent=years.slice(-6);
-  const PAL=["#2b5a52","#2f7d76","#36a890","#43c2a8","#5fd6bf","#8af0dd"];
+  // Distinct hues (oldest→newest of the recent years) so the lines are easy to
+  // tell apart; the newest year gets the brightest colour.
+  const PAL=["#e0a14a","#e0556e","#a78bfa","#4d9fff","#36c2a8","#62f0d0"];
   const colorFor=y=>{ const ri=recent.indexOf(y); return ri<0 ? "rgba(138,160,181,.16)" : PAL[Math.round(ri/Math.max(1,recent.length-1)*(PAL.length-1))]; };
   const grid=ticks.map(t=>`<line x1="${padL}" x2="${W-padR}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" class="lc-grid"/><text x="${padL-6}" y="${(Y(t)+3).toFixed(1)}" text-anchor="end" class="lc-ax">${fmtK(t)}</text>`).join("");
   const mlab=["Jan","Mar","May","Jul","Sep","Nov"].map((m,i)=>`<text x="${X([0,59,120,181,243,304][i]).toFixed(1)}" y="${H-6}" text-anchor="middle" class="lc-ax">${m}</text>`).join("");
