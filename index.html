@@ -1100,6 +1100,22 @@ function renderInsights(app){
   const topShoes=Object.entries(shoes).sort((x,y)=>y[1]-x[1]).slice(0,10);
   const shoeMax=topShoes.length?topShoes[0][1]:1;
 
+  // extra fun-fact equivalences + standout sessions
+  let bikeKm=0, swimKm=0, runSec=0, longSession=null; const dayKm={};
+  for(const r of real){
+    if(r.s==="bike"&&r.k) bikeKm+=r.k;
+    if(r.s==="swim"&&r.k) swimKm+=r.k;
+    if(r.s==="run"&&r.t) runSec+=r.t;
+    if(r.t && (!longSession || r.t>longSession.t)) longSession=r;
+    if(r.k) dayKm[r.d]=(dayKm[r.d]||0)+r.k;
+  }
+  const toursDeFrance=bikeKm/3360, channels=swimKm/33.8;  // a Tour ≈ 3360 km, the Channel ≈ 33.8 km
+  const coverage=activeDays.length/spanDays*100;
+  const runPace=runKm>0?(runSec/60)/runKm:0;              // lifetime avg run pace (min/km)
+  const bigDay=Object.entries(dayKm).sort((x,y)=>y[1]-x[1])[0];
+  const distinctShoes=Object.keys(shoes).length;
+  const sportCount=new Set(real.map(r=>r.s)).size;
+
   // complementary insight cards (on-this-day / by-decade / fitness trends)
   const _today=new Date(), _md=pad(_today.getMonth()+1)+"-"+pad(_today.getDate());
   const otd=real.filter(r=>r.d.slice(5)===_md).sort((x,y)=>x.d<y.d?-1:1);
@@ -1125,6 +1141,14 @@ function renderInsights(app){
      ${fact("⏱️", fmtNum(totalDays,1)+" days", "spent training, non-stop")}
      ${fact("📅", fmtNum(perWeek,1)+"/wk", "avg sessions over "+years.length+" years")}
      ${fact("🔥", longest+" days", "longest daily training streak")}
+     ${bikeKm?fact("🚴", fmtNum(toursDeFrance,1)+"×", "the Tour de France — "+fmtNum(bikeKm)+" km biked"):""}
+     ${swimKm?fact("🏊", fmtNum(channels,1)+"×", "across the English Channel — "+fmtNum(swimKm)+" km swum"):""}
+     ${runPace?fact("⚡", fmtPace(runPace)+"/km", "lifetime average running pace"):""}
+     ${longSession?fact("⏳", fmtDurShort(longSession.t), "longest session — "+sportName(longSession.s)+" "+longSession.d.slice(0,4)):""}
+     ${bigDay?fact("📈", fmtNum(bigDay[1])+" km", "biggest distance in a single day"):""}
+     ${distinctShoes?fact("👟", fmtNum(distinctShoes), "pairs of running shoes worn out"):""}
+     ${fact("🤸", sportCount, "different sports logged over the years")}
+     ${fact("🗓️", fmtNum(coverage)+"%", "of all days had a workout")}
    </div>
 
    <div class="card" style="margin-bottom:18px">
