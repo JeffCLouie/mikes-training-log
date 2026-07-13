@@ -52,7 +52,7 @@ placement as a note. _Mike to confirm or amend._
 
 ---
 
-## Batch 2 — annual totals don't reconcile (71 sport-years off by >3%)
+## Batch 2 — annual totals don't reconcile (69 sport-years off by >3%)
 
 Mike wrote a yearly `Totals` line (Run / Bike / Swim, in km). Today's `data.json`
 distance sums should equal these but mostly **exceed** them — evidence the grid was
@@ -62,19 +62,19 @@ ground-truth target for the corrected parser.**
 
 | Year | Sport | Mike's total | data.json sum | diff | off >3% |
 |---|---|--:|--:|--:|:--:|
-| 1991 | run | 2058 | 2215 | +157 | ⚠️ |
+| 1991 | run | 2058 | 2183 | +125 | ⚠️ |
 | 1991 | bike | 1473 | 1544.5 | +71.5 | ⚠️ |
 | 1991 | swim | 117 | 99.75 | -17.25 | ⚠️ |
-| 1992 | run | 2509 | 2788.8 | +279.8 | ⚠️ |
+| 1992 | run | 2509 | 2705 | +196 | ⚠️ |
 | 1992 | bike | 2656 | 2816.36 | +160.36 | ⚠️ |
 | 1992 | swim | 308.95 | 257.13 | -51.82 | ⚠️ |
 | 1993 | run | 1937 | 2091.9 | +154.9 | ⚠️ |
 | 1993 | bike | 2542 | 3495.4 | +953.4 | ⚠️ |
 | 1993 | swim | 256.8 | 248.5 | -8.3 | ⚠️ |
-| 1994 | run | 1477 | 1838.5 | +361.5 | ⚠️ |
+| 1994 | run | 1477 | 1831.5 | +354.5 | ⚠️ |
 | 1994 | bike | 2255 | 2635.4 | +380.4 | ⚠️ |
 | 1994 | swim | 173.6 | 182.25 | +8.65 | ⚠️ |
-| 1995 | run | 1491 | 1563.4 | +72.4 | ⚠️ |
+| 1995 | run | 1491 | 1555.1 | +64.1 | ⚠️ |
 | 1995 | bike | 2074 | 2874 | +800 | ⚠️ |
 | 1995 | swim | 214.4 | 211.67 | -2.73 |  |
 | 1996 | run | 1832 | 2231.9 | +399.9 | ⚠️ |
@@ -83,49 +83,49 @@ ground-truth target for the corrected parser.**
 | 1997 | run | 2345 | 1869.3 | -475.7 | ⚠️ |
 | 1997 | bike | 2287 | 2473 | +186 | ⚠️ |
 | 1997 | swim | 41.6 | 39.74 | -1.86 |  |
-| 1998 | run | 1773 | 1997.3 | +224.3 | ⚠️ |
+| 1998 | run | 1773 | 1978.3 | +205.3 | ⚠️ |
 | 1998 | bike | 1701 | 2053.6 | +352.6 | ⚠️ |
 | 1998 | swim | 18.7 | 25.62 | +6.92 | ⚠️ |
-| 1999 | run | 1783 | 1954.2 | +171.2 | ⚠️ |
+| 1999 | run | 1783 | 1940.2 | +157.2 | ⚠️ |
 | 1999 | bike | 1297 | 1311.9 | +14.9 |  |
 | 1999 | swim | 14.1 | 25.17 | +11.07 | ⚠️ |
 | 2000 | run | 1761 | 1911.6 | +150.6 | ⚠️ |
 | 2000 | bike | 491 | 672.5 | +181.5 | ⚠️ |
 | 2000 | swim | 1 | 13.57 | +12.57 | ⚠️ |
-| 2001 | run | 1654 | 1718.9 | +64.9 | ⚠️ |
+| 2001 | run | 1654 | 1709.9 | +55.9 | ⚠️ |
 | 2001 | bike | 2528 | 2535.5 | +7.5 |  |
 | 2001 | swim | 27 | 25.3 | -1.7 |  |
-| 2002 | run | 1467 | 1545.7 | +78.7 | ⚠️ |
+| 2002 | run | 1467 | 1537.7 | +70.7 | ⚠️ |
 | 2002 | bike | 870 | 1202.5 | +332.5 | ⚠️ |
 | 2002 | swim | 3 | 19 | +16 | ⚠️ |
-| 2003 | run | 1656 | 1725 | +69 | ⚠️ |
+| 2003 | run | 1656 | 1696 | +40 |  |
 | 2003 | bike | 497 | 658 | +161 | ⚠️ |
 | 2003 | swim | 0 | 8 | +8 | ⚠️ |
 | 2004 | run | 922 | 1017.6 | +95.6 | ⚠️ |
 | 2004 | bike | 1533 | 1475 | -58 | ⚠️ |
 | 2004 | swim | 5 | 5 | 0 |  |
-| 2005 | run | 1050 | 1134.3 | +84.3 | ⚠️ |
+| 2005 | run | 1050 | 1125.3 | +75.3 | ⚠️ |
 | 2005 | bike | 2199 | 2258 | +59 |  |
 | 2005 | swim | 92 | 102 | +10 | ⚠️ |
-| 2006 | run | 833 | 946.9 | +113.9 | ⚠️ |
+| 2006 | run | 833 | 929.9 | +96.9 | ⚠️ |
 | 2006 | bike | 799 | 1006 | +207 | ⚠️ |
-| 2007 | run | 1476 | 1653.2 | +177.2 | ⚠️ |
+| 2007 | run | 1476 | 1612.7 | +136.7 | ⚠️ |
 | 2007 | bike | 613 | 825.5 | +212.5 | ⚠️ |
-| 2008 | run | 1517 | 1701.2 | +184.2 | ⚠️ |
+| 2008 | run | 1517 | 1680.2 | +163.2 | ⚠️ |
 | 2008 | bike | 395 | 718.2 | +323.2 | ⚠️ |
-| 2009 | run | 1935 | 2005.8 | +70.8 | ⚠️ |
+| 2009 | run | 1935 | 1982.3 | +47.3 |  |
 | 2009 | bike | 504 | 690.5 | +186.5 | ⚠️ |
 | 2009 | swim | 0 | 10 | +10 | ⚠️ |
 | 2010 | run | 1451 | 1598 | +147 | ⚠️ |
 | 2010 | bike | 2839 | 2926.9 | +87.9 | ⚠️ |
 | 2010 | swim | 2.6 | 5.8 | +3.2 |  |
-| 2011 | run | 412 | 476.8 | +64.8 | ⚠️ |
+| 2011 | run | 412 | 470.8 | +58.8 | ⚠️ |
 | 2011 | bike | 3306 | 2946 | -360 | ⚠️ |
 | 2011 | swim | 0 | 5 | +5 |  |
 | 2012 | run | 1994 | 2062.3 | +68.3 | ⚠️ |
 | 2012 | bike | 976 | 1092.6 | +116.6 | ⚠️ |
 | 2012 | swim | 0 | 6 | +6 | ⚠️ |
-| 2013 | run | 1692 | 1781 | +89 | ⚠️ |
+| 2013 | run | 1692 | 1763 | +71 | ⚠️ |
 | 2013 | bike | 1021 | 1271.7 | +250.7 | ⚠️ |
 | 2013 | swim | 0 | 7 | +7 | ⚠️ |
 | 2014 | run | 1230 | 1285.6 | +55.6 | ⚠️ |
@@ -134,20 +134,20 @@ ground-truth target for the corrected parser.**
 | 2015 | run | 1417 | 1457.6 | +40.6 |  |
 | 2015 | bike | 1961 | 2041.18 | +80.18 | ⚠️ |
 | 2015 | swim | 0 | 3 | +3 |  |
-| 2016 | run | 1531 | 1653.1 | +122.1 | ⚠️ |
+| 2016 | run | 1531 | 1636.8 | +105.8 | ⚠️ |
 | 2016 | bike | 4323 | 3750 | -573 | ⚠️ |
 | 2016 | swim | 0 | 21.5 | +21.5 | ⚠️ |
-| 2017 | run | 1208 | 1276.9 | +68.9 | ⚠️ |
+| 2017 | run | 1208 | 1268.6 | +60.6 | ⚠️ |
 | 2017 | bike | 5502 | 4525.8 | -976.2 | ⚠️ |
 | 2017 | swim | 4 | 21.1 | +17.1 | ⚠️ |
-| 2018 | run | 1107 | 1112.2 | +5.2 |  |
+| 2018 | run | 1107 | 1107.2 | +0.2 |  |
 | 2018 | bike | 4340 | 4330.3 | -9.7 |  |
 | 2018 | swim | 10 | 25.6 | +15.6 | ⚠️ |
-| 2019 | run | 1290 | 1291.6 | +1.6 |  |
+| 2019 | run | 1290 | 1283.9 | -6.1 |  |
 | 2019 | bike | 2616 | 3368.7 | +752.7 | ⚠️ |
 | 2020 | run | 1205 | 1299.3 | +94.3 | ⚠️ |
 | 2020 | bike | 4448 | 4514.5 | +66.5 |  |
-| 2021 | run | 845 | 894.3 | +49.3 | ⚠️ |
+| 2021 | run | 845 | 875.7 | +30.7 | ⚠️ |
 | 2021 | bike | 5277 | 5126.6 | -150.4 |  |
 
 _Note: run gaps are partly expected — `data.json` runs come from the more-complete
@@ -167,9 +167,32 @@ shorthand the parser wasn't sure about. This is why the numbers can't simply be
 |---|--:|--:|--:|
 | bike | 75732 | 72283 | 95% |
 | swim | 1734 | 1568 | 90% |
-| run | 51220 | 4182 | 8% |
+| run | 50819 | 3813 | 8% |
 
 **Implication:** runs are trustworthy (from the clean running log). Bike/swim
 distance totals should come from Mike's own weekly/annual totals, not from summing
 these doubtful cells. Reconciling cell-level distances needs Mike's eye on the
 ambiguous entries — that is the bulk of the remaining work.
+
+---
+
+## Batch 4 — running-log runs at an impossible pace (6 rows)
+
+Runs are otherwise the exact, trustworthy source, but these lines carry a mis-keyed
+distance or time: a pace faster than **3:20/km**, quicker than any race Mike has ever
+run (his 5 K PR is 17:33, a 3:30/km pace). Each row's own `pace` column was computed
+from the bad figure, so it agrees with the typo — only Mike can say whether the
+**distance** or the **time** is wrong. The **Records** page floors run pace at 3:20/km
+so these can't drive a bogus personal best, but the source rows still need a ruling.
+
+| Date | Log line (time / km / pace) | Pace | Note |
+|---|---|--:|---|
+| 2008-06-08 | 24:25 / 12 km / 2:02 | 2:02/km | home |
+| 1993-09-23 | 41:26 / 15 km / 2:46 | 2:46/km | work to david and sheila's 10 plus 5 with cath |
+| 2012-08-05 | 50:08 / 18 km / 2:47 | 2:47/km | Transcanada   Cath |
+| 2018-07-28 | 25:19 / 9 km / 2:49 | 2:49/km | tfox, golf course |
+| 2013-05-03 | 25:43 / 8.5 km / 3:02 | 3:02/km | tfox trail to 2.5k Thomas |
+| 2009-06-28 | 52:25 / 16 km / 3:17 | 3:17/km | Home to Pitts +, Mike |
+
+**Proposed ruling:** for each, Mike confirms the true distance (or time); the corrected
+value replaces the typo in the running log. _Mike to supply the right figures._

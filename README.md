@@ -58,4 +58,7 @@ with no other changes.
 **Supporting tools** (`tools/`): `build-data.js` (rebuild + self-check runs against
 Mike's run table), `gen-review.js` (regenerate `mike-review.md`), `gen-qa-data.js`
 (regenerate the `qa-data.json` checksums the QA tab reconciles against),
-`apply-corrections.js` (the conservative, provably-correct fixes already applied).
+`apply-corrections.js` (the conservative, provably-correct fixes already applied),
+`dedup-grid-runs.js` (drop grid run cells that duplicate an exact running-log run —
+same day + identical finishing time — so a run isn't double-counted and a grid's
+inflated distance can't pair with a race-only time to fake a record).

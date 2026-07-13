@@ -937,7 +937,7 @@ function bestsFor(s){
     html.push(kv("Longest distance",`${fmtNum(m.k,1)} km`,m.d,entryFocus(m,nm+" — longest distance"))); }
   if(withDur.length){ const m=withDur.reduce((a,b)=>b.t>a.t?b:a);
     html.push(kv("Longest duration",fmtDur(m.t),m.d,entryFocus(m,nm+" — longest duration"))); }
-  if(sp.metric==="pace"){ const c=rows.filter(r=>r.t&&r.k&&r.k>=3);
+  if(sp.metric==="pace"){ const c=rows.filter(r=>r.k>=3&&saneRun(r));   // saneRun drops impossible-pace log typos (see Records section)
     if(c.length){ const m=c.reduce((a,b)=> (b.t/b.k)<(a.t/a.k)?b:a); html.push(kv("Fastest pace (≥3 km)",fmtPace((m.t/60)/m.k)+" /km",m.d,entryFocus(m,nm+" — fastest pace"))); } }
   if(sp.metric==="speed"){ const c=rows.filter(r=>r.t&&r.k&&r.k>=10);
     if(c.length){ const m=c.reduce((a,b)=>(b.k/b.t)>(a.k/a.t)?b:a); html.push(kv("Fastest avg speed (≥10 km)",(m.k/(m.t/3600)).toFixed(1)+" km/h",m.d,entryFocus(m,nm+" — fastest avg speed"))); } }
@@ -1845,17 +1845,21 @@ function renderAbout(app){
          ~7 km) had the rep time <b>77</b> parsed as a <b>77 km run</b> — producing
          phantom 73–77 km "ultras" and impossible sub-3:00/km paces. The
          <b>Records</b> page now ignores &gt;60 km runs with no recorded time and
-         floors run pace at 3:00/km, so personal bests stay realistic; the source
-         rows still need correcting.</li>
+         floors run pace at 3:20/km — just under Mike's fastest race pace — so a
+         handful of mis-keyed log entries (an 8.5 km "run" at 3:01/km, a 16 km at
+         3:16/km) can't fake a personal best. Those entries are catalogued for Mike
+         to correct at source (<code>mike-review.md</code>, Batch 4).</li>
        <li><span class="pill u">open</span> <b>Swim distances from interval sets.</b>
          Swim shorthand such as <code>3x.5</code> (3×500 m = 1.5 km) or <code>3on2of</code>
          is sometimes parsed at double the real distance, making swim pace look
          elite (e.g. 1:14 /100 m). Swim records should be read with caution until
          the source is reparsed.</li>
-       <li><span class="pill u">open</span> <b>Duplicate rows inflate weekly counts.</b>
-         The weekly training-log grid and the running log overlap, so some days carry
-         both a confirmed run and a near-identical deduced copy. Combined with a few
-         junk cells parsed as sessions, this can overstate "most sessions in a week."</li>
+       <li><span class="pill d">mitigated</span> <b>Duplicate rows inflate weekly counts.</b>
+         The weekly training-log grid and the running log overlap, so some days carried
+         both a confirmed run and a near-identical deduced copy. Grid runs that restate
+         an exact running-log run (same day + finishing time) are now removed
+         (<code>tools/dedup-grid-runs.js</code>, 47 rows); a few junk cells parsed as
+         sessions may still overstate "most sessions in a week."</li>
        <li><span class="pill u">open</span> <b>Distance vs. time mix-ups.</b>
          Shorthand containing two numbers (e.g. <code>9.2 47</code>) sometimes
          stores the time where the distance should be. Being audited.</li>
@@ -1970,9 +1974,13 @@ function cumulativeChart(rows){
 const _pace = r => (r.t/60)/r.k;          // min/km
 const _kmh  = r => r.k/(r.t/3600);        // km/h
 const _per100 = r => r.t/(r.k*10);        // sec/100 m
-// 3.0 min/km floor: the source has runs where an interval split or a wrong time
-// yields impossible sub-3:00/km paces; nobody in this log actually runs that fast.
-const saneRun  = r => r.s==="run"  && r.t>0 && r.k>0 && _pace(r)>=3.0 && _pace(r)<=10;
+// 3:20/km (3.333 min/km) floor: a few runs carry a mis-keyed distance or time that
+// yields an impossible pace — faster than any race Mike has ever run (his 5 K PR is
+// 17:33, a 3:30/km pace). An earlier 3:00 floor still let a couple slip through (an
+// 8.5 km "run" at 3:01/km, a 16 km at 3:16/km) and they surfaced as bogus 5 K / 10 K
+// records. These impossible-pace log entries are catalogued for Mike to correct at
+// source in source/mike-review.md (Batch 4).
+const saneRun  = r => r.s==="run"  && r.t>0 && r.k>0 && _pace(r)>=3.333 && _pace(r)<=10;
 const saneBike = r => r.s==="bike" && r.t>0 && r.k>0 && _kmh(r)>=8  && _kmh(r)<=55;
 const saneSwim = r => r.s==="swim" && r.t>0 && r.k>0 && _per100(r)>=55 && _per100(r)<=200;
 const dayNum = ds => Math.floor(Date.parse(ds+"T00:00:00Z")/864e5);
