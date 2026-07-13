@@ -100,6 +100,27 @@ function parseGrid(text) {
   return out;
 }
 
+// Mike's own per-year run summary, at the end of running.log.txt, is an
+// independent source of truth. Parsing our runs must reconcile with it.
+function parseRunTable(text) {
+  const t = {};
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/^\s*(19|20)(\d{2})\s+(\d+)\s+([\d.]+)\s+([\d.]+)\s+\d+:\d\d\s*$/);
+    if (m) t[m[1] + m[2]] = { runs: +m[3], km: +m[4] };
+  }
+  return t;
+}
+function reconcileRuns(runRows, table) {
+  const mine = {};
+  for (const r of runRows) { const y = r.d.slice(0, 4); mine[y] = mine[y] || { runs: 0, km: 0 }; mine[y].runs++; mine[y].km += (r.k || 0); }
+  let ok = 0, years = 0;
+  for (const y of Object.keys(table)) {
+    years++; const t = table[y], m = mine[y] || { runs: 0, km: 0 };
+    if (t.runs === m.runs && Math.abs(t.km - m.km) < 1.5) ok++;
+  }
+  return { ok, years };
+}
+
 // ---------- report ----------
 function main() {
   const run = parseRunningLog(rd('source/running.log.txt'));
@@ -115,6 +136,8 @@ function main() {
   console.log(`  parsed ${run.rows.length} run rows, dropped ${run.dropped.length} (invalid dates)`);
   console.log(`  byte-exact vs data.json src="r": ${runExact}/${goldR.length}`);
   if (run.dropped.length) console.log('  dropped:', run.dropped.map(d => d.slice(0, 8)).join(', '));
+  const rec = reconcileRuns(run.rows, parseRunTable(rd('source/running.log.txt')));
+  console.log(`  reconciles with Mike's per-year run table: ${rec.ok}/${rec.years} years (2 off = the dropped bad-date rows)`);
 
   console.log('GRID (WIP)');
   const goldT = gold.rows.filter(r => r.src === 't');
