@@ -153,3 +153,23 @@ ground-truth target for the corrected parser.**
 _Note: run gaps are partly expected — `data.json` runs come from the more-complete
 running log, which may exceed Mike's grid-based run tally. Bike/swim gaps are the
 real concern._
+
+---
+
+## Batch 3 — most grid distance is low-confidence source data
+
+The original parser flagged its own confidence per row (`c`: x=clean, d=doubtful,
+u=uncertain). Almost all grid-derived distance is a *guess* — bare numbers and
+shorthand the parser wasn't sure about. This is why the numbers can't simply be
+"fixed": the ambiguity is in Mike's shorthand, not in the parsing.
+
+| Sport | Total km | of which doubtful (c≠"x") | % |
+|---|--:|--:|--:|
+| bike | 75983 | 72534 | 95% |
+| swim | 1772 | 1606 | 91% |
+| run | 51255 | 4217 | 8% |
+
+**Implication:** runs are trustworthy (from the clean running log). Bike/swim
+distance totals should come from Mike's own weekly/annual totals, not from summing
+these doubtful cells. Reconciling cell-level distances needs Mike's eye on the
+ambiguous entries — that is the bulk of the remaining work.
