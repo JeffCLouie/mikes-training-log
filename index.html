@@ -216,9 +216,10 @@
   /* records: personal-best cards */
   .recgrid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
   .rec{display:flex;flex-direction:column}
-  .rec .v{font-size:22px;font-weight:800;letter-spacing:.3px}
-  .rec .l{font-size:20px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
-  .rec .sub{font-size:12px;color:var(--text);margin-top:4px}
+  /* Label is the card header (on top); the record value sits below it. */
+  .rec .l{font-size:20px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.4px}
+  .rec .v{font-size:22px;font-weight:800;letter-spacing:.3px;margin-top:4px}
+  .rec .sub{font-size:12px;color:var(--muted);margin-top:4px}
   .rec .d{font-size:11.5px;color:var(--muted);margin-top:6px}
   /* clickable drill-ins: cards / rows that deep-link into Raw Data */
   .clk{cursor:pointer;transition:transform .08s,border-color .12s,background .12s}
@@ -2102,11 +2103,11 @@ function renderRecords(app){
 
   const recCards=recs.length?recs.map(r=>{
     const a=r.nav?` ${focusAttrs(r.nav.from,r.nav.to,r.nav.idx,r.nav.label)}`:"";
-    return `<div class="card stat rec${r.nav?" clk":""}"${a}><div class="v">${r.v}</div><div class="l">${r.l}</div>${r.sub?`<div class="sub">${r.sub}</div>`:""}<div class="d">${r.d}${r.nav?' <span class="drillcue">→</span>':""}</div></div>`;
+    return `<div class="card stat rec${r.nav?" clk":""}"${a}><div class="l">${r.l}</div><div class="v">${r.v}</div>${r.sub?`<div class="sub">${r.sub}</div>`:""}<div class="d">${r.d}${r.nav?' <span class="drillcue">→</span>':""}</div></div>`;
   }).join(""):`<div class="muted">No records in this range.</div>`;
   const pred=predictRaces(rows);
   const predHtml=pred?`<div class="card" style="margin-top:18px"><h3>Predicted race times</h3>
-     <div class="grid recgrid">${pred.preds.map(p=>`<div class="card stat rec"><div class="v">${fmtDur(Math.round(p.sec))}</div><div class="l">${p.n}</div></div>`).join("")}</div>
+     <div class="grid recgrid">${pred.preds.map(p=>`<div class="card stat rec"><div class="l">${p.n}</div><div class="v">${fmtDur(Math.round(p.sec))}</div></div>`).join("")}</div>
      <div class="note-sm">Riegel projection from your fastest recent run: ${fmtNum(pred.basis.k,1)} km @ ${fmtPace(_pace(pred.basis))}/km (<span class="clk" style="text-decoration:underline;text-decoration-style:dotted;cursor:pointer" ${focusAttrs(pred.basis.d,pred.basis.d,rowId(pred.basis),"Race-prediction basis run")}>${pred.basis.d}</span>). An estimate, not a guarantee.</div></div>`:"";
   const badges=buildBadges(rows,prs);
   // Only show genuinely earned achievements — no greyed-out "unearned" ones.
