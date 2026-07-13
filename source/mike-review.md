@@ -16,43 +16,43 @@ totals. The original parser already flagged nearly all of these low-confidence.
 
 | Date | Raw cell | Current parse | Likely correct reading |
 |---|---|---|---|
-| 1991-08-05 | `1:59:3613c62oa` | s=other, k=13, t=7176, c=u | total 1:59:36, 13th class, 62nd overall, no distance |
-| 1992-07-04 | `1:32:08 5c17oa` | s=swim, k=5, t=5528, c=d | total 1:32:08, 5th class, 17th overall, no distance |
-| 1992-07-19 | `2:03:56 3c20oa` | s=run, k=20, t=7436, c=d | total 2:03:56, 3rd class, 20th overall, no distance |
-| 1992-08-03 | `1:54:06 7c25oa --------------` | s=other, k=7, t=6846, c=u | total 1:54:06, 7th class, 25th overall, no distance |
-| 1993-08-02 | `1:51:47 5c16oa` | s=swim, k=5, t=6707, c=d | total 1:51:47, 5th class, 16th overall, no distance |
-| 1994-06-26 | `7oa 4c` | s=bike, k=7, t=—, c=d | 4th class, 7th overall, no distance |
-| 1994-08-01 | `1:51:17 5c20oa` | s=swim, k=5, t=6677, c=d | total 1:51:17, 5th class, 20th overall, no distance |
-| 1994-08-28 | `c9oa   52:37` | s=run, k=9, t=3157, c=d | total 52:37, 9th overall, no distance |
-| 1995-05-07 | `T 58:10 4c8oa` | s=swim, k=4, t=3490, c=d | total 58:10, 4th class, 8th overall, no distance |
-| 1995-06-25 | `9oa 5c` | s=bike, k=9, t=—, c=d | 5th class, 9th overall, no distance |
-| 1995-07-09 | `54  5c 18oa` | s=bike, k=54, t=—, c=d | 5th class, 18th overall, no distance |
-| 1995-07-29 | `5c17oa` | s=bike, k=17, t=—, c=d | 5th class, 17th overall, no distance |
-| 1995-08-07 | `1:52:50 6c14oa` | s=other, k=6, t=6770, c=u | total 1:52:50, 6th class, 14th overall, no distance |
+| 1991-08-05 | `1:59:3613c62oa` | s=other, k=—, t=7176, c=u | total 1:59:36, 13th class, 62nd overall, no distance |
+| 1992-07-04 | `1:32:08 5c17oa` | s=swim, k=—, t=5528, c=d | total 1:32:08, 5th class, 17th overall, no distance |
+| 1992-07-19 | `2:03:56 3c20oa` | s=run, k=—, t=7436, c=d | total 2:03:56, 3rd class, 20th overall, no distance |
+| 1992-08-03 | `1:54:06 7c25oa --------------` | s=other, k=—, t=6846, c=u | total 1:54:06, 7th class, 25th overall, no distance |
+| 1993-08-02 | `1:51:47 5c16oa` | s=swim, k=—, t=6707, c=d | total 1:51:47, 5th class, 16th overall, no distance |
+| 1994-06-26 | `7oa 4c` | s=bike, k=—, t=—, c=d | 4th class, 7th overall, no distance |
+| 1994-08-01 | `1:51:17 5c20oa` | s=swim, k=—, t=6677, c=d | total 1:51:17, 5th class, 20th overall, no distance |
+| 1994-08-28 | `c9oa   52:37` | s=run, k=—, t=3157, c=d | total 52:37, 9th overall, no distance |
+| 1995-05-07 | `T 58:10 4c8oa` | s=swim, k=—, t=3490, c=d | total 58:10, 4th class, 8th overall, no distance |
+| 1995-06-25 | `9oa 5c` | s=bike, k=—, t=—, c=d | 5th class, 9th overall, no distance |
+| 1995-07-09 | `54  5c 18oa` | s=bike, k=—, t=—, c=d | 5th class, 18th overall, no distance |
+| 1995-07-29 | `5c17oa` | s=bike, k=—, t=—, c=d | 5th class, 17th overall, no distance |
+| 1995-08-07 | `1:52:50 6c14oa` | s=other, k=—, t=6770, c=u | total 1:52:50, 6th class, 14th overall, no distance |
 | 1995-08-27 | `2:02:22 oa` | s=other, k=—, t=7342, c=u | total 2:02:22, no distance |
-| 1996-06-02 | `3c 5oa    /70` | s=bike, k=70, t=—, c=d | 3rd class, 5th overall, no distance |
-| 1996-06-22 | `6c 21oa` | s=bike, k=21, t=—, c=d | 6th class, 21st overall, no distance |
-| 1996-08-05 | `1:48:49 3c13oa` | s=swim, k=3, t=6529, c=d | total 1:48:49, 3rd class, 13th overall, no distance |
-| 1996-08-11 | `6oa` | s=bike, k=6, t=—, c=d | 6th overall, no distance |
-| 1996-08-18 | `2:04:08 2c8oa` | s=other, k=8, t=7448, c=u | total 2:04:08, 2nd class, 8th overall, no distance |
-| 1996-09-21 | `53:29 6oa` | s=run, k=6, t=3209, c=d | total 53:29, 6th overall, no distance |
-| 1997-06-01 | `c 5oa` | s=swim, k=5, t=—, c=d | 5th overall, no distance |
-| 1997-07-13 | `c 7oa` | s=bike, k=7, t=—, c=d | 7th overall, no distance |
-| 1999-07-04 | `c 7oa` | s=bike, k=7, t=—, c=d | 7th overall, no distance |
-| 2001-07-01 | `3c9oa` | s=bike, k=9, t=—, c=d | 3rd class, 9th overall, no distance |
-| 2001-07-08 | `a163   4c19oa` | s=bike, k=19, t=—, c=d | 4th class, 19th overall, no distance |
-| 2001-08-05 | `Tri  2c 3oa` | s=swim, k=3, t=—, c=d | 2nd class, 3rd overall, no distance |
-| 2001-08-26 | `2:19:39 4c11oa` | s=swim, k=4, t=8379, c=d | total 2:19:39, 4th class, 11th overall, no distance |
-| 2002-08-04 | `i  2c 4oa` | s=swim, k=4, t=—, c=d | 2nd class, 4th overall, no distance |
-| 2005-07-31 | `r Tri 4c 12oa` | s=bike, k=12, t=—, c=d | 4th class, 12th overall, no distance |
-| 2017-08-06 | `iver 5c 13oa` | s=bike, k=13, t=—, c=d | 5th class, 13th overall, no distance |
+| 1996-06-02 | `3c 5oa    /70` | s=bike, k=—, t=—, c=d | 3rd class, 5th overall, no distance |
+| 1996-06-22 | `6c 21oa` | s=bike, k=—, t=—, c=d | 6th class, 21st overall, no distance |
+| 1996-08-05 | `1:48:49 3c13oa` | s=swim, k=—, t=6529, c=d | total 1:48:49, 3rd class, 13th overall, no distance |
+| 1996-08-11 | `6oa` | s=bike, k=—, t=—, c=d | 6th overall, no distance |
+| 1996-08-18 | `2:04:08 2c8oa` | s=other, k=—, t=7448, c=u | total 2:04:08, 2nd class, 8th overall, no distance |
+| 1996-09-21 | `53:29 6oa` | s=run, k=—, t=3209, c=d | total 53:29, 6th overall, no distance |
+| 1997-06-01 | `c 5oa` | s=swim, k=—, t=—, c=d | 5th overall, no distance |
+| 1997-07-13 | `c 7oa` | s=bike, k=—, t=—, c=d | 7th overall, no distance |
+| 1999-07-04 | `c 7oa` | s=bike, k=—, t=—, c=d | 7th overall, no distance |
+| 2001-07-01 | `3c9oa` | s=bike, k=—, t=—, c=d | 3rd class, 9th overall, no distance |
+| 2001-07-08 | `a163   4c19oa` | s=bike, k=—, t=—, c=d | 4th class, 19th overall, no distance |
+| 2001-08-05 | `Tri  2c 3oa` | s=swim, k=—, t=—, c=d | 2nd class, 3rd overall, no distance |
+| 2001-08-26 | `2:19:39 4c11oa` | s=swim, k=—, t=8379, c=d | total 2:19:39, 4th class, 11th overall, no distance |
+| 2002-08-04 | `i  2c 4oa` | s=swim, k=—, t=—, c=d | 2nd class, 4th overall, no distance |
+| 2005-07-31 | `r Tri 4c 12oa` | s=bike, k=—, t=—, c=d | 4th class, 12th overall, no distance |
+| 2017-08-06 | `iver 5c 13oa` | s=bike, k=—, t=—, c=d | 5th class, 13th overall, no distance |
 
 **Proposed blanket ruling:** drop the phantom `k`; keep the total time; record the
 placement as a note. _Mike to confirm or amend._
 
 ---
 
-## Batch 2 — annual totals don't reconcile (72 sport-years off by >3%)
+## Batch 2 — annual totals don't reconcile (71 sport-years off by >3%)
 
 Mike wrote a yearly `Totals` line (Run / Bike / Swim, in km). Today's `data.json`
 distance sums should equal these but mostly **exceed** them — evidence the grid was
@@ -65,39 +65,39 @@ ground-truth target for the corrected parser.**
 | 1991 | run | 2058 | 2215 | +157 | ⚠️ |
 | 1991 | bike | 1473 | 1544.5 | +71.5 | ⚠️ |
 | 1991 | swim | 117 | 99.75 | -17.25 | ⚠️ |
-| 1992 | run | 2509 | 2808.8 | +299.8 | ⚠️ |
+| 1992 | run | 2509 | 2788.8 | +279.8 | ⚠️ |
 | 1992 | bike | 2656 | 2816.36 | +160.36 | ⚠️ |
-| 1992 | swim | 308.95 | 262.13 | -46.82 | ⚠️ |
+| 1992 | swim | 308.95 | 257.13 | -51.82 | ⚠️ |
 | 1993 | run | 1937 | 2091.9 | +154.9 | ⚠️ |
 | 1993 | bike | 2542 | 3495.4 | +953.4 | ⚠️ |
-| 1993 | swim | 256.8 | 253.5 | -3.3 |  |
-| 1994 | run | 1477 | 1847.5 | +370.5 | ⚠️ |
-| 1994 | bike | 2255 | 2642.4 | +387.4 | ⚠️ |
-| 1994 | swim | 173.6 | 187.25 | +13.65 | ⚠️ |
+| 1993 | swim | 256.8 | 248.5 | -8.3 | ⚠️ |
+| 1994 | run | 1477 | 1838.5 | +361.5 | ⚠️ |
+| 1994 | bike | 2255 | 2635.4 | +380.4 | ⚠️ |
+| 1994 | swim | 173.6 | 182.25 | +8.65 | ⚠️ |
 | 1995 | run | 1491 | 1563.4 | +72.4 | ⚠️ |
-| 1995 | bike | 2074 | 2954 | +880 | ⚠️ |
-| 1995 | swim | 214.4 | 215.67 | +1.27 |  |
-| 1996 | run | 1832 | 2237.9 | +405.9 | ⚠️ |
-| 1996 | bike | 2353 | 2793.1 | +440.1 | ⚠️ |
-| 1996 | swim | 179.9 | 197.94 | +18.04 | ⚠️ |
+| 1995 | bike | 2074 | 2874 | +800 | ⚠️ |
+| 1995 | swim | 214.4 | 211.67 | -2.73 |  |
+| 1996 | run | 1832 | 2231.9 | +399.9 | ⚠️ |
+| 1996 | bike | 2353 | 2696.1 | +343.1 | ⚠️ |
+| 1996 | swim | 179.9 | 194.94 | +15.04 | ⚠️ |
 | 1997 | run | 2345 | 1869.3 | -475.7 | ⚠️ |
-| 1997 | bike | 2287 | 2480 | +193 | ⚠️ |
-| 1997 | swim | 41.6 | 44.74 | +3.14 |  |
+| 1997 | bike | 2287 | 2473 | +186 | ⚠️ |
+| 1997 | swim | 41.6 | 39.74 | -1.86 |  |
 | 1998 | run | 1773 | 1997.3 | +224.3 | ⚠️ |
 | 1998 | bike | 1701 | 2053.6 | +352.6 | ⚠️ |
 | 1998 | swim | 18.7 | 25.62 | +6.92 | ⚠️ |
 | 1999 | run | 1783 | 1954.2 | +171.2 | ⚠️ |
-| 1999 | bike | 1297 | 1318.9 | +21.9 |  |
+| 1999 | bike | 1297 | 1311.9 | +14.9 |  |
 | 1999 | swim | 14.1 | 25.17 | +11.07 | ⚠️ |
 | 2000 | run | 1761 | 1911.6 | +150.6 | ⚠️ |
 | 2000 | bike | 491 | 672.5 | +181.5 | ⚠️ |
 | 2000 | swim | 1 | 13.57 | +12.57 | ⚠️ |
 | 2001 | run | 1654 | 1718.9 | +64.9 | ⚠️ |
-| 2001 | bike | 2528 | 2563.5 | +35.5 |  |
-| 2001 | swim | 27 | 32.3 | +5.3 | ⚠️ |
+| 2001 | bike | 2528 | 2535.5 | +7.5 |  |
+| 2001 | swim | 27 | 25.3 | -1.7 |  |
 | 2002 | run | 1467 | 1545.7 | +78.7 | ⚠️ |
 | 2002 | bike | 870 | 1202.5 | +332.5 | ⚠️ |
-| 2002 | swim | 3 | 23 | +20 | ⚠️ |
+| 2002 | swim | 3 | 19 | +16 | ⚠️ |
 | 2003 | run | 1656 | 1725 | +69 | ⚠️ |
 | 2003 | bike | 497 | 658 | +161 | ⚠️ |
 | 2003 | swim | 0 | 8 | +8 | ⚠️ |
@@ -105,7 +105,7 @@ ground-truth target for the corrected parser.**
 | 2004 | bike | 1533 | 1475 | -58 | ⚠️ |
 | 2004 | swim | 5 | 5 | 0 |  |
 | 2005 | run | 1050 | 1134.3 | +84.3 | ⚠️ |
-| 2005 | bike | 2199 | 2270 | +71 | ⚠️ |
+| 2005 | bike | 2199 | 2258 | +59 |  |
 | 2005 | swim | 92 | 102 | +10 | ⚠️ |
 | 2006 | run | 833 | 946.9 | +113.9 | ⚠️ |
 | 2006 | bike | 799 | 1006 | +207 | ⚠️ |
@@ -138,7 +138,7 @@ ground-truth target for the corrected parser.**
 | 2016 | bike | 4323 | 3750 | -573 | ⚠️ |
 | 2016 | swim | 0 | 21.5 | +21.5 | ⚠️ |
 | 2017 | run | 1208 | 1276.9 | +68.9 | ⚠️ |
-| 2017 | bike | 5502 | 4538.8 | -963.2 | ⚠️ |
+| 2017 | bike | 5502 | 4525.8 | -976.2 | ⚠️ |
 | 2017 | swim | 4 | 21.1 | +17.1 | ⚠️ |
 | 2018 | run | 1107 | 1112.2 | +5.2 |  |
 | 2018 | bike | 4340 | 4330.3 | -9.7 |  |
@@ -165,9 +165,9 @@ shorthand the parser wasn't sure about. This is why the numbers can't simply be
 
 | Sport | Total km | of which doubtful (c≠"x") | % |
 |---|--:|--:|--:|
-| bike | 75983 | 72534 | 95% |
-| swim | 1772 | 1606 | 91% |
-| run | 51255 | 4217 | 8% |
+| bike | 75732 | 72283 | 95% |
+| swim | 1734 | 1568 | 90% |
+| run | 51220 | 4182 | 8% |
 
 **Implication:** runs are trustworthy (from the clean running log). Bike/swim
 distance totals should come from Mike's own weekly/annual totals, not from summing
