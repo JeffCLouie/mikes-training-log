@@ -220,6 +220,26 @@
   .rec .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
   .rec .sub{font-size:12px;color:var(--text);margin-top:4px}
   .rec .d{font-size:11.5px;color:var(--muted);margin-top:6px}
+  /* clickable drill-ins: cards / rows that deep-link into Raw Data */
+  .clk{cursor:pointer;transition:transform .08s,border-color .12s,background .12s}
+  .clk:hover,.clk:focus-visible{transform:translateY(-2px);border-color:var(--accent);outline:none}
+  .rec.clk:hover .d,.rec.clk:focus-visible .d{color:var(--accent)}
+  .kvgrid div.clk{border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin:-6px -8px}
+  .kvgrid div.clk:hover,.kvgrid div.clk:focus-visible{transform:none;background:var(--panel2)}
+  .clk .drillcue{opacity:0;transition:opacity .12s;color:var(--accent);font-weight:700}
+  .clk:hover .drillcue,.clk:focus-visible .drillcue{opacity:1}
+  /* Raw Data: focus banner + highlighted target row */
+  .focusbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--accent);
+    border-radius:10px;padding:9px 13px;margin-bottom:10px;font-size:13px}
+  .focusbar .fb-lbl{color:var(--text);font-weight:600}
+  .focusbar .fb-sub{color:var(--muted)}
+  .focusbar .fb-x{margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    padding:5px 11px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600}
+  .focusbar .fb-x:hover{border-color:var(--accent)}
+  tr.focusrow>td{background:color-mix(in srgb,var(--accent) 16%,transparent)!important}
+  tr.focusrow>td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+  .daylink{color:var(--accent);font-weight:700;font-size:13px;cursor:pointer}
+  .daylink:hover,.daylink:focus-visible{text-decoration:underline;outline:none}
   /* records: achievement badges */
   .badges{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
   .badge{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:16px 12px}
@@ -911,21 +931,23 @@ function bestsFor(s){
   const rows=DATA.filter(r=>r.s===s);
   const sp=SPORTS[s]||{};
   let html=[];
+  const nm=sportName(s);
   const withDist=rows.filter(r=>r.k); const withDur=rows.filter(r=>r.t);
   if(withDist.length){ const m=withDist.reduce((a,b)=>b.k>a.k?b:a);
-    html.push(kv("Longest distance",`${fmtNum(m.k,1)} km`,m.d)); }
+    html.push(kv("Longest distance",`${fmtNum(m.k,1)} km`,m.d,entryFocus(m,nm+" — longest distance"))); }
   if(withDur.length){ const m=withDur.reduce((a,b)=>b.t>a.t?b:a);
-    html.push(kv("Longest duration",fmtDur(m.t),m.d)); }
+    html.push(kv("Longest duration",fmtDur(m.t),m.d,entryFocus(m,nm+" — longest duration"))); }
   if(sp.metric==="pace"){ const c=rows.filter(r=>r.t&&r.k&&r.k>=3);
-    if(c.length){ const m=c.reduce((a,b)=> (b.t/b.k)<(a.t/a.k)?b:a); html.push(kv("Fastest pace (≥3 km)",fmtPace((m.t/60)/m.k)+" /km",m.d)); } }
+    if(c.length){ const m=c.reduce((a,b)=> (b.t/b.k)<(a.t/a.k)?b:a); html.push(kv("Fastest pace (≥3 km)",fmtPace((m.t/60)/m.k)+" /km",m.d,entryFocus(m,nm+" — fastest pace"))); } }
   if(sp.metric==="speed"){ const c=rows.filter(r=>r.t&&r.k&&r.k>=10);
-    if(c.length){ const m=c.reduce((a,b)=>(b.k/b.t)>(a.k/a.t)?b:a); html.push(kv("Fastest avg speed (≥10 km)",(m.k/(m.t/3600)).toFixed(1)+" km/h",m.d)); } }
+    if(c.length){ const m=c.reduce((a,b)=>(b.k/b.t)>(a.k/a.t)?b:a); html.push(kv("Fastest avg speed (≥10 km)",(m.k/(m.t/3600)).toFixed(1)+" km/h",m.d,entryFocus(m,nm+" — fastest avg speed"))); } }
   // best year
   const years=[...new Set(rows.map(yearOf))];
   if(years.length){ const by=years.map(y=>[y,rows.filter(r=>yearOf(r)===y).length]).reduce((a,b)=>b[1]>a[1]?b:a);
-    html.push(kv("Most sessions in a year",`${by[1]}`,String(by[0]))); }
+    html.push(kv("Most sessions in a year",`${by[1]}`,String(by[0]),rangeFocus(by[0]+"-01-01",by[0]+"-12-31",nm+" in "+by[0]))); }
   return html.join("");
-  function kv(label,val,date){ return `<div><b>${label}</b>${val} <span class="muted">(${date})</span></div>`; }
+  function kv(label,val,date,nav){ const a=nav?` class="clk" ${focusAttrs(nav.from,nav.to,nav.idx,nav.label)}`:"";
+    return `<div${a}><b>${label}</b>${val} <span class="muted">(${date})</span></div>`; }
 }
 
 function reportBests(){
@@ -1182,10 +1204,85 @@ const PER_CHOICES=[50,100,250,500,1000000000];
 const perLabel=v=>v>=1e9?"All":String(v);
 const BROWSE={page:0,per:250,sort:"d",dir:-1,rows:null};
 const BROWSE_FIELDS=[["x-q","q"],["x-sport","sport"],["x-year","year"],["x-src","src"],["x-conf","conf"]];
+
+// ── Drill-in focus ─────────────────────────────────────────────────────────
+// Deep-links from records/bests into Raw Data. A "focus" narrows the table to a
+// date or date-range and (optionally) highlights the single entry that IS the
+// record. Encoded in the URL (f0/f1/fi/fl) so it survives refresh & sharing.
+let BROWSE_FOCUS=null;   // {from, to, idx|null, label} or null
+let _rowIndex=null;      // row-object -> DATA index, built lazily
+function rowId(r){ if(!_rowIndex){ _rowIndex=new Map(); DATA.forEach((row,i)=>_rowIndex.set(row,i)); } return _rowIndex.get(r); }
+function addDays(ds,n){ const t=new Date(ds+"T00:00:00Z"); t.setUTCDate(t.getUTCDate()+n); return t.toISOString().slice(0,10); }
+function monthRange(ym){ const y=+ym.slice(0,4),m=+ym.slice(5,7); const last=new Date(Date.UTC(y,m,0)).getUTCDate();
+  return [ym+"-01", ym+"-"+String(last).padStart(2,"0")]; }
+// nav for a single entry (drills to that exact row) / a date range (drills to a period)
+const entryNav=(row,label)=>({from:row.d,to:row.d,idx:rowId(row),label});
+const rangeNav=(from,to,label)=>({from,to,label});
+const entryFocus=entryNav, rangeFocus=rangeNav;   // aliases
+// build the data-* attributes that mark any element as a drill-in target
+function focusAttrs(from,to,idx,label){
+  let a=`data-focus="1" data-from="${from}" role="button" tabindex="0"`;
+  if(to&&to!==from) a+=` data-to="${to}"`;
+  if(idx!=null) a+=` data-idx="${idx}"`;
+  if(label) a+=` data-flabel="${escapeHTML(label)}"`;
+  return a+` title="View in Raw Data"`;
+}
+// navigate to Raw Data focused on a date / range / single entry
+function openFocus(from,to,idx,label){
+  if(!from) return;
+  const p=new URLSearchParams();
+  p.set("f0",from); if(to&&to!==from) p.set("f1",to);
+  if(idx!=null&&idx!=="") p.set("fi",String(idx));
+  if(label) p.set("fl",label);
+  document.getElementById("day-overlay")?.classList.remove("show");   // if opened from a day popup
+  current="browse"; renderTabs();
+  history.replaceState(null,"","#browse?"+p.toString());   // set URL first so render restores from it
+  renderBrowse(document.getElementById("app"));
+  window.scrollTo(0,0);
+}
+function restoreFocusFromURL(){
+  BROWSE_FOCUS=null;
+  const qi=location.hash.indexOf("?"); if(qi<0) return;
+  const p=new URLSearchParams(location.hash.slice(qi+1));
+  if(!p.has("f0")) return;
+  const from=p.get("f0"), to=p.get("f1")||from;
+  const fi=p.has("fi")?+p.get("fi"):null;
+  BROWSE_FOCUS={from,to,idx:(fi!=null&&!isNaN(fi))?fi:null,label:p.get("fl")||""};
+}
+function focusBanner(){
+  if(!BROWSE_FOCUS) return "";
+  const {from,to,label}=BROWSE_FOCUS;
+  const when=from===to?from:`${from} → ${to}`;
+  return `<div class="focusbar" id="x-focus">
+    <span class="fb-lbl">${label?escapeHTML(label):"Focused entry"}</span>
+    <span class="fb-sub">${when}</span>
+    <button class="fb-x" id="x-focus-clear">Clear focus ✕</button></div>`;
+}
+function clearFocus(){
+  BROWSE_FOCUS=null;
+  const b=document.getElementById("x-focus"); if(b) b.remove();
+  syncBrowseURL(); drawBrowse();
+}
+// delegated: any [data-focus] element (record card, best row, day link) drills in
+document.addEventListener("click",e=>{
+  const el=e.target.closest("[data-focus]"); if(!el) return;
+  openFocus(el.dataset.from,el.dataset.to,el.dataset.idx,el.dataset.flabel);
+});
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Enter"&&e.key!==" ") return;
+  const el=e.target.closest&&e.target.closest("[data-focus]"); if(!el) return;
+  e.preventDefault();
+  openFocus(el.dataset.from,el.dataset.to,el.dataset.idx,el.dataset.flabel);
+});
+
 // reflect current filters into the URL so refresh / sharing keeps them
 function syncBrowseURL(){
   const p=new URLSearchParams();
-  BROWSE_FIELDS.forEach(([id,key])=>{ const v=document.getElementById(id).value; if(v) p.set(key,v); });
+  BROWSE_FIELDS.forEach(([id,key])=>{ const el=document.getElementById(id); const v=el?el.value:""; if(v) p.set(key,v); });
+  if(BROWSE_FOCUS){ p.set("f0",BROWSE_FOCUS.from);
+    if(BROWSE_FOCUS.to!==BROWSE_FOCUS.from) p.set("f1",BROWSE_FOCUS.to);
+    if(BROWSE_FOCUS.idx!=null) p.set("fi",String(BROWSE_FOCUS.idx));
+    if(BROWSE_FOCUS.label) p.set("fl",BROWSE_FOCUS.label); }
   const qs=p.toString();
   history.replaceState(null,"","#browse"+(qs?"?"+qs:""));   // replaceState => no hashchange loop
 }
@@ -1195,6 +1292,7 @@ function prefillBrowseFromURL(){
   BROWSE_FIELDS.forEach(([id,key])=>{ if(p.has(key)){ const el=document.getElementById(id); if(el) el.value=p.get(key); }});
 }
 function renderBrowse(app){
+  restoreFocusFromURL();   // pick up a drill-in focus (date/range/entry) before building the banner
   const years=[...new Set(DATA.map(yearOf))].sort((a,b)=>b-a);
   const sports=globalSportOrder().filter(s=>SPORTS[s]);
   app.innerHTML=`
@@ -1208,6 +1306,7 @@ function renderBrowse(app){
      <button class="btn ghost" id="x-clear">Clear</button>
      <button class="btn ghost" id="x-csv">Export CSV</button>
    </div>
+   ${focusBanner()}
    <div class="muted" id="x-count" style="margin-bottom:8px"></div>
    <div class="tablewrap"><table id="x-table"></table></div>
    <div class="pager" id="x-pager"></div>`;
@@ -1217,8 +1316,10 @@ function renderBrowse(app){
   ["x-sport","x-year","x-src","x-conf"].forEach(id=>document.getElementById(id).onchange=redraw);
   document.getElementById("x-clear").onclick=()=>{
     BROWSE_FIELDS.forEach(([id])=>document.getElementById(id).value="");
+    BROWSE_FOCUS=null; const b=document.getElementById("x-focus"); if(b) b.remove();
     redraw();
   };
+  const fc=document.getElementById("x-focus-clear"); if(fc) fc.onclick=clearFocus;
   document.getElementById("x-csv").onclick=exportRawCSV;
   prefillBrowseFromURL();   // restore filters from the URL (refresh / shared link)
   drawBrowse();
@@ -1251,6 +1352,7 @@ function browseFilter(){
   const src=document.getElementById("x-src").value;
   const conf=document.getElementById("x-conf").value;
   return DATA.filter(r=>{
+    if(BROWSE_FOCUS&&(r.d<BROWSE_FOCUS.from||r.d>BROWSE_FOCUS.to)) return false;
     if(sport&&r.s!==sport) return false;
     if(year&&yearOf(r)!==+year) return false;
     if(src&&r.src!==src) return false;
@@ -1273,6 +1375,12 @@ function drawBrowse(){
     if(av<bv)return -dir; if(av>bv)return dir; return 0;
   });
   BROWSE.rows=rows;
+  // If a specific entry is focused, jump to the page that contains it.
+  let focusPos=-1;
+  if(BROWSE_FOCUS&&BROWSE_FOCUS.idx!=null){
+    const fr=DATA[BROWSE_FOCUS.idx]; focusPos=fr?rows.indexOf(fr):-1;
+    if(focusPos>=0) BROWSE.page=Math.floor(focusPos/BROWSE.per);
+  }
   const total=rows.length, pages=Math.max(1,Math.ceil(total/BROWSE.per));
   if(BROWSE.page>=pages)BROWSE.page=0;
   const start=BROWSE.page*BROWSE.per;
@@ -1296,6 +1404,14 @@ function drawBrowse(){
     const tr=e.target.closest("tr.datarow");
     if(tr) toggleDetail(tr);
   };
+  // Highlight + expand + scroll to the focused entry once it's on this page.
+  if(focusPos>=start&&focusPos<start+slice.length){
+    const tr=tbl.querySelectorAll("tbody tr.datarow")[focusPos-start];
+    if(tr){ tr.classList.add("focusrow");
+      if(!(tr.nextElementSibling&&tr.nextElementSibling.classList.contains("row-detail"))) toggleDetail(tr);
+      requestAnimationFrame(()=>tr.scrollIntoView({behavior:"smooth",block:"center"}));
+    }
+  }
   // pager + rows-per-page picker
   const pg=document.getElementById("x-pager");
   pg.innerHTML=`<button ${BROWSE.page===0?"disabled":""} id="pg-prev">‹ Prev</button>
@@ -1614,9 +1730,10 @@ function dayPopup(ds){
     return `<div class="e"><span class="note-tag" style="background:${col}">${lab}</span><span class="meta">${escapeHTML(txt)||"—"}</span></div>`; }).join("");
   const body=(wbody+nbody)||`<div class="muted">Nothing recorded.</div>`;
   const tot=rows.length>1?`<div class="day-tot"><span><b>${rows.length}</b> sessions</span><span><b>${fmtDurShort(totDur)}</b> total</span>${totKm?`<span><b>${fmtNum(totKm,1)}</b> km</span>`:""}</div>`:"";
+  const link=all.length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)"><span class="daylink" ${focusAttrs(ds,ds,null,"Day: "+ds)}>View in Raw Data →</span></div>`:"";
   return `<div class="day-card">
     <div class="cardhead" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">${title}</h3><button class="day-x" aria-label="Close">✕</button></div>
-    ${tot}<div class="cal-detail">${body}</div>
+    ${tot}<div class="cal-detail">${body}</div>${link}
   </div>`;
 }
 function showDayOverlay(ds){
@@ -1965,29 +2082,32 @@ function renderRecords(app){
   // is a parse error, not an ultramarathon.
   const rows=filtered(DATA).filter(r=>r.s!=="note").filter(r=>!(r.s==="run"&&r.k>60&&!r.t));
   const recs=[], prs=distancePRs(rows);
-  for(const p of prs) recs.push({v:fmtDur(Math.round(p.sec)),l:p.name,sub:fmtPace(_pace(p.row))+"/km · "+fmtNum(p.row.k,1)+" km",d:p.row.d});
+  for(const p of prs) recs.push({v:fmtDur(Math.round(p.sec)),l:p.name,sub:fmtPace(_pace(p.row))+"/km · "+fmtNum(p.row.k,1)+" km",d:p.row.d,nav:entryNav(p.row,p.name+" PR")});
   const longestBy=pred=>{ const a=rows.filter(pred); return a.length?a.reduce((x,y)=>(y.k||0)>(x.k||0)?y:x):null; };
   const lr=longestBy(r=>r.s==="run"&&r.k>0), lb=longestBy(r=>r.s==="bike"&&r.k>0), lsw=longestBy(r=>r.s==="swim"&&r.k>0);
-  if(lr) recs.push({v:fmtNum(lr.k,1)+" km",l:"Longest run",sub:lr.t?fmtDurShort(lr.t):"",d:lr.d});
-  if(lb) recs.push({v:fmtNum(lb.k,1)+" km",l:"Longest ride",sub:lb.t?fmtDurShort(lb.t):"",d:lb.d});
-  if(lsw) recs.push({v:fmtNum(lsw.k,2)+" km",l:"Longest swim",sub:lsw.t?fmtDurShort(lsw.t):"",d:lsw.d});
+  if(lr) recs.push({v:fmtNum(lr.k,1)+" km",l:"Longest run",sub:lr.t?fmtDurShort(lr.t):"",d:lr.d,nav:entryNav(lr,"Longest run")});
+  if(lb) recs.push({v:fmtNum(lb.k,1)+" km",l:"Longest ride",sub:lb.t?fmtDurShort(lb.t):"",d:lb.d,nav:entryNav(lb,"Longest ride")});
+  if(lsw) recs.push({v:fmtNum(lsw.k,2)+" km",l:"Longest swim",sub:lsw.t?fmtDurShort(lsw.t):"",d:lsw.d,nav:entryNav(lsw,"Longest swim")});
   const ride40=rows.filter(r=>saneBike(r)&&r.k>=40);
-  if(ride40.length){ const b=ride40.reduce((x,y)=>_kmh(y)>_kmh(x)?y:x); recs.push({v:_kmh(b).toFixed(1)+" km/h",l:"Fastest 40K+ ride",sub:fmtNum(b.k,1)+" km",d:b.d}); }
+  if(ride40.length){ const b=ride40.reduce((x,y)=>_kmh(y)>_kmh(x)?y:x); recs.push({v:_kmh(b).toFixed(1)+" km/h",l:"Fastest 40K+ ride",sub:fmtNum(b.k,1)+" km",d:b.d,nav:entryNav(b,"Fastest 40K+ ride")}); }
   const sw=rows.filter(saneSwim);
-  if(sw.length){ const b=sw.reduce((x,y)=>_per100(y)<_per100(x)?y:x); recs.push({v:fmtMMSS(_per100(b))+"/100m",l:"Best swim pace",sub:fmtNum(b.k,2)+" km",d:b.d}); }
+  if(sw.length){ const b=sw.reduce((x,y)=>_per100(y)<_per100(x)?y:x); recs.push({v:fmtMMSS(_per100(b))+"/100m",l:"Best swim pace",sub:fmtNum(b.k,2)+" km",d:b.d,nav:entryNav(b,"Best swim pace")}); }
   const timed=rows.filter(r=>r.t>0);
-  if(timed.length){ const b=timed.reduce((x,y)=>y.t>x.t?y:x); recs.push({v:fmtDurShort(b.t),l:"Longest session",sub:sportName(b.s),d:b.d}); }
+  if(timed.length){ const b=timed.reduce((x,y)=>y.t>x.t?y:x); recs.push({v:fmtDurShort(b.t),l:"Longest session",sub:sportName(b.s),d:b.d,nav:entryNav(b,"Longest session")}); }
   const dm=dailyMap(rows); let bd=null; for(const d in dm) if(!bd||dm[d].k>dm[bd].k)bd=d;
-  if(bd&&dm[bd].k>0) recs.push({v:fmtNum(dm[bd].k,1)+" km",l:"Biggest day",d:bd});
-  const wk=rollingMax(rows,"k",7); if(wk&&wk.val>0) recs.push({v:fmtNum(Math.round(wk.val))+" km",l:"Biggest week",d:"week to "+wk.end});
-  const mo=monthMax(rows,"k"); if(mo&&mo.val>0) recs.push({v:fmtNum(Math.round(mo.val))+" km",l:"Biggest month",d:MONTHS[+mo.ym.slice(5,7)-1]+" "+mo.ym.slice(0,4)});
-  const wkc=rollingMax(rows,"c",7); if(wkc&&wkc.val>0) recs.push({v:wkc.val+" sessions",l:"Most in a week",d:"week to "+wkc.end});
+  if(bd&&dm[bd].k>0) recs.push({v:fmtNum(dm[bd].k,1)+" km",l:"Biggest day",d:bd,nav:rangeNav(bd,bd,"Biggest day")});
+  const wk=rollingMax(rows,"k",7); if(wk&&wk.val>0) recs.push({v:fmtNum(Math.round(wk.val))+" km",l:"Biggest week",d:"week to "+wk.end,nav:rangeNav(addDays(wk.end,-6),wk.end,"Biggest week (7 days to "+wk.end+")")});
+  const mo=monthMax(rows,"k"); if(mo&&mo.val>0){ const[mf,mt]=monthRange(mo.ym); recs.push({v:fmtNum(Math.round(mo.val))+" km",l:"Biggest month",d:MONTHS[+mo.ym.slice(5,7)-1]+" "+mo.ym.slice(0,4),nav:rangeNav(mf,mt,"Biggest month ("+MONTHS[+mo.ym.slice(5,7)-1]+" "+mo.ym.slice(0,4)+")")}); }
+  const wkc=rollingMax(rows,"c",7); if(wkc&&wkc.val>0) recs.push({v:wkc.val+" sessions",l:"Most in a week",d:"week to "+wkc.end,nav:rangeNav(addDays(wkc.end,-6),wkc.end,"Most sessions in a week (7 days to "+wkc.end+")")});
 
-  const recCards=recs.length?recs.map(r=>`<div class="card stat rec"><div class="v">${r.v}</div><div class="l">${r.l}</div>${r.sub?`<div class="sub">${r.sub}</div>`:""}<div class="d">${r.d}</div></div>`).join(""):`<div class="muted">No records in this range.</div>`;
+  const recCards=recs.length?recs.map(r=>{
+    const a=r.nav?` ${focusAttrs(r.nav.from,r.nav.to,r.nav.idx,r.nav.label)}`:"";
+    return `<div class="card stat rec${r.nav?" clk":""}"${a}><div class="v">${r.v}</div><div class="l">${r.l}</div>${r.sub?`<div class="sub">${r.sub}</div>`:""}<div class="d">${r.d}${r.nav?' <span class="drillcue">→</span>':""}</div></div>`;
+  }).join(""):`<div class="muted">No records in this range.</div>`;
   const pred=predictRaces(rows);
   const predHtml=pred?`<div class="card" style="margin-top:18px"><h3>Predicted race times</h3>
      <div class="grid recgrid">${pred.preds.map(p=>`<div class="card stat rec"><div class="v">${fmtDur(Math.round(p.sec))}</div><div class="l">${p.n}</div></div>`).join("")}</div>
-     <div class="note-sm">Riegel projection from your fastest recent run: ${fmtNum(pred.basis.k,1)} km @ ${fmtPace(_pace(pred.basis))}/km (${pred.basis.d}). An estimate, not a guarantee.</div></div>`:"";
+     <div class="note-sm">Riegel projection from your fastest recent run: ${fmtNum(pred.basis.k,1)} km @ ${fmtPace(_pace(pred.basis))}/km (<span class="clk" style="text-decoration:underline;text-decoration-style:dotted;cursor:pointer" ${focusAttrs(pred.basis.d,pred.basis.d,rowId(pred.basis),"Race-prediction basis run")}>${pred.basis.d}</span>). An estimate, not a guarantee.</div></div>`:"";
   const badges=buildBadges(rows,prs);
   // Only show genuinely earned achievements — no greyed-out "unearned" ones.
   const earnedBadges=badges.filter(b=>b.earned);
@@ -2031,9 +2151,9 @@ function renderWrapped(app){
    </div>
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
      ${topSport?`<div class="card"><h3>Top sport</h3><div class="factnum">${sportMark(topSport)} ${sportName(topSport)}</div><div class="factsub">${fmtNum(sp[topSport].c)} sessions · ${fmtDurShort(sp[topSport].dur)}</div></div>`:""}
-     ${bd&&dm[bd].k>0?`<div class="card"><h3>Biggest day</h3><div class="factnum">${fmtNum(dm[bd].k,1)} km</div><div class="factsub">${bd}</div></div>`:""}
-     ${ls?`<div class="card"><h3>Longest session</h3><div class="factnum">${fmtDurShort(ls.t)}</div><div class="factsub">${sportName(ls.s)} · ${ls.d}</div></div>`:""}
-     ${bm!=null?`<div class="card"><h3>Busiest month</h3><div class="factnum">${MONTHS[bm]}</div><div class="factsub">${mc[bm]} sessions</div></div>`:""}
+     ${bd&&dm[bd].k>0?`<div class="card clk" ${focusAttrs(bd,bd,null,"Biggest day of "+y)}><h3>Biggest day</h3><div class="factnum">${fmtNum(dm[bd].k,1)} km</div><div class="factsub">${bd} <span class="drillcue">→</span></div></div>`:""}
+     ${ls?`<div class="card clk" ${focusAttrs(ls.d,ls.d,rowId(ls),"Longest session of "+y)}><h3>Longest session</h3><div class="factnum">${fmtDurShort(ls.t)}</div><div class="factsub">${sportName(ls.s)} · ${ls.d} <span class="drillcue">→</span></div></div>`:""}
+     ${bm!=null?(()=>{const[bmf,bmt]=monthRange(y+"-"+String(bm+1).padStart(2,"0"));return `<div class="card clk" ${focusAttrs(bmf,bmt,null,"Busiest month ("+MONTHS[bm]+" "+y+")")}><h3>Busiest month</h3><div class="factnum">${MONTHS[bm]}</div><div class="factsub">${mc[bm]} sessions <span class="drillcue">→</span></div></div>`;})():""}
      <div class="card"><h3>Personal records set</h3><div class="factnum">${prsThisYear.length}</div><div class="factsub">${prsThisYear.length?prsThisYear.map(p=>p.name).join(", "):"No new distance PRs this year"}</div></div>
    </div>
    <div class="card" style="margin-top:16px"><h3>Sessions by month</h3>${columnChart(MONTHS.map((m,i)=>({label:m,value:mc[i]||0})),{shortLabel:l=>l[0]})}</div>`;
