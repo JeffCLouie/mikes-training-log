@@ -14,6 +14,9 @@ const ord = n => { n = +n; const s = ['th','st','nd','rd'], v = n % 100; return 
 
 const grid = rd('source/training.log.txt');
 const data = JSON.parse(rd('data.json'));
+const paceMin = r => (r.t / 60) / r.k;   // min/km
+const fmtPace = p => `${Math.floor(p)}:${String(Math.round((p - Math.floor(p)) * 60)).padStart(2, '0')}`;
+const fmtHMS = s => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60; return (h ? `${h}:${String(m).padStart(2, '0')}` : `${m}`) + `:${String(ss).padStart(2, '0')}`; };
 
 // ---- Batch 1: race placements misread as distances ----
 const races = data.rows.filter(r => /\d+\s*oa/.test(r.r || '')).sort((a, b) => a.d < b.d ? -1 : 1);
@@ -56,6 +59,22 @@ for (const sp of ['bike', 'swim', 'run']) {
   const tot = rows.reduce((a, r) => a + r.k, 0);
   const doubt = rows.filter(r => r.c !== 'x').reduce((a, r) => a + r.k, 0);
   b3 += `| ${sp} | ${Math.round(tot)} | ${Math.round(doubt)} | ${(100 * doubt / tot).toFixed(0)}% |\n`;
+}
+
+// ---- Batch 4: running-log runs with a physically impossible pace ----
+// The running log is the exact source for runs, but a few lines carry a mis-keyed
+// distance or time — a pace faster than 3:20/km, quicker than any race Mike has run
+// (5 K PR 17:33 ≈ 3:30/km). The pace column was computed from the bad figure, so it
+// is self-consistent: only Mike knows whether the distance or the time is the typo.
+// The Records page floors run pace at 3:20/km so these can't fake a personal best.
+const IMPOSSIBLE = 3.333; // min/km (= 3:20/km)
+const badPace = data.rows
+  .filter(r => r.src === 'r' && r.s === 'run' && r.t > 0 && r.k > 0 && paceMin(r) < IMPOSSIBLE)
+  .sort((a, b) => paceMin(a) - paceMin(b));
+let b4 = `| Date | Log line (time / km / pace) | Pace | Note |\n|---|---|--:|---|\n`;
+for (const r of badPace) {
+  const note = (r.n || '').replace(/\|/g, '\\|').trim() || '—';
+  b4 += `| ${r.d} | ${fmtHMS(r.t)} / ${r.k} km / ${fmtPace(paceMin(r))} | ${fmtPace(paceMin(r))}/km | ${note} |\n`;
 }
 
 const md = `# Data points for Mike to validate
@@ -107,6 +126,21 @@ ${b3}
 distance totals should come from Mike's own weekly/annual totals, not from summing
 these doubtful cells. Reconciling cell-level distances needs Mike's eye on the
 ambiguous entries — that is the bulk of the remaining work.
+
+---
+
+## Batch 4 — running-log runs at an impossible pace (${badPace.length} rows)
+
+Runs are otherwise the exact, trustworthy source, but these lines carry a mis-keyed
+distance or time: a pace faster than **3:20/km**, quicker than any race Mike has ever
+run (his 5 K PR is 17:33, a 3:30/km pace). Each row's own \`pace\` column was computed
+from the bad figure, so it agrees with the typo — only Mike can say whether the
+**distance** or the **time** is wrong. The **Records** page floors run pace at 3:20/km
+so these can't drive a bogus personal best, but the source rows still need a ruling.
+
+${b4}
+**Proposed ruling:** for each, Mike confirms the true distance (or time); the corrected
+value replaces the typo in the running log. _Mike to supply the right figures._
 `;
 fs.writeFileSync(path.join(ROOT, 'source/mike-review.md'), md);
-console.log(`wrote source/mike-review.md — Batch 1: ${races.length} rows, Batch 2: ${offCount} off-totals`);
+console.log(`wrote source/mike-review.md — Batch 1: ${races.length} rows, Batch 2: ${offCount} off-totals, Batch 4: ${badPace.length} impossible-pace runs`);
