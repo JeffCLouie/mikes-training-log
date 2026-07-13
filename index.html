@@ -215,12 +215,13 @@
   .fbar .fclear:hover{border-color:var(--accent);color:var(--text)}
   /* records: personal-best cards */
   .recgrid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
-  .rec{display:flex;flex-direction:column}
-  /* Label is the card header (on top); the record value sits below it. */
-  .rec .l{font-size:20px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.4px}
-  .rec .v{font-size:22px;font-weight:800;letter-spacing:.3px;margin-top:4px}
-  .rec .sub{font-size:12px;color:var(--muted);margin-top:4px}
-  .rec .d{font-size:11.5px;color:var(--muted);margin-top:6px}
+  .rec{display:flex;flex-direction:column;padding:14px 15px}
+  /* Label is the card header: a high-contrast accent eyebrow on top, with the
+     record value as the dominant line below it. Dates bottom-align across a row. */
+  .rec .l{font-size:15px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;line-height:1.25}
+  .rec .v{font-size:25px;font-weight:800;letter-spacing:.2px;line-height:1.15;margin-top:7px}
+  .rec .sub{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .rec .d{font-size:11.5px;color:var(--muted);margin-top:auto;padding-top:10px}
   /* clickable drill-ins: cards / rows that deep-link into Raw Data */
   .clk{cursor:pointer;transition:transform .08s,border-color .12s,background .12s}
   .clk:hover,.clk:focus-visible{transform:translateY(-2px);border-color:var(--accent);outline:none}
@@ -2107,7 +2108,28 @@ function renderRecords(app){
   if(bd&&dm[bd].k>0) recs.push({v:fmtNum(dm[bd].k,1)+" km",l:"Biggest day",d:bd,nav:rangeNav(bd,bd,"Biggest day")});
   const wk=rollingMax(rows,"k",7); if(wk&&wk.val>0) recs.push({v:fmtNum(Math.round(wk.val))+" km",l:"Biggest week",d:"week to "+wk.end,nav:rangeNav(addDays(wk.end,-6),wk.end,"Biggest week (7 days to "+wk.end+")")});
   const mo=monthMax(rows,"k"); if(mo&&mo.val>0){ const[mf,mt]=monthRange(mo.ym); recs.push({v:fmtNum(Math.round(mo.val))+" km",l:"Biggest month",d:MONTHS[+mo.ym.slice(5,7)-1]+" "+mo.ym.slice(0,4),nav:rangeNav(mf,mt,"Biggest month ("+MONTHS[+mo.ym.slice(5,7)-1]+" "+mo.ym.slice(0,4)+")")}); }
+  // Biggest year — most distance logged in a calendar year (volume: sits with day/week/month).
+  const yearKm={}; for(const r of rows) if(r.k>0){ const y=r.d.slice(0,4); yearKm[y]=(yearKm[y]||0)+r.k; }
+  { let by=null; for(const y in yearKm) if(by===null||yearKm[y]>yearKm[by]) by=y;
+    if(by) recs.push({v:fmtNum(Math.round(yearKm[by]))+" km",l:"Biggest year",d:by,nav:rangeNav(by+"-01-01",by+"-12-31","Biggest year ("+by+")")}); }
   const wkc=rollingMax(rows,"c",7); if(wkc&&wkc.val>0) recs.push({v:wkc.val+" sessions",l:"Most in a week",d:"week to "+wkc.end,nav:rangeNav(addDays(wkc.end,-6),wkc.end,"Most sessions in a week (7 days to "+wkc.end+")")});
+  // Most in a day — busiest single day by session count (sits with most-in-a-week).
+  { let bday=null; for(const d in dm) if(bday===null||dm[d].c>dm[bday].c) bday=d;
+    if(bday&&dm[bday].c>1) recs.push({v:dm[bday].c+" sessions",l:"Most in a day",d:bday,nav:rangeNav(bday,bday,"Most sessions in a day ("+bday+")")}); }
+  // Most active year — most distinct days trained in a calendar year (consistency).
+  const yearDays={}; for(const r of rows){ const y=r.d.slice(0,4); (yearDays[y]||(yearDays[y]=new Set())).add(r.d); }
+  { let by=null; for(const y in yearDays) if(by===null||yearDays[y].size>yearDays[by].size) by=y;
+    if(by) recs.push({v:yearDays[by].size+" days",l:"Most active year",sub:"days trained",d:by,nav:rangeNav(by+"-01-01",by+"-12-31","Most active year ("+by+")")}); }
+  // Longest streak — most consecutive calendar days trained (consistency).
+  const stk=streakInfo(rows);
+  if(stk.longest>1&&stk.start) recs.push({v:stk.longest+" days",l:"Longest streak",sub:"consecutive days",d:"through "+stk.end,nav:rangeNav(stk.start,stk.end,"Longest streak — "+stk.longest+" days")});
+  // Most sports in a day — biggest single-day variety (a multi-sport / brick day).
+  const daySports={}; for(const r of rows){ (daySports[r.d]||(daySports[r.d]=new Set())).add(r.s); }
+  { let bs=null; for(const d in daySports) if(bs===null||daySports[d].size>daySports[bs].size) bs=d;
+    if(bs&&daySports[bs].size>1) recs.push({v:daySports[bs].size+" sports",l:"Most sports in a day",sub:[...daySports[bs]].map(sportName).join(", "),d:bs,nav:rangeNav(bs,bs,"Most sports in a day ("+bs+")")}); }
+  // Fastest century ride — fastest 100 km+ ride (renders only if such a ride exists).
+  const century=rows.filter(r=>saneBike(r)&&r.k>=100);
+  if(century.length){ const cb=century.reduce((x,y)=>_kmh(y)>_kmh(x)?y:x); recs.push({v:_kmh(cb).toFixed(1)+" km/h",l:"Fastest century ride",sub:fmtNum(cb.k,1)+" km",d:cb.d,nav:entryNav(cb,"Fastest century ride")}); }
 
   const recCards=recs.length?recs.map(r=>{
     const a=r.nav?` ${focusAttrs(r.nav.from,r.nav.to,r.nav.idx,r.nav.label)}`:"";
