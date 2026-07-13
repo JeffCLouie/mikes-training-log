@@ -49,6 +49,15 @@ for (const y of Object.keys(totals).sort()) for (const sp of ['run', 'bike', 'sw
   b2 += `| ${y} | ${sp} | ${mt} | ${ds} | ${diff > 0 ? '+' : ''}${diff} | ${off ? '⚠️' : ''} |\n`;
 }
 
+// ---- Batch 3: how much distance is low-confidence source data ----
+let b3 = `| Sport | Total km | of which doubtful (c≠"x") | % |\n|---|--:|--:|--:|\n`;
+for (const sp of ['bike', 'swim', 'run']) {
+  const rows = data.rows.filter(r => r.s === sp && r.k);
+  const tot = rows.reduce((a, r) => a + r.k, 0);
+  const doubt = rows.filter(r => r.c !== 'x').reduce((a, r) => a + r.k, 0);
+  b3 += `| ${sp} | ${Math.round(tot)} | ${Math.round(doubt)} | ${(100 * doubt / tot).toFixed(0)}% |\n`;
+}
+
 const md = `# Data points for Mike to validate
 
 Rebuilt from the raw source files. Places where today's \`data.json\` disagrees with
@@ -83,6 +92,21 @@ ${b2}
 _Note: run gaps are partly expected — \`data.json\` runs come from the more-complete
 running log, which may exceed Mike's grid-based run tally. Bike/swim gaps are the
 real concern._
+
+---
+
+## Batch 3 — most grid distance is low-confidence source data
+
+The original parser flagged its own confidence per row (\`c\`: x=clean, d=doubtful,
+u=uncertain). Almost all grid-derived distance is a *guess* — bare numbers and
+shorthand the parser wasn't sure about. This is why the numbers can't simply be
+"fixed": the ambiguity is in Mike's shorthand, not in the parsing.
+
+${b3}
+**Implication:** runs are trustworthy (from the clean running log). Bike/swim
+distance totals should come from Mike's own weekly/annual totals, not from summing
+these doubtful cells. Reconciling cell-level distances needs Mike's eye on the
+ambiguous entries — that is the bulk of the remaining work.
 `;
 fs.writeFileSync(path.join(ROOT, 'source/mike-review.md'), md);
 console.log(`wrote source/mike-review.md — Batch 1: ${races.length} rows, Batch 2: ${offCount} off-totals`);
