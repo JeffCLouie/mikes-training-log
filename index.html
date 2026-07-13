@@ -358,6 +358,35 @@
   #toTop:active{filter:brightness(.92)}
   #toTop svg{width:22px;height:22px;stroke:#04201a;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
   @media(max-width:640px){ #toTop{bottom:calc(70px + env(safe-area-inset-bottom));width:40px;height:40px} }
+  /* ---- Data QA ---- */
+  .qa-subnav{display:flex;gap:6px;flex-wrap:wrap}
+  .qa-subnav button{background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+    padding:7px 13px;border-radius:8px;cursor:pointer;font-size:13.5px;font-weight:600}
+  .qa-subnav button.on{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel2))}
+  .qa-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .qa-row select,.qa-row input{background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    padding:6px 9px;border-radius:8px;font-size:13px}
+  .qa-tbl{border-collapse:collapse;width:100%;font-size:13.5px}
+  .qa-tbl th,.qa-tbl td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  .qa-tbl th:first-child,.qa-tbl td:first-child{text-align:left}
+  .qa-tbl thead th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+  .qa-edit td{text-align:left}
+  .qa-edit input{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:4px 7px;border-radius:6px;font-size:13px}
+  .qa-edit .qa-rawc{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis}
+  .qa-edit tr.edited td:first-child{color:var(--accent)}
+  .qa-flag{color:var(--accent)}
+  .nowrap{white-space:nowrap}
+  .qa-item{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:9px}
+  .qa-meta{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:13px;margin-bottom:6px}
+  .qa-date{font-weight:700}
+  .chip-s{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600}
+  .qa-c{border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;text-transform:uppercase}
+  .qa-c.c-d{background:rgba(216,162,74,.16);color:#d8a24a} .qa-c.c-u{background:rgba(224,104,95,.16);color:#e0685f}
+  .qa-raw{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--text);
+    background:var(--panel2);border-radius:6px;padding:6px 9px;margin-bottom:7px;overflow-x:auto}
+  .qa-ruling{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    padding:8px 10px;border-radius:8px;font-size:13.5px}
+  .qa-ruling.saved{border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -583,7 +612,7 @@ function lineChart(points, opts={}){
 const TABS = [
   ["dash","Dashboard"], ["insights","Insights"], ["records","Records"],
   ["wrapped","Year in Review"], ["reports","Reports"], ["browse","Raw Data"],
-  ["about","About"],
+  ["qa","Data QA"], ["about","About"],
 ];
 // The custom report builder used to be its own tab; it now lives inside Reports.
 // Keep old #builder deep links working by routing them to Reports.
@@ -625,6 +654,7 @@ function route(){
   else if(current==="wrapped") renderWrapped(app);
   else if(current==="reports") renderReports(app);
   else if(current==="browse") renderBrowse(app);
+  else if(current==="qa") renderQA(app);
   else renderAbout(app);
 }
 
@@ -2011,6 +2041,192 @@ function renderWrapped(app){
   if(yp) yp.addEventListener("click",e=>{ const b=e.target.closest(".ypick"); if(b){ WRAP_YEAR=+b.dataset.y; renderWrapped(app); window.scrollTo(0,0); } });
 }
 
+//============================================================ DATA QA
+// A data-quality workspace: see how the live data reconciles with Mike's own
+// checksums, spot-check the uncertain entries, rule on them, and edit raw values.
+//
+// Persistence: rulings/edits are saved to the browser (localStorage) right now.
+// To back them with a server later, set QAStore.SYNC_URL to an endpoint — every
+// save then also POSTs {key,value}; no other code changes needed.
+const QAStore = {
+  SYNC_URL: null,                       // e.g. "/api/qa" once a server exists
+  K_RUL:"mtl_rulings", K_EDIT:"mtl_edits",
+  _load(k){ try{return JSON.parse(localStorage.getItem(k)||"{}")}catch{return{}} },
+  _save(k,v){ try{localStorage.setItem(k,JSON.stringify(v))}catch{} this._sync(k,v); },
+  _sync(k,v){ if(!this.SYNC_URL)return; try{fetch(this.SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:k,value:v,at:new Date().toISOString()})})}catch(e){} },
+  rulings(){ return this._load(this.K_RUL); },
+  setRuling(id,val){ const r=this.rulings(); if(val&&val.trim())r[id]={val:val.trim(),ts:Date.now()}; else delete r[id]; this._save(this.K_RUL,r); },
+  edits(){ return this._load(this.K_EDIT); },
+  setEdit(id,orig,patch){ const e=this.edits(); e[id]={orig,patch,ts:Date.now()}; this._save(this.K_EDIT,e); },
+  clearEdit(id){ const e=this.edits(); delete e[id]; this._save(this.K_EDIT,e); },
+  exportBlob(){ return JSON.stringify({exportedAt:new Date().toISOString(),rulings:this.rulings(),edits:this.edits()},null,2); },
+};
+let QADATA=null, qaSub="health";
+const qaId = r => `${r.d}|${r.s}|${r.r||""}`;
+
+function renderQA(app){
+  if(!QADATA){
+    app.innerHTML=`<h2 class="section">Data QA</h2><div class="card"><p class="muted">Loading checksums…</p></div>`;
+    fetch("qa-data.json").then(r=>r.json()).then(j=>{QADATA=j; if(current==="qa")renderQA(app);})
+      .catch(()=>{QADATA={annual:{},runTable:{}}; if(current==="qa")renderQA(app);});
+    return;
+  }
+  const subs=[["health","Data health"],["review","Spot-check &amp; rulings"],["edit","Edit entries"]];
+  app.innerHTML=`
+    <h2 class="section">Data QA</h2>
+    <div class="card" style="margin-bottom:14px">
+      <p class="muted" style="margin:0 0 8px">Cross-check the live data against Mike's own written totals, review the
+      uncertain entries, and record rulings. Changes are saved in this browser${QAStore.SYNC_URL?"":" (a server can be wired in later)"}.</p>
+      <div class="qa-subnav">${subs.map(([id,n])=>`<button data-sub="${id}" class="${id===qaSub?'on':''}">${n}</button>`).join("")}</div>
+    </div>
+    <div id="qa-body"></div>`;
+  app.querySelectorAll(".qa-subnav button").forEach(b=>b.onclick=()=>{qaSub=b.dataset.sub; renderQA(app);});
+  const body=app.querySelector("#qa-body");
+  if(qaSub==="health") qaHealth(body);
+  else if(qaSub==="review") qaReview(body);
+  else qaEdit(body);
+}
+
+// ---- Data health: confidence + reconciliation vs Mike's totals ----
+function qaHealth(el){
+  const real=DATA.filter(r=>r.s!=="note");
+  const cc={x:0,d:0,u:0}, ck={x:0,d:0,u:0};
+  for(const r of real){ cc[r.c]=(cc[r.c]||0)+1; if(r.k)ck[r.c]=(ck[r.c]||0)+r.k; }
+  const totK=ck.x+ck.d+ck.u||1;
+  const pct=v=>Math.round(100*v/totK);
+  // reconciliation table
+  const sum={}; for(const r of DATA){ if(!r.k)continue; const y=yearOf(r); sum[y]=sum[y]||{}; sum[y][r.s]=(sum[y][r.s]||0)+r.k; }
+  const years=Object.keys(QADATA.annual).sort();
+  let offCount=0, rows="";
+  for(const y of years){
+    const a=QADATA.annual[y]; if(!a)continue;
+    const cells=["run","bike","swim"].map(sp=>{
+      if(a[sp]==null) return `<td class="muted">·</td>`;
+      const gotRaw=sum[y]?.[sp]||0, got=Math.round(gotRaw), diff=Math.round(gotRaw-a[sp]);
+      const off=Math.abs(diff)>Math.max(5,a[sp]*0.03); if(off)offCount++;
+      const col=off?(diff>0?"var(--bad,#e0685f)":"var(--warn,#d8a24a)"):"var(--accent)";
+      return `<td title="Mike ${a[sp]} · data ${got}"><span style="color:${col}">${diff>0?"+":""}${diff}</span></td>`;
+    }).join("");
+    rows+=`<tr><td><b>${y}</b></td>${cells}</tr>`;
+  }
+  el.innerHTML=`
+    <div class="grid stat-row" style="margin-bottom:14px">
+      <div class="card stat"><div class="num" style="color:var(--accent)">${pct(ck.x)}%</div><div class="lbl">Distance confident (c=x)</div></div>
+      <div class="card stat"><div class="num" style="color:var(--warn,#d8a24a)">${pct(ck.d)}%</div><div class="lbl">Doubtful (c=d)</div></div>
+      <div class="card stat"><div class="num">${cc.d+cc.u}</div><div class="lbl">Rows needing review</div></div>
+      <div class="card stat"><div class="num">${offCount}</div><div class="lbl">Sport-years off vs Mike</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3>Runs — reconciled ✔</h3>
+      <p class="muted" style="margin:0">Runs come from the precise running log and match Mike's own per-year run
+      table exactly (his grand total: ${QADATA.runTable?Object.values(QADATA.runTable).reduce((a,r)=>a+r.runs,0):"—"} runs). These are trustworthy.</p>
+    </div>
+    <div class="card">
+      <h3>Distance vs Mike's annual totals — difference (km)</h3>
+      <p class="muted" style="margin:0 0 10px">Grid distances (bike/swim) are ~95% low-confidence guesses, so they overshoot
+      Mike's own yearly totals. Green = within 3%; <span style="color:var(--bad,#e0685f)">red</span> = data reads high;
+      <span style="color:var(--warn,#d8a24a)">amber</span> = reads low. The goal is all-green, via the rulings under
+      “Spot-check”.</p>
+      <div style="overflow-x:auto"><table class="qa-tbl">
+        <thead><tr><th>Year</th><th>Run</th><th>Bike</th><th>Swim</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+
+// ---- Spot-check & rulings: work through the uncertain rows ----
+let qaFilter={year:"",sport:"",only:"unruled"};
+function qaReview(el){
+  const rul=QAStore.rulings();
+  let cand=DATA.filter(r=>r.c!=="x" && r.s!=="note");
+  const years=[...new Set(cand.map(yearOf))].sort((a,b)=>a-b);
+  const sports=[...new Set(cand.map(r=>r.s))].sort();
+  if(qaFilter.year) cand=cand.filter(r=>String(yearOf(r))===qaFilter.year);
+  if(qaFilter.sport) cand=cand.filter(r=>r.s===qaFilter.sport);
+  if(qaFilter.only==="unruled") cand=cand.filter(r=>!rul[qaId(r)]);
+  else if(qaFilter.only==="ruled") cand=cand.filter(r=>rul[qaId(r)]);
+  cand.sort((a,b)=>(b.k||0)-(a.k||0));               // biggest impact first
+  const shown=cand.slice(0,200);
+  const total=DATA.filter(r=>r.c!=="x"&&r.s!=="note").length;
+  const ruled=Object.keys(rul).length;
+  el.innerHTML=`
+    <div class="card" style="margin-bottom:12px">
+      <div class="qa-row">
+        <span><b>${ruled}</b> ruled · <b>${total-ruled}</b> left</span>
+        <select id="qf-year"><option value="">All years</option>${years.map(y=>`<option ${qaFilter.year==String(y)?"selected":""}>${y}</option>`).join("")}</select>
+        <select id="qf-sport"><option value="">All sports</option>${sports.map(s=>`<option ${qaFilter.sport==s?"selected":""}>${s}</option>`).join("")}</select>
+        <select id="qf-only">
+          <option value="unruled" ${qaFilter.only==="unruled"?"selected":""}>Needs ruling</option>
+          <option value="ruled" ${qaFilter.only==="ruled"?"selected":""}>Ruled</option>
+          <option value="all" ${qaFilter.only==="all"?"selected":""}>All</option></select>
+        <button class="btn ghost" id="qa-export">Export rulings + edits</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Sorted by distance (biggest impact first). Enter what an entry <i>should</i> be —
+      a note, a corrected distance, “drop this”, whatever — and I'll apply it. Showing ${shown.length} of ${cand.length}.</p>
+    </div>
+    ${shown.map(r=>{ const id=qaId(r); const rv=rul[id];
+      return `<div class="qa-item">
+        <div class="qa-meta"><span class="qa-date">${r.d}</span> <span class="chip-s">${r.s}</span>
+          <span class="qa-c c-${r.c}">${r.c}</span>
+          ${r.k?`<span class="muted">${r.k} km</span>`:""}${r.t?`<span class="muted">${fmtDur(r.t)}</span>`:""}</div>
+        <div class="qa-raw">${escapeHtml(r.r||"")}</div>
+        <input class="qa-ruling" data-id="${id}" placeholder="Mike's ruling (e.g. 'swim 1.8k', 'drop — placement', 'correct')" value="${rv?escapeHtml(rv.val):""}">
+      </div>`;}).join("") || `<div class="card muted">Nothing matches this filter. 🎉</div>`}`;
+  el.querySelector("#qf-year").onchange=e=>{qaFilter.year=e.target.value; qaReview(el);};
+  el.querySelector("#qf-sport").onchange=e=>{qaFilter.sport=e.target.value; qaReview(el);};
+  el.querySelector("#qf-only").onchange=e=>{qaFilter.only=e.target.value; qaReview(el);};
+  el.querySelector("#qa-export").onclick=qaExport;
+  el.querySelectorAll(".qa-ruling").forEach(inp=>{
+    inp.onchange=()=>{ QAStore.setRuling(inp.dataset.id, inp.value); inp.classList.toggle("saved",!!inp.value.trim()); };
+  });
+}
+
+// ---- Edit entries: correct raw values directly, tracked ----
+let qaSearch="";
+function qaEdit(el){
+  const edits=QAStore.edits();
+  let rows=DATA;
+  if(qaSearch.trim()){ const q=qaSearch.toLowerCase(); rows=rows.filter(r=>(r.r||"").toLowerCase().includes(q)||r.d.includes(q)||r.s.includes(q)); }
+  rows=rows.slice(0,150);
+  el.innerHTML=`
+    <div class="card" style="margin-bottom:12px">
+      <div class="qa-row">
+        <input id="qe-search" placeholder="Search by date, sport, or raw text…" value="${escapeHtml(qaSearch)}" style="flex:1;min-width:180px">
+        <span class="muted"><b>${Object.keys(edits).length}</b> edited</span>
+        <button class="btn ghost" id="qa-export2">Export rulings + edits</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Edit distance (km), duration, sport, or note. Edited rows are flagged and
+      recorded (original + new) so I can learn the pattern and apply it broadly. Showing ${rows.length}${qaSearch?"":" (search to narrow)"}.</p>
+    </div>
+    <div style="overflow-x:auto"><table class="qa-tbl qa-edit">
+      <thead><tr><th>Date</th><th>Raw</th><th>Sport</th><th>km</th><th>Note</th><th></th></tr></thead>
+      <tbody>${rows.map(r=>{ const id=qaId(r); const ed=edits[id];
+        return `<tr class="${ed?"edited":""}" data-id="${id}">
+          <td class="nowrap">${r.d}${ed?' <span title="edited" class="qa-flag">●</span>':''}</td>
+          <td class="qa-rawc">${escapeHtml(r.r||"")}</td>
+          <td><input class="qe-s" value="${escapeHtml(ed?.patch.s??r.s)}" size="6"></td>
+          <td><input class="qe-k" value="${ed?.patch.k??r.k??""}" size="5" inputmode="decimal"></td>
+          <td><input class="qe-n" value="${escapeHtml(ed?.patch.n??r.n??"")}" size="16"></td>
+          <td>${ed?`<button class="qe-undo" title="revert">↺</button>`:""}</td>
+        </tr>`;}).join("")}</tbody></table></div>`;
+  el.querySelector("#qe-search").onchange=e=>{qaSearch=e.target.value; qaEdit(el);};
+  el.querySelector("#qa-export2").onclick=qaExport;
+  el.querySelectorAll("tbody tr").forEach(tr=>{
+    const id=tr.dataset.id; const r=DATA.find(x=>qaId(x)===id);
+    const save=()=>{ const patch={s:tr.querySelector(".qe-s").value.trim(), k:tr.querySelector(".qe-k").value.trim(), n:tr.querySelector(".qe-n").value.trim()};
+      QAStore.setEdit(id,{s:r.s,k:r.k??"",n:r.n??""},patch); tr.classList.add("edited"); };
+    tr.querySelectorAll("input").forEach(i=>i.onchange=save);
+    const u=tr.querySelector(".qe-undo"); if(u)u.onclick=()=>{QAStore.clearEdit(id); qaEdit(el);};
+  });
+}
+
+function qaExport(){
+  const blob=new Blob([QAStore.exportBlob()],{type:"application/json"});
+  const url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download="mikes-training-log-qa.json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
 //============================================================ boot
 fetch("data.json").then(r=>r.json()).then(j=>{
   META=j.meta; DATA=j.rows;
@@ -2038,9 +2254,10 @@ fetch("data.json").then(r=>r.json()).then(j=>{
     records: '<path d="M7 4h10v3a5 5 0 0 1-10 0Z"/><path d="M7 5H4v1a3 3 0 0 0 3 3"/><path d="M17 5h3v1a3 3 0 0 1-3 3"/><path d="M10 17h4v3h-4z"/><path d="M9 20h6"/><path d="M12 12v5"/>',
     wrapped: '<path d="M12 3l2.3 5.4L20 9l-4 3.6L17.2 19 12 16l-5.2 3L8 12.6 4 9l5.7-.6z"/>',
     browse:  '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    qa:      '<path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/>',
     about:   '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1.1" fill="currentColor" stroke="none"/>',
   };
-  const SHORT = {dash:"Home", insights:"Insights", records:"Records", wrapped:"Recap", reports:"Reports", browse:"Data", about:"About"};
+  const SHORT = {dash:"Home", insights:"Insights", records:"Records", wrapped:"Recap", reports:"Reports", browse:"Data", qa:"QA", about:"About"};
   const nav = document.getElementById("bottomnav");
   if(!nav || typeof TABS==="undefined") return;
   nav.innerHTML = TABS.map(([id])=>

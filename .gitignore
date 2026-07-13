@@ -3,3 +3,4 @@
 # are the source of truth for the site and must be committed so the data is
 # reproducible. (Previously `_*.js` here silently excluded them.)
 *.tmp
+node_modules/
