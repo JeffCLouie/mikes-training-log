@@ -1,2 +1,5 @@
-_*.js
+# Scratch / temp files only.
+# NOTE: do NOT ignore the data pipeline. The scripts that generate data.json
+# are the source of truth for the site and must be committed so the data is
+# reproducible. (Previously `_*.js` here silently excluded them.)
 *.tmp
