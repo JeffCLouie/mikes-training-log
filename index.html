@@ -226,43 +226,91 @@
   .note-tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#0c1116;flex:none}
   .cal-detail .e .meta{color:var(--muted)}
   /* dedicated vertical activity calendar (weeks stacked top-to-bottom, Mon→Sun) */
-  .vcal-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:12px}
-  .vcal-sum{font-size:13px;color:var(--muted)}
+  .vcal-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:10px}
+  .vcal-sum{font-size:12.5px;color:var(--muted);line-height:1.4}
   .vcal-sum b{color:var(--text);font-weight:700}
-  .vcal-chips{display:flex;flex-wrap:wrap;gap:6px}
-  .vcal-chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);
-    color:var(--text);padding:5px 10px;border-radius:20px;font-size:12.5px;cursor:pointer;user-select:none;
-    transition:opacity .12s,border-color .12s}
-  .vcal-chip .sw{width:11px;height:11px;border-radius:3px;flex:none}
+  .vcal-chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .vcal-chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);
+    color:var(--text);padding:4px 9px;border-radius:20px;font-size:12px;cursor:pointer;user-select:none;
+    -webkit-tap-highlight-color:transparent}
+  .vcal-chip .sw{width:10px;height:10px;border-radius:3px;flex:none}
   .vcal-chip[aria-pressed="false"]{opacity:.4}
   .vcal-chip[aria-pressed="true"]{border-color:var(--muted)}
-  .vcal-mini{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;
-    padding:5px 10px;font-size:12px;cursor:pointer}
-  .vcal-mini:hover{color:var(--text);border-color:var(--muted)}
-  .vcal-scroll{position:relative;max-width:560px;max-height:74vh;overflow-y:auto;background:var(--panel);
-    border:1px solid var(--line);border-radius:12px;padding:0 12px 12px}
-  .vcal-head,.vcal{display:grid;grid-template-columns:var(--vcal-gut,46px) repeat(7,minmax(0,1fr));gap:4px}
-  .vcal-head{position:sticky;top:0;z-index:2;background:var(--panel);padding:9px 0 7px;
-    border-bottom:1px solid var(--line)}
-  .vcal-head .dow{font-size:11px;color:var(--muted);text-align:center;font-weight:700;letter-spacing:.4px}
+  .vcal-mini{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:20px;
+    padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .vcal-mini:active,.vcal-mini:hover{color:var(--text);border-color:var(--muted)}
+  .vcal-scroll{position:relative;max-width:560px;max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 10px 10px}
+  .vcal-head,.vcal-row{display:grid;grid-template-columns:var(--vcal-gut,44px) repeat(7,minmax(0,1fr));gap:3px}
+  .vcal-head{position:sticky;top:0;z-index:2;background:var(--panel);padding:8px 0 6px;border-bottom:1px solid var(--line)}
+  .vcal-head .dow{font-size:10.5px;color:var(--muted);text-align:center;font-weight:700;letter-spacing:.3px}
   .vcal-head .dow.we{color:var(--accent2)}
-  .vcal{padding-top:6px}
-  .vcal-lbl{font-size:10.5px;color:var(--muted);display:flex;align-items:center;white-space:nowrap;
-    overflow:visible;padding-right:4px}
+  .vcal{display:flex;flex-direction:column;gap:3px;padding-top:5px}
+  /* content-visibility:auto lets the browser SKIP layout/style/paint for off-screen
+     weeks — so initial render, scrolling, and filter re-styling only touch the ~15
+     visible rows instead of all ~1,700. Critical for the large grid on mobile. */
+  .vcal-row{content-visibility:auto;contain-intrinsic-size:0 var(--vcal-cell-h,44px)}
+  .vcal-lbl{font-size:10px;color:var(--muted);display:flex;align-items:center;white-space:nowrap;overflow:visible;padding-right:3px}
   .vcal-lbl b{color:var(--text);font-weight:800}
-  .vcal-cell{position:relative;aspect-ratio:1;min-height:24px;border-radius:5px;background:var(--panel2);
-    transition:opacity .12s,filter .12s}
+  .vcal-cell{position:relative;height:var(--vcal-cell-h,44px);border-radius:5px;background:var(--panel2)}
   .vcal-cell[data-d]{cursor:pointer}
-  .vcal-cell[data-d]:hover{outline:2px solid var(--text);outline-offset:-1px}
-  .vcal-cell .dn{position:absolute;top:2px;left:4px;font-size:9.5px;line-height:1;color:rgba(255,255,255,.5);
-    pointer-events:none}
-  .vcal-cell.vcal-dim{opacity:.12;filter:grayscale(1)}
-  .vcal-y{border-top:2px solid var(--line);padding-top:3px;margin-top:2px}
-  .vcal-layout{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
-  .vcal-main{flex:0 1 560px;min-width:0}
-  .vcal-aside{flex:1 1 280px;min-width:260px}
-  .vcal-aside h3{margin-bottom:8px}
-  @media (max-width:560px){ .vcal-head,.vcal{--vcal-gut:38px;gap:3px} .vcal-cell{min-height:20px} .vcal-cell .dn{font-size:8.5px} }
+  .vcal-cell[data-d]:active,.vcal-cell[data-d]:hover{outline:2px solid var(--text);outline-offset:-1px}
+  .vcal-cell .dn{position:absolute;top:2px;left:4px;font-size:9px;line-height:1;color:rgba(255,255,255,.5);pointer-events:none}
+  .vcal-row.vcal-y{box-shadow:0 -2px 0 var(--line)}   /* year separator without changing row height */
+  /* category filter: gate static per-category rules with a class on the grid, so a
+     toggle is ~10 class writes on ONE node — no per-cell work, no filter/transition,
+     opacity only (paints just the visible cells). Keeps mobile snappy. */
+  #vcal-grid.off-trained  [data-cat="trained"],
+  #vcal-grid.off-top      [data-cat="top"],
+  #vcal-grid.off-race     [data-cat="race"],
+  #vcal-grid.off-injury   [data-cat="injury"],
+  #vcal-grid.off-illness  [data-cat="illness"],
+  #vcal-grid.off-weather  [data-cat="weather"],
+  #vcal-grid.off-rest     [data-cat="rest"],
+  #vcal-grid.off-recovery [data-cat="recovery"],
+  #vcal-grid.off-travel   [data-cat="travel"],
+  #vcal-grid.off-home     [data-cat="home"]{opacity:.12}
+  .vcal-layout{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+  .vcal-main{flex:1 1 340px;min-width:0}
+  .vcal-aside{flex:1 1 260px;min-width:240px}
+  .vcal-how{margin-top:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+  .vcal-how>summary{list-style:none;cursor:pointer;padding:10px 12px;font-size:13px;font-weight:700;color:var(--text);
+    display:flex;align-items:center;justify-content:space-between;gap:8px;-webkit-tap-highlight-color:transparent}
+  .vcal-how>summary::-webkit-details-marker{display:none}
+  .vcal-how>summary::after{content:"\25B8";color:var(--muted);transition:transform .15s;font-size:14px}
+  .vcal-how[open]>summary::after{transform:rotate(90deg)}
+  .vcal-how .body{padding:2px 14px 12px;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .vcal-how ul{margin:6px 0 0;padding-left:18px}
+  .vcal-how li{margin:4px 0}
+  .vcal-how b{color:var(--text)}
+  .vcal-how code{font-size:12px}
+  .vcal-catgrid{list-style:none;padding-left:0;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}
+  /* companion "matching days" table under the calendar */
+  .vcal-table{margin-top:18px}
+  .vcal-table-hint{font-size:12.5px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:11px 13px;line-height:1.5}
+  .vcal-table-hint b{color:var(--text)}
+  .vcal-table-head{font-size:12.5px;color:var(--muted);margin:0 2px 8px}
+  .vcal-table-head b{color:var(--text);font-size:15px}
+  .vcal-table-scroll{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+  .vcal-ttable{width:100%;border-collapse:collapse;font-size:13px}
+  .vcal-ttable tr{border-bottom:1px solid var(--line)}
+  .vcal-ttable tbody tr[data-d]{cursor:pointer}
+  .vcal-ttable tbody tr[data-d]:hover{background:var(--panel2)}
+  .vcal-ttable tr:last-child{border-bottom:none}
+  .vcal-ttable td{padding:9px 12px;vertical-align:top}
+  .vcal-tdate{white-space:nowrap;color:var(--text);font-variant-numeric:tabular-nums;width:1%}
+  .vcal-ttag{display:inline-block;padding:1px 9px;border-radius:20px;font-size:11px;font-weight:700;color:#0c1116;white-space:nowrap}
+  .vcal-ttable .sportlabel{font-size:12.5px}
+  @media (max-width:600px){
+    .vcal-scroll{max-width:none;max-height:62vh}
+    .vcal-head,.vcal{--vcal-gut:34px}
+    .vcal-cell{--vcal-cell-h:38px}
+    .vcal-cell .dn{font-size:8.5px;top:1px;left:3px}
+    .vcal-catgrid{grid-template-columns:1fr}
+    .vcal-ttable td{padding:8px 7px;font-size:12px}
+    .vcal-tdate{padding-left:9px}
+  }
   .factnum{font-size:24px;font-weight:800}
   .factsub{color:var(--muted);font-size:12.5px;margin-top:2px}
   .wd-bars{display:flex;align-items:flex-end;gap:6px;height:90px;margin-top:6px}
@@ -2027,46 +2075,53 @@ function renderCalendar(app){
     return `${d.ds} · ${bits.join(" · ")}`; };
   const gutter=wk=>{ const f=wk.find(d=>d.inSpan&&d.dom===1); if(!f) return "";
     return f.mo===1?`<b>${f.ds.slice(0,4)}</b>`:MONTHS[f.mo-1]; };
-  // build the grid: each week = [gutter label][7 day cells]
+  // build the grid: each week is one row = [gutter label][7 day cells]
   const rowsHTML = weeks.map(wk=>{
     const ny = wk.some(d=>d.inSpan&&d.ds.slice(5)==="01-01");   // first week of a calendar year
     const fs = wk.find(d=>d.inSpan); const yv = fs?fs.y:wk[3].y;
-    const yc = ny?" vcal-y":"";
     const cells = wk.map(d=>{
       const tappable = d.inSpan&&(d.c||d.note);
-      return `<div class="vcal-cell${yc}" data-cat="${catOf(d)}"${tappable?` data-d="${d.ds}"`:""} style="background:${color(d)}" title="${tip(d)}">${d.inSpan?`<span class="dn">${d.dom}</span>`:""}</div>`;
+      return `<div class="vcal-cell" data-cat="${catOf(d)}"${tappable?` data-d="${d.ds}"`:""} style="background:${color(d)}" title="${tip(d)}">${d.inSpan?`<span class="dn">${d.dom}</span>`:""}</div>`;
     }).join("");
-    return `<div class="vcal-lbl${yc}" data-y="${yv}">${gutter(wk)}</div>${cells}`;
+    return `<div class="vcal-row${ny?" vcal-y":""}" data-y="${yv}"><div class="vcal-lbl">${gutter(wk)}</div>${cells}</div>`;
   }).join("");
   const dows = WEEKDAYS.map((w,i)=>`<div class="dow${i>=5?" we":""}">${w}</div>`).join("");
   const chips = CAL_CATS.map(([k,c,l])=>`<button class="vcal-chip" data-cat="${k}" aria-pressed="true"><span class="sw" style="background:${c}"></span>${l}</button>`).join("");
   const legend = `<div class="hm-legend" style="margin-top:12px">Less
     <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.58)"></span><span class="hm-cell" style="background:rgba(54,194,168,.76)"></span><span class="hm-cell" style="background:rgba(54,194,168,.92)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%<span class="hm-cell" style="background:${NOTE_COL.race};margin-left:12px"></span> race<span class="hm-cell" style="background:${NOTE_COL.injury};margin-left:8px"></span> injury<span class="hm-cell" style="background:${NOTE_COL.illness};margin-left:8px"></span> illness<span class="hm-cell" style="background:${NOTE_COL.weather};margin-left:8px"></span> weather<span class="hm-cell" style="background:${NOTE_COL.rest};margin-left:8px"></span> rest<span class="hm-cell" style="background:${NOTE_COL.recovery};margin-left:8px"></span> recovery<span class="hm-cell" style="background:${NOTE_COL.travel};margin-left:8px"></span> travel<span class="hm-cell" style="background:${NOTE_COL.home};margin-left:8px"></span> home</div>`;
-  const howNote = `<div class="note-sm" style="margin-top:0;line-height:1.65">
-    Each square is one day. The green shade is that day's <b>training load</b>, not its session count:
-    <code>load = effort-minutes × intensity</code>, summed over the day's workouts. Effort-minutes are the recorded minutes
-    (or distance ÷ that sport's typical speed when only a distance was logged); intensity is the session's speed vs that sport's
-    typical speed — faster counts as harder — capped at 0.7–1.5× and treated as 1.0× when there's no pace to judge (time-only
-    sports like hockey or weights just score their minutes). Typical speeds are the median of each sport's physically-plausible
-    sessions, so the scale calibrates to Mike's own data. <b>So one long, fast effort outranks five short easy ones</b> — five
-    10-minute jogs are ~35 load, one fast 200-minute ride is ~280. <b>Orange = top 1%</b>: the days whose total load lands in the
-    top 1% across all ${years.length} years — the genuinely hardest days, not just the busiest.
-    <div style="margin-top:8px"><b>Diary-note categories</b> (a day with no workout, tinted by what Mike jotted; keyword-matched, medium confidence):
-    <b>race</b> a race / event / meet · <b>injury</b> a hurt or pain note · <b>illness</b> sick / cold / flu · <b>weather</b> storm, heat or cold that stopped training ·
-    <b>rest</b> an explicit day-off · <b>recovery</b> massage, physio, stretch, sauna, ice bath · <b>travel</b> trips &amp; time away · <b>home</b> home projects &amp; chores (roof, firewood, yard…).</div></div>`;
+  const howNote = `<details class="vcal-how">
+     <summary>How it's measured</summary>
+     <div class="body">
+       <ul>
+         <li><b>Green = training load</b> (not session count): <code>minutes × intensity</code>, summed per day. Darker = harder.</li>
+         <li><b>Intensity</b> = a session's speed vs that sport's typical speed — faster is harder — capped 0.7–1.5×; 1.0× when there's no pace (hockey, weights…).</li>
+         <li>So one long, fast effort beats five short easy ones (5×10-min jog ≈ 35; one fast 200-min ride ≈ 280).</li>
+         <li><b style="color:rgba(255,178,90,.95)">Orange = top 1%</b> of daily load across all ${years.length} years — the hardest days, not the busiest.</li>
+       </ul>
+       <div style="margin-top:9px;font-weight:700;color:var(--text)">Diary tints — no-workout days, by what Mike jotted:</div>
+       <ul class="vcal-catgrid">
+         <li><b>race</b> — event / meet</li><li><b>injury</b> — hurt / pain</li>
+         <li><b>illness</b> — sick / flu</li><li><b>weather</b> — storm / heat / cold</li>
+         <li><b>rest</b> — explicit day off</li><li><b>recovery</b> — massage / physio</li>
+         <li><b>travel</b> — trips / away</li><li><b>home</b> — projects / chores</li>
+       </ul>
+       <div style="margin-top:9px;opacity:.8">Diary tints are keyword-matched (medium confidence). Typical speeds are each sport's own median, so the scale self-calibrates.</div>
+     </div>
+   </details>`;
 
   app.innerHTML = `
    <h2 class="section">Activity calendar</h2>
    <div class="card">
      <div class="vcal-controls">
-       <label class="fld" style="max-width:130px;margin:0">Jump to year
+       <label class="fld" style="max-width:110px;margin:0">Year
          <select id="vcal-year">${years.slice().reverse().map(y=>`<option ${y===_calYear?"selected":""}>${y}</option>`).join("")}</select></label>
        <div id="vcal-sum" class="vcal-sum"></div>
      </div>
-     <div class="vcal-controls" style="margin-bottom:6px">
-       <div class="vcal-chips">${chips}</div>
-       <button class="vcal-mini" id="vcal-all">All</button>
-       <button class="vcal-mini" id="vcal-none">None</button>
+     <div class="vcal-controls" style="margin-bottom:8px">
+       <div class="vcal-chips">${chips}
+         <button class="vcal-mini" id="vcal-all">All</button>
+         <button class="vcal-mini" id="vcal-none">None</button>
+       </div>
      </div>
      <div class="vcal-layout">
        <div class="vcal-main">
@@ -2074,13 +2129,13 @@ function renderCalendar(app){
            <div class="vcal-head"><div></div>${dows}</div>
            <div class="vcal" id="vcal-grid">${rowsHTML}</div>
          </div>
-         ${legend}
        </div>
        <div class="vcal-aside">
-         <h3>How it's measured</h3>
+         ${legend}
          ${howNote}
        </div>
      </div>
+     <div id="vcal-table" class="vcal-table"></div>
    </div>`;
 
   // ---- wiring: year jump ↔ scroll sync, day popups, category filter
@@ -2088,39 +2143,87 @@ function renderCalendar(app){
   const grid=document.getElementById("vcal-grid");
   const ysel=document.getElementById("vcal-year");
   const sumEl=document.getElementById("vcal-sum");
-  const labels=[...grid.querySelectorAll(".vcal-lbl")];
-  const yearTop={}; labels.forEach(el=>{ const y=+el.dataset.y; if(yearTop[y]==null) yearTop[y]=el.offsetTop; });
+  const rowEls=[...grid.querySelectorAll(".vcal-row")];
   const headH=()=>{ const h=scroll.querySelector(".vcal-head"); return h?h.offsetHeight:0; };
+  // Every week row is the same height, so positions are exact from index×pitch —
+  // no per-row offsetTop reads (which content-visibility only *estimates* for
+  // off-screen rows, and which would be O(rows) on every scroll frame).
+  const firstTop=rowEls.length?rowEls[0].offsetTop:0;
+  const pitch=rowEls.length>1?((rowEls[1].offsetTop-rowEls[0].offsetTop)||1):1;
+  const yearIndex={}; rowEls.forEach((el,i)=>{ const y=+el.dataset.y; if(yearIndex[y]==null) yearIndex[y]=i; });
+  const topOfYear=y=>firstTop+(yearIndex[y]||0)*pitch;
   const fillSum=y=>{ const o=ysum[y];
     sumEl.innerHTML = o
       ? `<b>${y}</b> · <b>${o.days}</b> active day${o.days===1?"":"s"} · <b>${fmtNum(o.sess)}</b> session${o.sess===1?"":"s"} · <b>${Math.round(o.dur/3600)}h</b> trained · <b>${o.top}</b> top-1% day${o.top===1?"":"s"}`
       : `<b>${y}</b> · no recorded activity`; };
   // which year sits under the sticky header right now (slack > the jump gap below
   // so a freshly-jumped-to year reads back as itself, not the tail of the prior one)
-  const yearAtScroll=()=>{ const t=scroll.scrollTop+headH()+14; let y=labels.length?+labels[0].dataset.y:_calYear;
-    for(const el of labels){ if(el.offsetTop<=t) y=+el.dataset.y; else break; } return y; };
+  const yearAtScroll=()=>{ if(!rowEls.length) return _calYear;
+    let i=Math.floor((scroll.scrollTop+headH()+14-firstTop)/pitch);
+    if(i<0)i=0; else if(i>rowEls.length-1)i=rowEls.length-1;
+    return +rowEls[i].dataset.y; };
   let raf=0;
   scroll.addEventListener("scroll",()=>{ if(raf) return; raf=requestAnimationFrame(()=>{ raf=0;
     const y=yearAtScroll(); if(+ysel.value!==y) ysel.value=y; _calYear=y; fillSum(y); }); },{passive:true});
+  // Instant jump — smooth-scrolling across decades is a long, janky ride; a year
+  // picker should land immediately (and the scroll sync then reads back that year).
   ysel.onchange=()=>{ const y=+ysel.value; _calYear=y; fillSum(y);
-    if(yearTop[y]!=null) scroll.scrollTo({top:Math.max(0,yearTop[y]-headH()-4),behavior:"smooth"}); };
+    scroll.scrollTop=Math.max(0,topOfYear(y)-headH()-4); };
   grid.addEventListener("click",e=>{ const c=e.target.closest(".vcal-cell[data-d]"); if(c) showDayOverlay(c.dataset.d); });
-  // category filter: chips toggle; unselected categories grey out (unless all are on)
+  // category filter: unselected categories grey out. Dimming is done by toggling
+  // an `off-<cat>` class on the GRID (one node) — static CSS then fades just the
+  // matching cells via opacity. No per-cell writes, no filter/transition, so even
+  // "None" (dim everything) is instant on mobile.
   const active=new Set(CAL_CATS.map(c=>c[0]));
-  const cells=[...grid.querySelectorAll(".vcal-cell")];
-  const applyFilter=()=>{ const all=active.size===CAL_CATS.length;
-    cells.forEach(cell=>{ const cat=cell.dataset.cat;
-      cell.classList.toggle("vcal-dim", !all && cat!=="none" && !active.has(cat)); }); };
-  const chipEls=[...grid.ownerDocument.querySelectorAll(".vcal-chip")];
+  const applyFilter=()=>CAL_CATS.forEach(c=>grid.classList.toggle("off-"+c[0], !active.has(c[0])));
+
+  // ---- companion table: lists the days matching the active categories, so a
+  // sparse category (travel, races, injuries…) can be read off directly instead
+  // of hunted for in the grid. Tinted note-days follow the same rule as the
+  // calendar (a note only counts on a day with no workout). Tap a row → that day.
+  const tableEl=document.getElementById("vcal-table");
+  const catColor=c=> c==="trained"?"#36c2a8" : c==="top"?"rgba(255,178,90,.95)" : (NOTE_COL[c]||"var(--panel2)");
+  const catLbl=c=> c==="top"?"top 1%" : c;
+  const TCAP=400;
+  const updateTable=()=>{
+    if(active.size===CAL_CATS.length){ tableEl.innerHTML=`<div class="vcal-table-hint">Tap <b>None</b> then a category (or switch some off) to list those days here — every <b>travel</b>, <b>race</b> or <b>injury</b> day at a glance, no scrolling.</div>`; return; }
+    if(!active.size){ tableEl.innerHTML=`<div class="vcal-table-hint">No categories selected — pick one or more above.</div>`; return; }
+    const list=[];
+    const noteCats=new Set(["race","injury","illness","weather","rest","recovery","travel","home"]);
+    if([...active].some(c=>noteCats.has(c)))
+      for(const ds in noteDay){ const c=noteDay[ds]; if(active.has(c)&&!day[ds]) list.push({d:ds,cat:c,note:1}); }
+    const wT=active.has("trained"), wTop=active.has("top");
+    if(wT||wTop) for(const ds in day){ const dd=day[ds], top=dd.load>0&&dd.load>=hot;
+      if((top&&wTop)||(!top&&wT)) list.push({d:ds,cat:top?"top":"trained",dd}); }
+    list.sort((a,b)=> a.d<b.d?1:a.d>b.d?-1:0);   // newest first
+    const total=list.length;
+    const rows=list.slice(0,TCAP).map(it=>{
+      const dt=new Date(it.d+"T00:00:00Z");
+      const dstr=`${MONTHS[dt.getUTCMonth()]} ${dt.getUTCDate()}, ${dt.getUTCFullYear()}`;
+      const tag=`<span class="vcal-ttag" style="background:${catColor(it.cat)}">${catLbl(it.cat)}</span>`;
+      let detail;
+      if(it.note){ const txt=DATA.filter(r=>r.s==="note"&&r.d===it.d).map(noteText).filter(Boolean).join(" · "); detail=escapeHTML(txt)||"<span class='muted'>—</span>"; }
+      else { const dd=it.dd, sports=[...new Set(DATA.filter(r=>r.d===it.d&&r.s!=="note").map(r=>r.s))].map(sportTag).join(" ");
+        detail=`${sports} <span class="muted">· ${dd.c} session${dd.c===1?"":"s"}${dd.dur?" · "+fmtDurShort(dd.dur):""}${dd.dist?" · "+fmtNum(dd.dist,1)+" km":""} · load ${Math.round(dd.load)}</span>`; }
+      return `<tr data-d="${it.d}"><td class="vcal-tdate">${dstr}</td><td>${tag}</td><td>${detail}</td></tr>`;
+    }).join("");
+    tableEl.innerHTML=`<div class="vcal-table-head"><b>${fmtNum(total)}</b> matching day${total===1?"":"s"}${total>TCAP?` <span class="muted">· showing the ${TCAP} most recent</span>`:""}</div>
+      <div class="vcal-table-scroll"><table class="vcal-ttable"><tbody>${rows||`<tr><td class="muted" style="padding:12px">No matching days.</td></tr>`}</tbody></table></div>`;
+  };
+  tableEl.addEventListener("click",e=>{ const tr=e.target.closest("tr[data-d]"); if(tr) showDayOverlay(tr.dataset.d); });
+  const refresh=()=>{ applyFilter(); updateTable(); };
+
+  const chipEls=[...document.querySelectorAll(".vcal-chip")];
   chipEls.forEach(ch=>ch.onclick=()=>{ const k=ch.dataset.cat;
     if(active.has(k)) active.delete(k); else active.add(k);
-    ch.setAttribute("aria-pressed", active.has(k)?"true":"false"); applyFilter(); });
+    ch.setAttribute("aria-pressed", active.has(k)?"true":"false"); refresh(); });
   document.getElementById("vcal-all").onclick=()=>{ active.clear(); CAL_CATS.forEach(c=>active.add(c[0]));
-    chipEls.forEach(ch=>ch.setAttribute("aria-pressed","true")); applyFilter(); };
+    chipEls.forEach(ch=>ch.setAttribute("aria-pressed","true")); refresh(); };
   document.getElementById("vcal-none").onclick=()=>{ active.clear();
-    chipEls.forEach(ch=>ch.setAttribute("aria-pressed","false")); applyFilter(); };
+    chipEls.forEach(ch=>ch.setAttribute("aria-pressed","false")); refresh(); };
+  updateTable();
   // open on the default (most-active) year without a scroll animation
-  requestAnimationFrame(()=>{ if(yearTop[_calYear]!=null) scroll.scrollTop=Math.max(0,yearTop[_calYear]-headH()-4); fillSum(_calYear); });
+  requestAnimationFrame(()=>{ scroll.scrollTop=Math.max(0,topOfYear(_calYear)-headH()-4); fillSum(_calYear); });
 }
 
 //============================================================ ABOUT
