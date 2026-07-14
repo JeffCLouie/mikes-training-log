@@ -144,10 +144,19 @@
   .xlab span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
   /* stacked column charts: each bar split into coloured segments by sport */
   .bar.stack{display:flex;flex-direction:column-reverse;overflow:hidden;background:none}
-  .bar.stack .sseg{width:100%;flex:none;min-height:0}
+  /* 2px surface gap between stacked segments (none under the bottom one) */
+  .bar.stack .sseg{width:100%;flex:none;min-height:0;box-shadow:inset 0 -2px 0 var(--panel)}
+  .bar.stack .sseg:first-child{box-shadow:none}
   .stack-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--muted);margin-bottom:8px}
   .stack-legend .k{display:inline-flex;align-items:center;gap:5px}
   .stack-legend .sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+  /* exact-numbers readout under a stacked chart (fills on hover / tap) */
+  .sc-readout{display:flex;flex-wrap:wrap;align-items:center;gap:5px 14px;margin-top:10px;font-size:12px;color:var(--muted);min-height:20px;line-height:1.5}
+  .sc-readout b{color:var(--text);font-weight:700;margin-right:2px}
+  .sc-readout .sc-item{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+  .sc-readout .sc-item i{width:9px;height:9px;border-radius:2px;display:inline-block;flex:none}
+  .sc-readout .sc-tot{color:var(--text);font-weight:600}
+  .sc-readout .sc-hint{font-style:italic}
   /* compact SVG line chart (y-axis fitted to the data range, not forced to 0) */
   .linechart{width:100%;height:auto;display:block;overflow:visible}
   .lc-line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
@@ -777,9 +786,11 @@ function stackedColumnChart(data, opts={}){
     const segs = tot>0 ? series.map(se=>{ const v=d.parts[se.key]||0; if(v<=0) return "";
       return `<span class="sseg" style="height:${(v/tot*100).toFixed(2)}%;background:${se.color}"></span>`; }).join("") : "";
     const val = showVals && tot>0 ? `<span class="val">${valFmt(tot)}</span>` : "";
-    const parts = series.filter(se=>(d.parts[se.key]||0)>0).map(se=>`${se.label} ${fmt(d.parts[se.key])}`).join(" · ");
-    return `<div class="bar stack" style="height:${h}%" data-v="${tot}">
-      ${segs}${val}<span class="tip">${d.label}: ${fmt(tot)}${parts?" · "+parts:""}</span></div>`;
+    // exact-numbers readout for this bar (shown below the chart on hover / tap)
+    const items = series.filter(se=>(d.parts[se.key]||0)>0)
+      .map(se=>`<span class="sc-item"><i style="background:${se.color}"></i>${se.label} ${fmt(d.parts[se.key])}</span>`).join("");
+    const readout = `<b>${d.label}</b>${items}<span class="sc-item sc-tot">Total ${fmt(tot)}</span>`;
+    return `<div class="bar stack" style="height:${h}%" data-v="${tot}" data-r="${encodeURIComponent(readout)}">${segs}${val}</div>`;
   }).join("");
   const axisFmt = opts.axisFmt || (v=>fmtK(v));
   const grid = ticks.map(t=>`<div class="gline${t===0?' base':''}" style="bottom:${(t/axisMax*100).toFixed(2)}%"></div>`).join("");
@@ -797,13 +808,16 @@ function stackedColumnChart(data, opts={}){
     labs+=`<span style="left:${left}%">${text}</span>`;
   });
   const legend = `<div class="stack-legend">${series.map(se=>`<span class="k"><span class="sw" style="background:${se.color}"></span>${se.label}</span>`).join("")}</div>`;
-  return `${legend}<div class="chartwrap"><div class="yunit">${opts.unit||"sessions"}</div>
+  const noun = opts.unit==="km" ? "distance" : "session";
+  const hint = `<span class="sc-hint">Tap or hover a column for its exact ${noun} split.</span>`;
+  return `<div class="scchart">${legend}<div class="chartwrap"><div class="yunit">${opts.unit||"sessions"}</div>
     <div class="yaxis">${yax}</div>
     <div class="plot">
       <div class="chart">${grid}${bars}</div>
       <div class="xlab">${labs}</div>
     </div>
-  </div>`;
+  </div>
+  <div class="sc-readout">${hint}</div></div>`;
 }
 
 // Compact SVG line chart for trends where the variation matters more than the
@@ -880,6 +894,15 @@ document.addEventListener("click",e=>{
   document.querySelectorAll(".bar.show").forEach(x=>x.classList.remove("show"));
   if(!on) bar.classList.add("show");
 });
+// stacked bars: hovering or tapping a column fills the exact-numbers readout
+// below its chart with each sport's value + the total (works for mouse and touch).
+function fillStackReadout(e){
+  const bar=e.target.closest&&e.target.closest(".bar.stack"); if(!bar||!bar.dataset.r) return;
+  const out=bar.closest(".scchart")?.querySelector(".sc-readout");
+  if(out) out.innerHTML=decodeURIComponent(bar.dataset.r);
+}
+document.addEventListener("pointerover",fillStackReadout);
+document.addEventListener("click",fillStackReadout);
 function route(){
   const app=document.getElementById("app");
   if(current==="dash") renderDash(app);
@@ -1881,11 +1904,14 @@ function renderInsights(app){
   const fact=(icon,big,sub)=>`<div class="card stat fact"><span class="big">${icon}</span><span class="ftxt"><b>${big}</b><span>${sub}</span></span></div>`;
 
   // Sport groups for the stacked charts: run / bike / swim, and everything else.
+  // On-brand categorical palette stepped for the dark card surface (validated:
+  // in-band lightness, ≥3:1 contrast, adjacent CVD ΔE ≥ 18). run = the brand
+  // teal, bike = the brand blue, swim = amber, other = a recessive neutral slate.
   const STACK_SERIES = [
-    {key:"run",   label:"Run",   color:sportColor("run")},
-    {key:"bike",  label:"Bike",  color:sportColor("bike")},
-    {key:"swim",  label:"Swim",  color:sportColor("swim")},
-    {key:"other", label:"Other", color:sportColor("other")},
+    {key:"run",   label:"Run",   color:"#2aa189"},
+    {key:"bike",  label:"Bike",  color:"#3d80d4"},
+    {key:"swim",  label:"Swim",  color:"#c2863a"},
+    {key:"other", label:"Other", color:"#5f7186"},
   ];
   const grpOf = s => (s==="run"||s==="bike"||s==="swim") ? s : "other";
   const zeroParts = () => ({run:0, bike:0, swim:0, other:0});
