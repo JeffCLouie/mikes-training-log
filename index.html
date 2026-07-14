@@ -1513,10 +1513,20 @@ function focusAttrs(from,to,idx,label,pin){
   return a+` title="View in Raw Data"`;
 }
 // navigate to Raw Data focused on a date / range / single entry.
-// pin: a date to highlight within the range when no single entry (idx) is targeted
-// — used by day drill-ins so a ±2-week context window still spotlights the day.
+// pin: a date to highlight within the range when no single entry (idx) is targeted.
+// A single-point drill-in — one entry or one day (to omitted or == from) — ALWAYS
+// opens on a ±2-week context window centred on that date, with the entry/day
+// pinned; it never lands on a lone row. Genuine ranges (a whole year, a month —
+// to != from) are shown as-is. This is the one place the window is applied, so
+// every "View in Raw Data" across the site (records, bests, Data QA, calendar,
+// race basis…) behaves identically.
 function openFocus(from,to,idx,label,pin){
   if(!from) return;
+  if(!to || to===from){
+    pin = pin || from;              // highlight the entry/day we came from
+    to   = addDays(from,14);
+    from = addDays(from,-14);
+  }
   const p=new URLSearchParams();
   p.set("f0",from); if(to&&to!==from) p.set("f1",to);
   if(idx!=null&&idx!=="") p.set("fi",String(idx));
@@ -2076,7 +2086,7 @@ function dayPopup(ds){
     return `<div class="e"><span class="note-tag" style="background:${col}">${lab}</span><span class="meta">${escapeHTML(txt)||"—"}</span></div>`; }).join("");
   const body=(wbody+nbody)||`<div class="muted">Nothing recorded.</div>`;
   const tot=rows.length>1?`<div class="day-tot"><span><b>${rows.length}</b> sessions</span><span><b>${fmtDurShort(totDur)}</b> total</span>${totKm?`<span><b>${fmtNum(totKm,1)}</b> km</span>`:""}</div>`:"";
-  const link=all.length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)"><span class="daylink" ${focusAttrs(addDays(ds,-14),addDays(ds,14),null,"Day: "+ds,ds)}>View in Raw Data →</span></div>`:"";
+  const link=all.length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)"><span class="daylink" ${focusAttrs(ds,ds,null,"Day: "+ds)}>View in Raw Data →</span></div>`:"";
   return `<div class="day-card">
     <div class="cardhead" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">${title}</h3><button class="day-x" aria-label="Close">✕</button></div>
     ${tot}<div class="cal-detail">${body}</div>${link}
@@ -2376,7 +2386,7 @@ function renderCalendar(app){
   // window with the day highlighted. No intermediate popup; Back returns here
   // (the filtered table) because openFocus pushes history and the filter is in the URL.
   tableEl.addEventListener("click",e=>{ const tr=e.target.closest("tr[data-d]"); if(!tr) return;
-    const ds=tr.dataset.d; openFocus(addDays(ds,-14),addDays(ds,14),null,"Day: "+ds,ds); });
+    const ds=tr.dataset.d; openFocus(ds,ds,null,"Day: "+ds); });
   const refresh=()=>{ applyFilter(); updateTable(); syncCalURL(); };
 
   const chipEls=[...document.querySelectorAll(".vcal-chip")];
@@ -2522,7 +2532,7 @@ const VERSION_HISTORY = [
   { date:"2026-07-14", entries:[
     { c:"ux",   t:"Calendar <b>matching-days</b> rows now jump <b>straight into Raw Data</b> — no intermediate day popup — on a ±2-week window with that day highlighted." },
     { c:"ux",   t:"The calendar <b>category filter now lives in the URL</b>, so browser <b>Back</b> from a day's Raw Data returns you to the same filtered matching-days table you left." },
-    { c:"ux",   t:"<b>View in Raw Data</b> from Data QA now lands on a <b>±2-week window</b> around the flagged entry (still pinned &amp; expanded) instead of just that one day — so the surrounding training reads as context for the ruling." },
+    { c:"ux",   t:"<b>Every drill-in into Raw Data</b> — a record, a personal best, a Data QA entry, a calendar day, a race basis — now opens a <b>±2-week context window</b> centred on it, with that entry/day pinned. Never a lone row; the surrounding training always reads as context." },
     { c:"feat", t:"Added a <b>Month</b> filter on Raw Data alongside Year — narrow the table to a specific year + month." },
     { c:"feat", t:"New <b>Performance</b> tab — a lens on Mike's <b>best</b> efforts, not his volume: races only, age-graded, and split by era." },
     { c:"feat", t:"<b>Races</b> view: every RACE-tagged effort, race-day PRs at each standard distance, and a per-year race count — training days excluded." },
@@ -3327,7 +3337,7 @@ function qaCard(r,{tone,why,emph,placeholder,focusLabel,quick,rv}){
     <div class="qa-head">
       <span class="qa-date">${r.d}</span>${sportTag(r.s)}${conf}
       <span class="qa-ruledtag">✓ ruled</span>
-      <span class="qa-viewraw" ${focusAttrs(addDays(r.d,-14),addDays(r.d,14),rowId(r),focusLabel)}>View in Raw Data →</span>
+      <span class="qa-viewraw" ${focusAttrs(r.d,r.d,rowId(r),focusLabel)}>View in Raw Data →</span>
     </div>
     <div class="qa-strip"><span class="qa-striplbl">Interpreted as</span>${strip}</div>
     <div class="qa-why tone-${tone}">${why}</div>
