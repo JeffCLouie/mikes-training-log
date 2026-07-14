@@ -8,7 +8,8 @@ A browsable, filterable website for 30+ years of Mike's training data
 - **Report Builder** — filter by year / sport / source / distance, group and measure however you like, export CSV.
 - **Raw Data** — every parsed entry with its original shorthand preserved.
 - **Data QA** — cross-check the live data against Mike's own written totals,
-  spot-check the uncertain entries, record rulings, and edit raw values.
+  flag physically-impossible entries (the **Outliers** view), spot-check the
+  uncertain entries, record rulings, and edit raw values.
 
 Built from a weekly training-log grid plus a precise running log (de-duplicated).
 Single static site — `index.html` + `data.json`, no build step.
@@ -68,4 +69,18 @@ it is a phantom; runs anchor the check since they're exact),
 `fix-phantom-distances.js` (remove the phantom swim/bike distances that check
 surfaced — race names, body weights/HRs, placements and runs double-counted as
 swims — and recover the real distances they displaced; each fix is corroborated by
-the weekly totals or the running log).
+the weekly totals or the running log),
+`fix-tremblant-2018.js` (un-garble the 2018 Tremblant Half Ironman cell — recover
+the dropped swim leg, restore the bike-leg time, and remove the phantom 445 km/h
+"ride" the mis-parse produced).
+
+### Outlier validation
+
+The in-site **Data QA → Outliers** view flags every entry whose recorded time and
+distance imply a physically-impossible speed or pace (bike &gt; 60 km/h, run pace
+&lt; 3:20/km, swim outside 0:45–5:00 /100 m) — the near-certain signatures of a
+parse error. It's the systematic version of hunting a bogus personal best on the
+**Records** page and tracing it back to the source `.txt`: each outlier is sorted
+most-extreme first and links straight to its Raw Data row, and a ruling entered
+there feeds the same correction pipeline as **Spot-check**. Pace/speed **Records**
+already exclude these entries, so a mis-keyed row can't fake a best.

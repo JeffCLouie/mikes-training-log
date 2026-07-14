@@ -2053,7 +2053,14 @@ function renderAbout(app){
          into a single distance — together producing absurd figures (e.g. 140 km/h
          "rides"). The yearly <b>Avg bike speed</b> and <b>Avg run pace</b> charts
          now ignore physically impossible entries; a year left with fewer than 8
-         sane rides reads <i>“Not enough data.”</i></li>
+         sane rides reads <i>“Not enough data.”</i> The new <b>Data QA →
+         Outliers</b> tab lists every such entry (~150), most-extreme first, each
+         linking to its Raw Data row — the systematic version of scanning the
+         Records page for a bogus best. The 2018 Tremblant Half Ironman, whose
+         garbled cell became a phantom 445 km/h "ride" and briefly topped the
+         biggest-day record, is the first corrected at source
+         (<code>tools/fix-tremblant-2018.js</code>): it now reads as a proper
+         swim + bike + run.</li>
        <li><span class="pill d">mitigated</span> <b>Track intervals filed as cycling.</b>
          Workouts written as track repeats (<code>8×475 @1:27</code>,
          <code>6×800 on 2:41</code>) had been deduced as bike rides. 42 such
@@ -2207,6 +2214,34 @@ const saneRun  = r => r.s==="run"  && r.t>0 && r.k>0 && _pace(r)>=3.333 && _pace
 const saneBike = r => r.s==="bike" && r.t>0 && r.k>0 && _kmh(r)>=8  && _kmh(r)<=55;
 const saneSwim = r => r.s==="swim" && r.t>0 && r.k>0 && _per100(r)>=55 && _per100(r)<=200;
 const dayNum = ds => Math.floor(Date.parse(ds+"T00:00:00Z")/864e5);
+
+// Physically-impossible bands. An entry whose recorded time + distance imply a
+// speed/pace no human sustains is almost always a parse artifact — an H:MM time
+// read as M:SS (~60× too short), two numbers merged into one distance, or an
+// interval split read as a distance. These bands are wider than the sane*
+// record bands on purpose: sane* decides what may set a record; these flag near-
+// certain DATA ERRORS for review, so each edge sits past what's humanly possible
+// rather than merely fast/slow. Powers the Data QA "Outliers" validation view —
+// the systematic version of eyeballing the Records page for a bogus best.
+const OUTLIER = {
+  bikeKmhMax:   60,    // >60 km/h average: duration too short, or two distances summed
+  runPaceMin:   3.333, // <3:20/km: quicker than Mike's fastest race pace (5K PR is 3:30/km)
+  swimPer100Min:45,    // <0:45/100m: faster than a 100 m sprint world record, held all set
+  swimPer100Max:300,   // >5:00/100m: distance mis-read tiny (e.g. a pull set counted as 0.03 km)
+};
+// Return {kind,value,sev,why} if r is physically impossible, else null. sev is a
+// >1 severity ratio (how far past the limit) so different sports sort together.
+function outlierInfo(r){
+  if(!(r.t>0&&r.k>0)) return null;
+  if(r.s==="bike"){ const v=_kmh(r);
+    if(v>OUTLIER.bikeKmhMax) return {kind:"bike speed",value:v.toFixed(1)+" km/h",sev:v/OUTLIER.bikeKmhMax,why:`implied average speed exceeds ${OUTLIER.bikeKmhMax} km/h — the duration is likely an H:MM time read as M:SS, or two rides summed into one distance`}; }
+  else if(r.s==="run"){ const p=_pace(r);
+    if(p<OUTLIER.runPaceMin) return {kind:"run pace",value:fmtPace(p)+" /km",sev:OUTLIER.runPaceMin/p,why:"faster than 3:20/km — quicker than any race Mike has run, so the distance or time is mis-keyed"}; }
+  else if(r.s==="swim"){ const p=_per100(r);
+    if(p<OUTLIER.swimPer100Min) return {kind:"swim pace",value:fmtMMSS(p)+" /100m",sev:OUTLIER.swimPer100Min/p,why:"faster than a 100 m world-record sprint, held for the whole set — distance likely doubled"};
+    if(p>OUTLIER.swimPer100Max) return {kind:"swim pace",value:fmtMMSS(p)+" /100m",sev:p/OUTLIER.swimPer100Max,why:"slower than 5:00/100m — the distance was mis-read far too small (e.g. a pull set counted as a few lengths)"}; }
+  return null;
+}
 
 const RACE_DISTS = [["5K",5],["10K",10],["Half",21.0975],["Marathon",42.195]];
 // Best avg pace over runs that covered at least each distance → an estimated time.
@@ -2443,7 +2478,7 @@ function renderQA(app){
       .catch(()=>{QADATA={annual:{},runTable:{}}; if(current==="qa")renderQA(app);});
     return;
   }
-  const subs=[["health","Data health"],["review","Spot-check &amp; rulings"],["edit","Edit entries"]];
+  const subs=[["health","Data health"],["outliers","Outliers"],["review","Spot-check &amp; rulings"],["edit","Edit entries"]];
   app.innerHTML=`
     <h2 class="section">Data QA</h2>
     <div class="card" style="margin-bottom:14px">
@@ -2455,6 +2490,7 @@ function renderQA(app){
   app.querySelectorAll(".qa-subnav button").forEach(b=>b.onclick=()=>{qaSub=b.dataset.sub; renderQA(app);});
   const body=app.querySelector("#qa-body");
   if(qaSub==="health") qaHealth(body);
+  else if(qaSub==="outliers") qaOutliers(body);
   else if(qaSub==="review") qaReview(body);
   else qaEdit(body);
 }
@@ -2466,6 +2502,7 @@ function qaHealth(el){
   for(const r of real){ cc[r.c]=(cc[r.c]||0)+1; if(r.k)ck[r.c]=(ck[r.c]||0)+r.k; }
   const totK=ck.x+ck.d+ck.u||1;
   const pct=v=>Math.round(100*v/totK);
+  const outCount=DATA.reduce((n,r)=>n+(outlierInfo(r)?1:0),0);   // physically-impossible entries
   // reconciliation table
   const sum={}; for(const r of DATA){ if(!r.k)continue; const y=yearOf(r); sum[y]=sum[y]||{}; sum[y][r.s]=(sum[y][r.s]||0)+r.k; }
   const years=Object.keys(QADATA.annual).sort();
@@ -2487,6 +2524,7 @@ function qaHealth(el){
       <div class="card stat"><div class="num" style="color:var(--warn,#d8a24a)">${pct(ck.d)}%</div><div class="lbl">Doubtful (c=d)</div></div>
       <div class="card stat"><div class="num">${cc.d+cc.u}</div><div class="lbl">Rows needing review</div></div>
       <div class="card stat"><div class="num">${offCount}</div><div class="lbl">Sport-years off vs Mike</div></div>
+      <div class="card stat qa-jump" data-sub="outliers" role="button" tabindex="0" title="Open the Outliers view" style="cursor:pointer"><div class="num" style="color:${outCount?"var(--bad,#e0685f)":"var(--accent)"}">${outCount}</div><div class="lbl">Impossible entries →</div></div>
     </div>
     <div class="card" style="margin-bottom:14px">
       <h3>Runs — reconciled ✔</h3>
@@ -2503,6 +2541,62 @@ function qaHealth(el){
         <thead><tr><th>Year</th><th>Run</th><th>Bike</th><th>Swim</th></tr></thead>
         <tbody>${rows}</tbody></table></div>
     </div>`;
+  const jump=el.querySelector(".qa-jump");
+  if(jump){ const go=()=>{ qaSub="outliers"; renderQA(document.getElementById("app")); };
+    jump.onclick=go; jump.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } }; }
+}
+
+// ---- Outliers: physically-impossible entries, worst first ----
+// The systematic version of the manual hunt (Records → a bogus best → Raw Data →
+// compare to the source .txt): outlierInfo() flags any entry whose time+distance
+// imply a humanly-impossible speed/pace, so parse errors surface as a list to rule
+// on instead of one at a time. Each links straight into Raw Data, and the ruling
+// box writes to the same store as Spot-check.
+let qaOutFilter="unruled";
+function qaOutliers(el){
+  const rul=QAStore.rulings();
+  let all=DATA.map(r=>({r,o:outlierInfo(r)})).filter(x=>x.o);
+  all.sort((a,b)=>b.o.sev-a.o.sev);
+  const total=all.length, ruled=all.filter(x=>rul[qaId(x.r)]).length;
+  const bySport=all.reduce((m,x)=>((m[x.r.s]=(m[x.r.s]||0)+1),m),{});
+  let cand=all;
+  if(qaOutFilter==="unruled") cand=all.filter(x=>!rul[qaId(x.r)]);
+  else if(qaOutFilter==="ruled") cand=all.filter(x=>rul[qaId(x.r)]);
+  else if(qaOutFilter==="confident") cand=all.filter(x=>x.r.c==="x");
+  const shown=cand.slice(0,300);
+  const sportBits=Object.entries(bySport).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`${sportTag(s)} ${n}`).join(" · ");
+  el.innerHTML=`
+    <div class="card" style="margin-bottom:12px">
+      <div class="qa-row">
+        <span><b>${total}</b> impossible ${total===1?"entry":"entries"} · <b>${ruled}</b> ruled</span>
+        <select id="qo-filter">
+          <option value="unruled" ${qaOutFilter==="unruled"?"selected":""}>Needs ruling</option>
+          <option value="ruled" ${qaOutFilter==="ruled"?"selected":""}>Ruled</option>
+          <option value="confident" ${qaOutFilter==="confident"?"selected":""}>Marked confident (c=x)</option>
+          <option value="all" ${qaOutFilter==="all"?"selected":""}>All</option></select>
+        <button class="btn ghost" id="qo-export">Export rulings + edits</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Entries whose recorded time &amp; distance imply a speed or pace no human sustains —
+      almost always a parse error (an H:MM time read as M:SS, two numbers merged into one distance, or an interval split read as a distance).
+      ${sportBits?`Found in ${sportBits}. `:""}Sorted most-extreme first; each opens in Raw Data. These are excluded from pace/speed
+      records automatically — ruling on them here also corrects the yearly totals. Showing ${shown.length} of ${cand.length}.</p>
+    </div>
+    ${shown.map(({r,o})=>{ const id=qaId(r); const rv=rul[id];
+      return `<div class="qa-item">
+        <div class="qa-meta"><span class="qa-date">${r.d}</span> <span class="chip-s">${r.s}</span>
+          <span class="qa-c c-${r.c}">${r.c}</span>
+          <span style="color:var(--bad,#e0685f);font-weight:700">${o.value}</span>
+          ${r.k?`<span class="muted">${fmtNum(r.k,r.s==="swim"?2:1)} km</span>`:""}${r.t?`<span class="muted">${fmtDur(r.t)}</span>`:""}
+          <span class="clk" style="margin-left:auto;text-decoration:underline;text-decoration-style:dotted;cursor:pointer" ${focusAttrs(r.d,r.d,rowId(r),`Outlier — ${o.kind} ${o.value}`)}>View in Raw Data →</span></div>
+        <div class="note-sm" style="margin:2px 0 6px">${escapeHtml(o.why)}</div>
+        <div class="qa-raw">${escapeHtml(r.r||"")}</div>
+        <input class="qa-ruling" data-id="${id}" placeholder="Mike's ruling (e.g. 'time is 2:41:46 not 46s', 'distance doubled — 1.9k', 'drop')" value="${rv?escapeHtml(rv.val):""}">
+      </div>`;}).join("") || `<div class="card muted">Nothing matches this filter. 🎉</div>`}`;
+  el.querySelector("#qo-filter").onchange=e=>{qaOutFilter=e.target.value; qaOutliers(el);};
+  el.querySelector("#qo-export").onclick=qaExport;
+  el.querySelectorAll(".qa-ruling").forEach(inp=>{
+    inp.onchange=()=>{ QAStore.setRuling(inp.dataset.id, inp.value); inp.classList.toggle("saved",!!inp.value.trim()); };
+  });
 }
 
 // ---- Spot-check & rulings: work through the uncertain rows ----
