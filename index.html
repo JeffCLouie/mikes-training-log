@@ -106,6 +106,15 @@
   .vh-entry .txt{flex:1;line-height:1.45;font-size:13.5px}
   .vh-legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:12px}
   .vh-legend span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  /* Raw Data → per-row "add context" affordance: a small button that opens the
+     row and focuses a ruling box writing to the same QAStore as the Data QA tab. */
+  .rd-actcell{width:1%;text-align:center;padding-left:4px;padding-right:6px}
+  .rd-act{display:inline-flex;align-items:center;justify-content:center;width:30px;height:28px;
+    background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--muted);cursor:pointer;padding:0}
+  .rd-act svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .rd-act:hover{color:var(--text);border-color:var(--accent)}
+  .rd-act.has{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel2))}
+  .rd-ruling{margin-top:12px;border-top:1px solid var(--line);padding-top:11px}
   /* chart */
   .chartwrap{display:flex;gap:8px;align-items:flex-start;padding-top:15px;position:relative}
   .yunit{position:absolute;top:0;left:0;font-size:9px;color:var(--muted);line-height:1;letter-spacing:.3px}
@@ -1487,18 +1496,29 @@ function drawBrowse(){
   document.getElementById("x-count").textContent= total
     ? `Showing ${fmtNum(start+1)}–${fmtNum(start+slice.length)} of ${fmtNum(total)} entries`
     : "No entries match these filters.";
-  const th=BROWSE_COLS.map(([k,lbl,num])=>`<th class="sortable ${num?'num':''}" data-k="${k}">${lbl}${BROWSE.sort===k?(BROWSE.dir>0?" ▲":" ▼"):""}</th>`).join("");
-  const body=slice.map((r,i)=>rowHTML(r,start+i)).join("");
+  const th=BROWSE_COLS.map(([k,lbl,num])=>`<th class="sortable ${num?'num':''}" data-k="${k}">${lbl}${BROWSE.sort===k?(BROWSE.dir>0?" ▲":" ▼"):""}</th>`).join("")
+    +`<th class="rd-acthead" aria-label="Add context for Mike"></th>`;
+  const rul=QAStore.rulings();
+  const body=slice.map((r,i)=>rowHTML(r,start+i,rul)).join("");
   const tbl=document.getElementById("x-table");
   tbl.innerHTML=`<thead><tr>${th}</tr></thead><tbody>${body}</tbody>`;
-  // One delegated handler covers header sorting + row expand, so large page
-  // sizes (250/500/All) don't bind thousands of per-row listeners.
+  // One delegated handler covers header sorting + the per-row context button +
+  // row expand, so large page sizes (250/500/All) don't bind thousands of listeners.
   tbl.onclick=e=>{
     const h=e.target.closest("th.sortable");
     if(h){
       const k=h.dataset.k;
       if(BROWSE.sort===k)BROWSE.dir*=-1; else {BROWSE.sort=k;BROWSE.dir=(k==="d")?-1:1;}
       drawBrowse(); return;
+    }
+    const act=e.target.closest(".rd-act");
+    if(act){                                   // open the row (if closed) and jump to its ruling box
+      const row=act.closest("tr.datarow"); if(!row) return;
+      let det=row.nextElementSibling;
+      if(!(det&&det.classList.contains("row-detail"))){ toggleDetail(row); det=row.nextElementSibling; }
+      const inp=det&&det.querySelector(".qa-ruling");
+      if(inp){ inp.focus({preventScroll:true}); inp.scrollIntoView({block:"center",behavior:"smooth"}); }
+      return;
     }
     const tr=e.target.closest("tr.datarow");
     if(tr) toggleDetail(tr);
@@ -1522,9 +1542,10 @@ function drawBrowse(){
   if(next)next.onclick=()=>{BROWSE.page++;drawBrowse();window.scrollTo(0,0);};
   if(per)per.onchange=()=>{BROWSE.per=+per.value;BROWSE.page=0;drawBrowse();window.scrollTo(0,0);};
 }
-function rowHTML(r,idx){
+function rowHTML(r,idx,rul){
   const sp=sportTag(r.s);
   const confPill=r.c==="x"?"":`<span class="pill ${r.c}">${CONF[r.c]}</span>`;
+  const hasR=rul&&rul[qaId(r)];
   return `<tr class="datarow" data-idx="${idx}">
     <td>${r.d}</td><td>${sp}</td>
     <td class="num">${fmtDur(r.t)||"—"}</td>
@@ -1533,13 +1554,17 @@ function rowHTML(r,idx){
     <td class="num">${r.h||"—"}</td>
     <td>${r.src==="r"?"running":"training"}</td>
     <td>${confPill||'<span class="pill">ok</span>'}</td>
-    <td>${escapeHTML(r.n||r.r||"").slice(0,46)}</td></tr>`;
+    <td>${escapeHTML(r.n||r.r||"").slice(0,46)}</td>
+    <td class="rd-actcell"><button class="rd-act${hasR?" has":""}" title="${hasR?"Edit":"Add"} context / ruling for Mike" aria-label="Add context or ruling for Mike">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v13h5v3l4-3h7z"/><path d="M8 9h8M8 12.5h5"/></svg>
+    </button></td></tr>`;
 }
 function toggleDetail(tr){
   const next=tr.nextElementSibling;
   if(next&&next.classList.contains("row-detail")){ next.remove(); return; }
   const r=BROWSE.rows[+tr.dataset.idx];
-  const tdcount=BROWSE_COLS.length;
+  const tdcount=BROWSE_COLS.length+1;                 // +1 for the context-button column
+  const id=qaId(r), rv=QAStore.rulings()[id];
   const det=document.createElement("tr"); det.className="row-detail";
   det.innerHTML=`<td colspan="${tdcount}">
     <div class="kvgrid">
@@ -1556,8 +1581,30 @@ function toggleDetail(tr){
     </div>
     ${r.n?`<div class="note-sm" style="margin-top:8px"><b>Note:</b> ${escapeHTML(r.n)}</div>`:""}
     <div class="rawbox">${escapeHTML(r.r)}</div>
+    <div class="rd-ruling">
+      <span class="qa-rulelbl">Add context / ruling <span class="muted" style="font-weight:600">— goes straight to Mike's Data QA</span></span>
+      <div class="qa-ruleinput">
+        <input class="qa-ruling${rv?" saved":""}" data-id="${escapeHTML(id)}" placeholder="e.g. “swim 1.8k”, “96 km bike”, “drop — placement”, or a note" value="${rv?escapeHTML(rv.val):""}">
+        <div class="qa-quick">
+          <button type="button" class="qa-qbtn" data-fill="correct">Looks right</button>
+          <button type="button" class="qa-qbtn" data-fill="drop">Drop</button>
+        </div>
+      </div>
+    </div>
   </td>`;
   tr.after(det);
+  wireRowRuling(det,tr);
+}
+// A ruling box lives in each expanded Raw Data row — an alternate route to the
+// same QAStore the Data QA tab writes to. Keeps the row's context button in sync.
+function wireRowRuling(det,tr){
+  const inp=det.querySelector(".qa-ruling"); if(!inp) return;
+  const btn=tr.querySelector(".rd-act");
+  const reflect=()=>{ const on=!!inp.value.trim(); inp.classList.toggle("saved",on);
+    if(btn){ btn.classList.toggle("has",on); btn.title=(on?"Edit":"Add")+" context / ruling for Mike"; } };
+  inp.onchange=()=>{ QAStore.setRuling(inp.dataset.id,inp.value); reflect(); };
+  det.querySelectorAll(".qa-qbtn").forEach(b=>b.onclick=()=>{
+    inp.value=b.dataset.fill; QAStore.setRuling(inp.dataset.id,inp.value); reflect(); });
 }
 function escapeHTML(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
