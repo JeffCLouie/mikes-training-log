@@ -61,4 +61,11 @@ Mike's run table), `gen-review.js` (regenerate `mike-review.md`), `gen-qa-data.j
 `apply-corrections.js` (the conservative, provably-correct fixes already applied),
 `dedup-grid-runs.js` (drop grid run cells that duplicate an exact running-log run —
 same day + identical finishing time — so a run isn't double-counted and a grid's
-inflated distance can't pair with a race-only time to fake a record).
+inflated distance can't pair with a race-only time to fake a record),
+`verify-weekly-totals.js` (cross-check the parsed rows against Mike's column-1
+weekly per-sport totals — a sport parsed for a week whose column 1 has no total for
+it is a phantom; runs anchor the check since they're exact),
+`fix-phantom-distances.js` (remove the phantom swim/bike distances that check
+surfaced — race names, body weights/HRs, placements and runs double-counted as
+swims — and recover the real distances they displaced; each fix is corroborated by
+the weekly totals or the running log).
