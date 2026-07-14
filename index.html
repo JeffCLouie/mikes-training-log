@@ -1487,7 +1487,7 @@ function exportCSV(entries,group){
 const PER_CHOICES=[50,100,250,500,1000000000];
 const perLabel=v=>v>=1e9?"All":String(v);
 const BROWSE={page:0,per:250,sort:"d",dir:-1,rows:null};
-const BROWSE_FIELDS=[["x-q","q"],["x-sport","sport"],["x-year","year"],["x-src","src"],["x-conf","conf"]];
+const BROWSE_FIELDS=[["x-q","q"],["x-sport","sport"],["x-year","year"],["x-month","month"],["x-src","src"],["x-conf","conf"]];
 
 // ── Drill-in focus ─────────────────────────────────────────────────────────
 // Deep-links from records/bests into Raw Data. A "focus" narrows the table to a
@@ -1585,6 +1585,7 @@ function renderBrowse(app){
      <label class="fld">Search<input type="text" id="x-q" placeholder="notes / raw text…"></label>
      <label class="fld" style="max-width:150px">Sport<select id="x-sport"><option value="">all</option>${sports.map(s=>`<option value="${s}">${sportName(s)}</option>`).join("")}</select></label>
      <label class="fld" style="max-width:120px">Year<select id="x-year"><option value="">all</option>${years.map(y=>`<option>${y}</option>`).join("")}</select></label>
+     <label class="fld" style="max-width:120px">Month<select id="x-month"><option value="">all</option>${MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("")}</select></label>
      <label class="fld" style="max-width:150px">Source<select id="x-src"><option value="">all</option><option value="t">training log</option><option value="r">running log</option></select></label>
      <label class="fld" style="max-width:150px">Confidence<select id="x-conf"><option value="">all</option><option value="x">confirmed</option><option value="d">deduced</option><option value="u">uncertain</option></select></label>
      <button class="btn ghost" id="x-clear">Clear</button>
@@ -1597,7 +1598,7 @@ function renderBrowse(app){
   const debounce=(fn,ms)=>{let t;return()=>{clearTimeout(t);t=setTimeout(fn,ms);};};
   const redraw=()=>{BROWSE.page=0;syncBrowseURL();drawBrowse();};
   document.getElementById("x-q").oninput=debounce(redraw,180);   // smooth typing over 12k rows
-  ["x-sport","x-year","x-src","x-conf"].forEach(id=>document.getElementById(id).onchange=redraw);
+  ["x-sport","x-year","x-month","x-src","x-conf"].forEach(id=>document.getElementById(id).onchange=redraw);
   document.getElementById("x-clear").onclick=()=>{
     BROWSE_FIELDS.forEach(([id])=>document.getElementById(id).value="");
     BROWSE_FOCUS=null; const b=document.getElementById("x-focus"); if(b) b.remove();
@@ -1633,12 +1634,14 @@ function browseFilter(){
   const q=document.getElementById("x-q").value.toLowerCase();
   const sport=document.getElementById("x-sport").value;
   const year=document.getElementById("x-year").value;
+  const month=document.getElementById("x-month").value;
   const src=document.getElementById("x-src").value;
   const conf=document.getElementById("x-conf").value;
   return DATA.filter(r=>{
     if(BROWSE_FOCUS&&(r.d<BROWSE_FOCUS.from||r.d>BROWSE_FOCUS.to)) return false;
     if(sport&&r.s!==sport) return false;
     if(year&&yearOf(r)!==+year) return false;
+    if(month&&monthOf(r)!==+month) return false;
     if(src&&r.src!==src) return false;
     if(conf&&r.c!==conf) return false;
     if(q&&!(r.r||"").toLowerCase().includes(q)&&!(r.n||"").toLowerCase().includes(q)) return false;
@@ -2478,6 +2481,8 @@ const VH_CATS = {
 };
 const VERSION_HISTORY = [
   { date:"2026-07-14", entries:[
+    { c:"ux",   t:"<b>View in Raw Data</b> from Data QA now lands on a <b>±2-week window</b> around the flagged entry (still pinned &amp; expanded) instead of just that one day — so the surrounding training reads as context for the ruling." },
+    { c:"feat", t:"Added a <b>Month</b> filter on Raw Data alongside Year — narrow the table to a specific year + month." },
     { c:"feat", t:"New <b>Performance</b> tab — a lens on Mike's <b>best</b> efforts, not his volume: races only, age-graded, and split by era." },
     { c:"feat", t:"<b>Races</b> view: every RACE-tagged effort, race-day PRs at each standard distance, and a per-year race count — training days excluded." },
     { c:"feat", t:"<b>Age-graded</b> racing (WMA-style) with an editable birth year — a 4:20/km 10 K at 55 now compares fairly with a 3:40/km one at 30; form by year comes out near-flat." },
@@ -3281,7 +3286,7 @@ function qaCard(r,{tone,why,emph,placeholder,focusLabel,quick,rv}){
     <div class="qa-head">
       <span class="qa-date">${r.d}</span>${sportTag(r.s)}${conf}
       <span class="qa-ruledtag">✓ ruled</span>
-      <span class="qa-viewraw" ${focusAttrs(r.d,r.d,rowId(r),focusLabel)}>View in Raw Data →</span>
+      <span class="qa-viewraw" ${focusAttrs(addDays(r.d,-14),addDays(r.d,14),rowId(r),focusLabel)}>View in Raw Data →</span>
     </div>
     <div class="qa-strip"><span class="qa-striplbl">Interpreted as</span>${strip}</div>
     <div class="qa-why tone-${tone}">${why}</div>
