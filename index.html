@@ -142,6 +142,12 @@
   .cardhead h3{margin:0}
   .xlab{position:relative;height:15px;margin-top:7px}
   .xlab span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
+  /* stacked column charts: each bar split into coloured segments by sport */
+  .bar.stack{display:flex;flex-direction:column-reverse;overflow:hidden;background:none}
+  .bar.stack .sseg{width:100%;flex:none;min-height:0}
+  .stack-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--muted);margin-bottom:8px}
+  .stack-legend .k{display:inline-flex;align-items:center;gap:5px}
+  .stack-legend .sw{width:10px;height:10px;border-radius:2px;display:inline-block}
   /* compact SVG line chart (y-axis fitted to the data range, not forced to 0) */
   .linechart{width:100%;height:auto;display:block;overflow:visible}
   .lc-line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
@@ -162,17 +168,8 @@
   .fact .big{font-size:22px;line-height:1}
   .fact .ftxt b{display:block;font-size:17px;font-weight:800}
   .fact .ftxt span{color:var(--muted);font-size:12.5px}
-  /* insights: activity heatmap (GitHub-style) */
-  .hm-box{position:relative}
-  /* Year follows the scroll: pinned badge showing the year currently in view. */
-  .hm-scroll{overflow-x:auto;padding-bottom:4px;scroll-behavior:smooth}
-  .hm-months{display:flex;gap:3px;margin-bottom:4px;font-size:10px;color:var(--muted);height:15px}
-  .hm-mlabel{width:16px;flex:none;white-space:nowrap;overflow:visible}
-  .hm{display:flex;gap:3px}
-  .hm-week{display:flex;flex-direction:column;gap:3px;flex:none}
+  /* activity-calendar legend swatches (shared by the dedicated Calendar page) */
   .hm-cell{width:16px;height:16px;border-radius:3px;background:var(--panel2)}
-  .hm-cell[data-d]{cursor:pointer}
-  .hm-cell[data-d]:hover{outline:2px solid var(--text);outline-offset:-1px}
   .hm-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 6px;margin-top:9px;font-size:11.5px;color:var(--muted)}
   .hm-legend .hm-cell{width:12px;height:12px}
   /* day-detail overlay (tap a calendar square) */
@@ -189,6 +186,7 @@
   .shoe .track{flex:1;background:var(--panel2);border-radius:6px;height:16px;overflow:hidden;min-width:60px}
   .shoe .fill{display:block;height:100%;min-width:3px;background:linear-gradient(90deg,#1d6e60,var(--accent));border-radius:6px}
   .shoe .km{width:74px;flex:none;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .shoescroll{max-height:440px;overflow-y:auto;padding-right:4px}
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px}
   .legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
   .checks{display:flex;flex-wrap:wrap;gap:8px}
@@ -748,6 +746,58 @@ function columnChart(data, opts={}){
     labs+=`<span style="left:${left}%">${text}</span>`;
   });
   return `<div class="chartwrap"><div class="yunit">${opts.unit||"sessions"}</div>
+    <div class="yaxis">${yax}</div>
+    <div class="plot">
+      <div class="chart">${grid}${bars}</div>
+      <div class="xlab">${labs}</div>
+    </div>
+  </div>`;
+}
+
+// Stacked column chart — like columnChart, but each bar is split into coloured
+// segments by series (Insights uses it to break sessions/distance down by sport).
+//   data: [{label, parts:{<key>:value,…}}]
+//   opts.series: [{key,label,color}] — stack order is bottom→top and it also
+//                drives the legend row shown above the chart.
+function stackedColumnChart(data, opts={}){
+  const series = opts.series || [];
+  const totalOf = d => series.reduce((s,se)=>s+(d.parts[se.key]||0), 0);
+  const fmt = opts.fmt || (v=>fmtNum(v));
+  const valFmt = opts.valFmt || fmt;
+  const rawMax = Math.max(1, ...data.map(totalOf));
+  const allInt = data.every(d=>series.every(se=>Number.isInteger(d.parts[se.key]||0)));
+  const ticks = niceTicks(rawMax, 4, allInt);
+  const axisMax = ticks[ticks.length-1];
+  const n = data.length;
+  const showVals = opts.values!==false && n <= (opts.maxValues || (window.innerWidth<560 ? 7 : 18));
+  const bars = data.map(d=>{
+    const tot = totalOf(d);
+    const h = (tot/axisMax*100).toFixed(1);
+    // segments stack bottom→top in series order; each is a share of this bar's total
+    const segs = tot>0 ? series.map(se=>{ const v=d.parts[se.key]||0; if(v<=0) return "";
+      return `<span class="sseg" style="height:${(v/tot*100).toFixed(2)}%;background:${se.color}"></span>`; }).join("") : "";
+    const val = showVals && tot>0 ? `<span class="val">${valFmt(tot)}</span>` : "";
+    const parts = series.filter(se=>(d.parts[se.key]||0)>0).map(se=>`${se.label} ${fmt(d.parts[se.key])}`).join(" · ");
+    return `<div class="bar stack" style="height:${h}%" data-v="${tot}">
+      ${segs}${val}<span class="tip">${d.label}: ${fmt(tot)}${parts?" · "+parts:""}</span></div>`;
+  }).join("");
+  const axisFmt = opts.axisFmt || (v=>fmtK(v));
+  const grid = ticks.map(t=>`<div class="gline${t===0?' base':''}" style="bottom:${(t/axisMax*100).toFixed(2)}%"></div>`).join("");
+  const yax = ticks.map(t=>`<span style="bottom:${(t/axisMax*100).toFixed(2)}%">${axisFmt(t)}</span>`).join("");
+  const maxLabels = opts.maxLabels || (window.innerWidth<560 ? 7 : 14);
+  const step = Math.max(1, Math.ceil(n/maxLabels));
+  const lastShown = Math.floor((n-1)/step)*step;
+  const showLast = (n-1) - lastShown >= step*0.6;
+  let labs = "";
+  data.forEach((d,i)=>{
+    const isTick = (i%step===0) || (i===n-1 && showLast);
+    if(!isTick) return;
+    const left=((i+0.5)/n*100).toFixed(2);
+    const text=opts.shortLabel?opts.shortLabel(d.label):d.label;
+    labs+=`<span style="left:${left}%">${text}</span>`;
+  });
+  const legend = `<div class="stack-legend">${series.map(se=>`<span class="k"><span class="sw" style="background:${se.color}"></span>${se.label}</span>`).join("")}</div>`;
+  return `${legend}<div class="chartwrap"><div class="yunit">${opts.unit||"sessions"}</div>
     <div class="yaxis">${yax}</div>
     <div class="plot">
       <div class="chart">${grid}${bars}</div>
@@ -1802,7 +1852,6 @@ const NOTE_COL  = { race:"rgba(228,80,200,.90)", injury:"rgba(224,90,108,.80)", 
 const NOTE_RANK = { race:7, injury:6, illness:5, weather:4.5, rest:4, recovery:3, travel:2, home:1 };
 const NOTE_LABEL= { race:"race / event", injury:"injury", illness:"illness", weather:"weather day", rest:"rest day", recovery:"therapy / recovery", travel:"travel", home:"home project" };
 
-let _insightsYear = null;
 function renderInsights(app){
   const real = filtered(DATA).filter(r=>r.s!=="note");
   const a = agg(real);
@@ -1831,19 +1880,26 @@ function renderInsights(app){
   const equator=a.dist/40075, moonPct=a.dist/384400*100, marathons=runKm/42.195, totalDays=a.dur/86400;
   const fact=(icon,big,sub)=>`<div class="card stat fact"><span class="big">${icon}</span><span class="ftxt"><b>${big}</b><span>${sub}</span></span></div>`;
 
-  if(_insightsYear===null || !years.includes(_insightsYear))
-    _insightsYear = topYear ? +topYear[0] : years[years.length-1];
+  // Sport groups for the stacked charts: run / bike / swim, and everything else.
+  const STACK_SERIES = [
+    {key:"run",   label:"Run",   color:sportColor("run")},
+    {key:"bike",  label:"Bike",  color:sportColor("bike")},
+    {key:"swim",  label:"Swim",  color:sportColor("swim")},
+    {key:"other", label:"Other", color:sportColor("other")},
+  ];
+  const grpOf = s => (s==="run"||s==="bike"||s==="swim") ? s : "other";
+  const zeroParts = () => ({run:0, bike:0, swim:0, other:0});
 
-  // weekly + seasonal training patterns
-  const dow = WEEKDAYS.map(w=>({label:w, value:0}));
-  real.forEach(r=>{ const d=new Date(r.d+"T00:00:00Z").getUTCDay(); dow[(d+6)%7].value++; });
-  const mon = MONTHS.map(m=>({label:m, value:0}));
-  real.forEach(r=>{ mon[monthOf(r)-1].value++; });
+  // weekly + seasonal training patterns, split by sport group
+  const dow = WEEKDAYS.map(w=>({label:w, parts:zeroParts()}));
+  real.forEach(r=>{ const d=new Date(r.d+"T00:00:00Z").getUTCDay(); dow[(d+6)%7].parts[grpOf(r.s)]++; });
+  const mon = MONTHS.map(m=>({label:m, parts:zeroParts()}));
+  real.forEach(r=>{ mon[monthOf(r)-1].parts[grpOf(r.s)]++; });
 
   // shoe mileage leaderboard (running km attributed to each shoe)
   const shoes={};
   for(const r of real){ if(r.s!=="run"||!r.sh||!r.k) continue; shoes[r.sh]=(shoes[r.sh]||0)+r.k; }
-  const topShoes=Object.entries(shoes).sort((x,y)=>y[1]-x[1]).slice(0,10);
+  const topShoes=Object.entries(shoes).sort((x,y)=>y[1]-x[1]);
   const shoeMax=topShoes.length?topShoes[0][1]:1;
 
   // extra fun-fact equivalences + standout sessions
@@ -1901,9 +1957,11 @@ function renderInsights(app){
 
   // More patterns: annual volume + sport mix. (Cumulative distance lives in the
   // Reports distance report; active days per year in Reports > Consistency.)
-  const kmByYear={}; for(const r of real) if(r.k) kmByYear[yearOf(r)]=(kmByYear[yearOf(r)]||0)+r.k;
+  const kmByYear={}; for(const r of real){ if(!r.k) continue; const y=yearOf(r);
+    const o=kmByYear[y]||(kmByYear[y]=zeroParts()); o[grpOf(r.s)]+=r.k; }
   const volYears=Object.keys(kmByYear).sort();
-  const distByYear=volYears.map(y=>({label:y, value:Math.round(kmByYear[y])}));
+  const distByYear=volYears.map(y=>{ const o=kmByYear[y];
+    return {label:y, parts:{run:Math.round(o.run), bike:Math.round(o.bike), swim:Math.round(o.swim), other:Math.round(o.other)}}; });
   const sportCnt={}; for(const r of real) sportCnt[r.s]=(sportCnt[r.s]||0)+1;
   const topSports=Object.entries(sportCnt).sort((x,y)=>y[1]-x[1]).slice(0,12);
   const sportMax=topSports.length?topSports[0][1]:1;
@@ -1929,34 +1987,18 @@ function renderInsights(app){
      ${fact("🗓️", fmtNum(coverage)+"%", "of all days had a workout")}
    </div>
 
-   <div class="card" style="margin-bottom:18px">
-     <div class="cardhead" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-       <h3>Activity calendar</h3>
-       <div style="display:flex;align-items:center;gap:14px">
-         <a href="#calendar" style="font-size:12.5px;font-weight:600">Full calendar →</a>
-         <label class="fld" style="max-width:120px">Year
-           <select id="hm-year">${years.slice().reverse().map(y=>`<option ${y===_insightsYear?"selected":""}>${y}</option>`).join("")}</select></label>
-       </div>
-     </div>
-     <div class="hm-box">
-       <div class="hm-scroll" id="hm-scroll">${activityHeatmap()}</div>
-     </div>
-     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%<span class="hm-cell" style="background:rgba(224,90,108,.80);margin-left:12px"></span> injury<span class="hm-cell" style="background:rgba(232,150,60,.80);margin-left:8px"></span> illness<span class="hm-cell" style="background:rgba(125,142,170,.82);margin-left:8px"></span> rest<span class="hm-cell" style="background:rgba(80,180,220,.74);margin-left:8px"></span> recovery<span class="hm-cell" style="background:rgba(150,130,255,.72);margin-left:8px"></span> travel<span class="hm-cell" style="background:rgba(190,140,85,.76);margin-left:8px"></span> home<span class="hm-cell" style="background:rgba(228,80,200,.90);margin-left:8px"></span> race<span class="hm-cell" style="background:rgba(200,212,224,.80);margin-left:8px"></span> weather</div>
-     <div class="note-sm">Each square is one day. Green shows that day's <b>training load</b> (time weighted by intensity) — darker means more — and orange marks the hardest 1%. Days with no workout but a diary note are tinted by what Mike jotted — a race/event, injury, illness, weather, rest, therapy/recovery, travel, or a home project. <b>Tap any square</b> for that day's workouts and notes, or open the <a href="#calendar">full vertical calendar →</a> for filters and a how-it's-measured breakdown.</div>
-   </div>
-
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
-     <div class="card"><h3>By day of week</h3>${columnChart(dow,{unit:"sessions"})}<div class="note-sm">Total sessions on each weekday, all years combined — which days Mike trains most.</div></div>
-     <div class="card"><h3>By month (all years)</h3>${columnChart(mon,{shortLabel:l=>l[0],unit:"sessions"})}<div class="note-sm">Sessions in each calendar month, every year stacked together — reveals seasonal patterns.</div></div>
+     <div class="card"><h3>By day of week</h3>${stackedColumnChart(dow,{unit:"sessions",series:STACK_SERIES})}<div class="note-sm">Total sessions on each weekday, all years combined — split by sport (everything but run/bike/swim is “other”).</div></div>
+     <div class="card"><h3>By month (all years)</h3>${stackedColumnChart(mon,{shortLabel:l=>l[0],unit:"sessions",series:STACK_SERIES})}<div class="note-sm">Sessions in each calendar month, every year stacked together and split by sport — reveals seasonal patterns.</div></div>
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
      <div class="card"><h3>Why days were skipped <span class="muted" style="font-weight:400;font-size:12px">· ${years[0]}–${years[years.length-1]}</span></h3>
-       ${restData.some(d=>d.value)?columnChart(restData,{unit:"days"}):`<div class="muted">No rest-reason notes found.</div>`}
-       <div class="note-sm">Note-only days across all ${years.length} years (${years[0]}–${years[years.length-1]}), grouped by likely reason and keyword-matched from the diary jottings (medium confidence).</div></div>
+       ${restData.some(d=>d.value)?columnChart(restData.filter(d=>d.value>0),{unit:"days"}):`<div class="muted">No rest-reason notes found.</div>`}
+       <div class="note-sm">Note-only days across all ${years.length} years (${years[0]}–${years[years.length-1]}), grouped by likely reason and keyword-matched from the diary jottings (medium confidence). Reasons with no matching notes are omitted.</div></div>
    </div>
 
-   <div class="card" style="margin-bottom:18px"><h3>Distance by year</h3>${columnChart(distByYear,{unit:"km",shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtNum(v)+" km"})}<div class="note-sm">Total distance logged each year, all sports. (Active days per year live in Reports → Consistency.)</div></div>
+   <div class="card" style="margin-bottom:18px"><h3>Distance by year</h3>${stackedColumnChart(distByYear,{unit:"km",shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtNum(v)+" km",series:STACK_SERIES})}<div class="note-sm">Total distance logged each year, split by sport (everything but run/bike/swim is “other”). Active days per year live in Reports → Consistency.</div></div>
 
    <div class="card" style="margin-bottom:18px">
      <h3>Cumulative distance — year vs year</h3>
@@ -2001,33 +2043,16 @@ function renderInsights(app){
    </div>
 
    ${topShoes.length?`<div class="card" style="margin-top:18px">
-     <h3>Top running shoes by distance</h3>
-     <div class="shoebar">
+     <h3>Running shoes by distance <span class="muted" style="font-weight:400;font-size:12px">· ${topShoes.length} pairs</span></h3>
+     <div class="shoescroll"><div class="shoebar">
        ${topShoes.map(([nm,km])=>`<div class="shoe">
          <span class="nm" title="${escapeHTML(nm)}">${escapeHTML(nm)}</span>
          <span class="track"><span class="fill" style="width:${(km/shoeMax*100).toFixed(1)}%"></span></span>
          <span class="km">${fmtNum(km)} km</span></div>`).join("")}
-     </div>
-     <div class="note-sm">Distance attributed to the shoe noted on each run.</div>
+     </div></div>
+     <div class="note-sm">Distance attributed to the shoe noted on each run — every pair Mike logged (${fmtNum(topShoes.length)} in all), ranked by total distance. Scroll for the full list.</div>
    </div>`:""}`;
 
-  // The heatmap is one continuous all-years strip. The Year dropdown scrolls it
-  // to that year; scrolling updates the dropdown to match.
-  const ysel=document.getElementById("hm-year");
-  const scroll=document.getElementById("hm-scroll");
-  const grid=scroll&&scroll.querySelector(".hm");
-  if(scroll&&grid){
-    const kids=grid.children;
-    const step=()=>kids.length>1?(kids[1].getBoundingClientRect().left-kids[0].getBoundingClientRect().left)||16:16;
-    const yearAt=()=>{ const i=Math.min(kids.length-1,Math.max(0,Math.round(scroll.scrollLeft/step()))); const el=kids[i]; return el?+el.dataset.year:_insightsYear; };
-    const sync=()=>{ const y=yearAt(); if(ysel&&+ysel.value!==y)ysel.value=y; _insightsYear=y; };
-    const scrollToYear=y=>{ for(let i=0;i<kids.length;i++){ if(+kids[i].dataset.year===y){ scroll.scrollTo({left:i*step(),behavior:"smooth"}); break; } } };
-    scroll.addEventListener("scroll",sync,{passive:true});
-    grid.addEventListener("click",e=>{ const c=e.target.closest(".hm-cell[data-d]"); if(c) showDayOverlay(c.dataset.d); });
-    if(ysel) ysel.onchange=()=>scrollToYear(+ysel.value);
-    // jump to the most-active year on open (no smooth animation for the initial jump)
-    requestAnimationFrame(()=>{ for(let i=0;i<kids.length;i++){ if(+kids[i].dataset.year===_insightsYear){ scroll.scrollLeft=i*step(); break; } } sync(); });
-  }
   wireFilter();
 }
 
@@ -2106,45 +2131,6 @@ function activityModel(){
 }
 // green shade for a day's load (effort-minutes): four steps, darker = more load
 function loadShade(load){ const a = load<30?.4 : load<60?.58 : load<120?.76 : .92; return `rgba(54,194,168,${a})`; }
-
-// GitHub-style activity heatmap spanning ALL years as one continuous Monday-top
-// week grid coloured by each day's training LOAD (empty cells are rest days).
-// Returns the month-label row + the week grid; the caller wraps it in a
-// horizontal scroller. Each week carries data-year (its Thursday's year,
-// ISO-week style) so scrolling can sync the year dropdown to the view.
-function activityHeatmap(){
-  const {day,noteDay,minY,maxY,hot}=activityModel();
-  if(!isFinite(minY)) return `<div class="muted">No activity recorded.</div>`;
-  const start=new Date(Date.UTC(minY,0,1));
-  start.setUTCDate(start.getUTCDate()-((start.getUTCDay()+6)%7));   // back to Monday
-  const end=new Date(Date.UTC(maxY,11,31));
-  end.setUTCDate(end.getUTCDate()+(6-((end.getUTCDay()+6)%7)));     // forward to Sunday
-  const weeks=[]; const cur=new Date(start);
-  while(cur<=end){
-    const wk=[];
-    for(let i=0;i<7;i++){
-      const ds=cur.toISOString().slice(0,10), y=cur.getUTCFullYear();
-      const inSpan=y>=minY&&y<=maxY, d=day[ds]||{c:0,dur:0,load:0};
-      wk.push({ds,y,inSpan,c:d.c,dur:d.dur,load:d.load,note:noteDay[ds]||null});
-      cur.setUTCDate(cur.getUTCDate()+1);
-    }
-    weeks.push({cells:wk, year:wk[3].y});   // Thursday's year labels the week
-  }
-  const color=d=>{
-    if(!d.inSpan) return "transparent";
-    if(!d.c) return d.note ? NOTE_COL[d.note] : "var(--panel2)";   // no workout: show a diary-note colour if any
-    if(d.load>0 && d.load>=hot) return "rgba(255,178,90,.95)";     // top ~1% of days by training load
-    return loadShade(d.load);
-  };
-  // Month label sits on the week containing the 1st; January also shows the year.
-  const months=weeks.map(w=>{ const f=w.cells.find(d=>d.inSpan&&d.ds.slice(8)==="01");
-    if(!f) return ""; const mo=+f.ds.slice(5,7); return mo===1?"'"+f.ds.slice(2,4):MONTHS[mo-1]; });
-  const tip=d=>{ if(!d.inSpan) return "";
-    if(!d.c) return d.note ? `${d.ds} · ${NOTE_LABEL[d.note]}` : "";
-    return `${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}${d.load>0&&d.load>=hot?" · top 1%":""}`; };
-  return `<div class="hm-months">${months.map(m=>`<div class="hm-mlabel">${m}</div>`).join("")}</div>
-    <div class="hm">${weeks.map(w=>`<div class="hm-week" data-year="${w.year}">${w.cells.map(d=>`<div class="hm-cell"${d.inSpan&&(d.c||d.note)?` data-d="${d.ds}"`:""} style="background:${color(d)}" title="${tip(d)}"></div>`).join("")}</div>`).join("")}</div>`;
-}
 
 //============================================================ CALENDAR (dedicated page)
 // The Insights heatmap, but full-page and scrolled VERTICALLY: every week is one
@@ -2492,6 +2478,10 @@ const VH_CATS = {
 };
 const VERSION_HISTORY = [
   { date:"2026-07-14", entries:[
+    { c:"ux",   t:"Removed the <b>activity calendar</b> from Insights now that it has its own dedicated <b>Calendar</b> page — no more duplicate heatmap." },
+    { c:"feat", t:"<b>By day of week</b>, <b>By month</b> and <b>Distance by year</b> on Insights are now stacked by sport — run / bike / swim / other." },
+    { c:"ux",   t:"The shoe leaderboard now lists <b>every pair</b> Mike logged (66), scrollable and ranked by distance — not just the top 10." },
+    { c:"fix",  t:"“Why days were skipped” no longer shows an empty <b>Rest</b> bar — reasons with no matching notes are omitted." },
     { c:"feat", t:"New <b>Performance</b> tab — a lens on Mike's <b>best</b> efforts, not his volume: races only, and split by era." },
     { c:"feat", t:"<b>Races</b> view: every RACE-tagged effort, race-day PRs at each standard distance, and a per-year race count — training days excluded." },
     { c:"feat", t:"<b>Records by era</b> (decade / 5-year) so his later-life bests aren't buried by his 20s–30s." },
