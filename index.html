@@ -86,6 +86,25 @@
   .pill{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
   .pill.d{color:#e0b15a;border-color:#5a4a26}
   .pill.u{color:#d98b8b;border-color:#5a3030}
+  /* version history / changelog */
+  .vtag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+        padding:2px 7px;border-radius:6px;border:1px solid var(--line);white-space:nowrap;flex:none}
+  .vt-feat{color:#4fd1b3;border-color:#2f6a5c;background:color-mix(in srgb,#36c2a8 13%,transparent)}
+  .vt-ui  {color:#7bb4ff;border-color:#2f5480;background:color-mix(in srgb,#4d9fff 13%,transparent)}
+  .vt-ux  {color:#c79bff;border-color:#574180;background:color-mix(in srgb,#a06bff 13%,transparent)}
+  .vt-data{color:#e0b15a;border-color:#5a4a26;background:color-mix(in srgb,#e0b15a 13%,transparent)}
+  .vt-pipe{color:#5fc8d8;border-color:#2a5a63;background:color-mix(in srgb,#4dc2d8 13%,transparent)}
+  .vt-fix {color:#e88f8f;border-color:#5a3030;background:color-mix(in srgb,#e07a7a 13%,transparent)}
+  .vt-docs{color:#9fb0c0;border-color:#3a4657;background:color-mix(in srgb,#8aa0b5 11%,transparent)}
+  .vh-day{margin:24px 0 10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .vh-day h3{margin:0;font-size:15.5px}
+  .vh-day .cnt{font-size:12px;color:var(--muted)}
+  .vh-day::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--accent);flex:none;align-self:center}
+  .vh-list .vh-entry{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
+  .vh-list .vh-entry:first-child{border-top:none}
+  .vh-entry .txt{flex:1;line-height:1.45;font-size:13.5px}
+  .vh-legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:12px}
+  .vh-legend span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
   /* chart */
   .chartwrap{display:flex;gap:8px;align-items:flex-start;padding-top:15px;position:relative}
   .yunit{position:absolute;top:0;left:0;font-size:9px;color:var(--muted);line-height:1;letter-spacing:.3px}
@@ -672,7 +691,8 @@ function lineChart(points, opts={}){
 const TABS = [
   ["dash","Dashboard"], ["insights","Insights"], ["calendar","Calendar"],
   ["records","Records"], ["wrapped","Year in Review"], ["reports","Reports"],
-  ["browse","Raw Data"], ["qa","Data QA"], ["about","About"],
+  ["browse","Raw Data"], ["qa","Data QA"], ["changelog","Version History"],
+  ["about","About"],
 ];
 // The custom report builder used to be its own tab; it now lives inside Reports.
 // Keep old #builder deep links working by routing them to Reports.
@@ -716,6 +736,7 @@ function route(){
   else if(current==="reports") renderReports(app);
   else if(current==="browse") renderBrowse(app);
   else if(current==="qa") renderQA(app);
+  else if(current==="changelog") renderChangelog(app);
   else renderAbout(app);
 }
 
@@ -2118,6 +2139,94 @@ function renderAbout(app){
    <div class="note-sm" style="margin-top:14px">Generated ${META.generated}. Span ${META.span[0]} → ${META.span[1]}.</div>`;
 }
 
+//============================================================ VERSION HISTORY
+// A human-readable changelog of the patches / Claude sessions behind this site,
+// newest first. Each entry is {c:category, t:terse text}. Categories map to the
+// coloured .vtag styles below. Keep entries terse — one scannable line each.
+const VH_CATS = {
+  feat: ["New",      "vt-feat"],  // new page, chart, feature
+  ui:   ["UI",       "vt-ui"],    // look, layout, styling
+  ux:   ["UX",       "vt-ux"],    // navigation, interaction, discoverability
+  data: ["Data QA",  "vt-data"],  // data corrections & parse fixes
+  pipe: ["Pipeline", "vt-pipe"],  // parsers, tools, validators, CI
+  fix:  ["Fix",      "vt-fix"],   // bug fixes
+  docs: ["Docs",     "vt-docs"],  // documentation & methodology
+};
+const VERSION_HISTORY = [
+  { date:"2026-07-14", entries:[
+    { c:"feat", t:"New dedicated vertical <b>Activity Calendar</b> page — day colour scales with training load." },
+    { c:"data", t:"Fixed the 2018 Tremblant Half Ironman: a garbled cell had become a phantom 445 km/h “ride” topping the biggest-day record — now a proper swim + bike + run." },
+    { c:"data", t:"Fixed phantom swim / bike distances that were corrupting records." },
+    { c:"data", t:"Un-stacked grid weeks a missing year-marker had piled onto a single week." },
+    { c:"pipe", t:"Added a weekly-total verifier and a Data QA outlier validation pass." },
+  ]},
+  { date:"2026-07-13", entries:[
+    { c:"feat", t:"New <b>Data QA</b> tab, with a live race-placement correction." },
+    { c:"feat", t:"Restyled record cards and added five new record types." },
+    { c:"ux",   t:"Records &amp; bests now click through to their exact entry in Raw Data." },
+    { c:"ui",   t:"Made the record label the readable card header on the Records tab." },
+    { c:"data", t:"Fixed phantom running records — dedup grid runs vs. the running log; guard impossible-pace typos." },
+    { c:"data", t:"Fixed 1994-08-07 — un-merged the Kennebunk triathlon from an ordinary training day." },
+    { c:"pipe", t:"Data-pipeline foundations: an exact run parser, a WIP grid parser, and Mike-review checksums." },
+    { c:"pipe", t:"Added a data validator + CI; fixed stale <code>meta.sports</code>; committed the raw source files." },
+    { c:"pipe", t:"Closed the QA loop with an apply-rulings tool + workflow docs." },
+    { c:"docs", t:"Added a decode reference and quantified grid-distance uncertainty." },
+  ]},
+  { date:"2026-06-29", entries:[
+    { c:"feat", t:"Added the <b>Records</b> &amp; <b>Year in Review</b> tabs, a cumulative-distance chart, badges and a site-wide filter bar." },
+    { c:"feat", t:"Expanded <b>Insights</b> — lifetime distance, annual volume, consistency and sport mix." },
+    { c:"feat", t:"Beefed up <b>Reports</b> with three new report types." },
+    { c:"feat", t:"Turned diary notes into data — rest reasons, race &amp; weather tags, and tinted calendar days." },
+    { c:"feat", t:"Finer note categories + clickable note-days on the calendar." },
+    { c:"feat", t:"Top 1% / 5% calendar-day highlights and a tap-a-day stats overlay." },
+    { c:"feat", t:"Recognised <code>fb</code> as fat-bike (winter fat-tire cycling)." },
+    { c:"data", t:"Corrected misparsed bike times and fake distances; ignored impossible bike/run speeds in the yearly trend." },
+    { c:"data", t:"Reclassified track intervals from bike to run." },
+    { c:"data", t:"Dropped interval-shorthand artifacts from the personal records." },
+    { c:"ui",   t:"Quick year buttons on Year in Review (replaced the dropdown); show only earned achievements." },
+    { c:"ui",   t:"Calendar polish — taller grid, clearer legend colours, added a legend explainer." },
+    { c:"ui",   t:"Added explanatory captions to non-obvious figures; runner / bike emojis on trend titles." },
+    { c:"ui",   t:"Sorted the dashboard “By sport” cards by total sessions; compacted overlapping bar labels." },
+    { c:"ui",   t:"Removed body-weight tracking site-wide; de-duped overlapping Insights / Reports charts." },
+    { c:"ux",   t:"Merged the Report Builder into the Reports tab; moved the year-vs-year chart into Insights." },
+    { c:"fix",  t:"Confined the sticky table header to Raw Data; reworked the lifetime-distance line chart (axis + hover)." },
+    { c:"docs", t:"Added a living “Considerations” data-issues log to About and tightened the methodology card." },
+  ]},
+  { date:"2026-06-28", entries:[
+    { c:"fix",  t:"Rendered the shoe-distance bars (an inline span had never drawn)." },
+    { c:"ui",   t:"Restored the pinned year badge on the activity calendar; dropped a title so the dashboard toggles fit one row." },
+    { c:"docs", t:"Expanded About with the data-interpretation methodology." },
+  ]},
+];
+function renderChangelog(app){
+  const total = VERSION_HISTORY.reduce((n,d)=>n+d.entries.length,0);
+  const days  = VERSION_HISTORY.length;
+  const span  = [VERSION_HISTORY[VERSION_HISTORY.length-1].date, VERSION_HISTORY[0].date];
+  const fmtDay = iso=>{
+    const [y,m,d]=iso.split("-").map(Number);
+    const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${MO[m-1]} ${d}, ${y}`;
+  };
+  const tag = c=>{ const [lbl,cls]=VH_CATS[c]||["","vt-docs"]; return `<span class="vtag ${cls}">${lbl}</span>`; };
+  const legend = Object.values(VH_CATS).map(([lbl,cls])=>
+     `<span><span class="vtag ${cls}">${lbl}</span></span>`).join("");
+  const daysHtml = VERSION_HISTORY.map(d=>`
+     <div class="vh-day"><h3>${fmtDay(d.date)}</h3><span class="cnt">${d.entries.length} update${d.entries.length>1?"s":""}</span></div>
+     <div class="card vh-list">
+       ${d.entries.map(e=>`<div class="vh-entry">${tag(e.c)}<div class="txt">${e.t}</div></div>`).join("")}
+     </div>`).join("");
+  app.innerHTML=`
+   <h2 class="section">Version History</h2>
+   <div class="card" style="margin-bottom:14px;max-width:820px;line-height:1.6">
+     <p style="margin:0 0 4px">A running changelog of every patch and Claude session behind this site —
+     what we built, fixed and cleaned up — newest first.</p>
+     <p class="note-sm" style="margin:0">${total} updates across ${days} work days · ${fmtDay(span[0])} → ${fmtDay(span[1])}.</p>
+     <div class="vh-legend">${legend}</div>
+   </div>
+   <div style="max-width:820px">${daysHtml}</div>
+   <div class="note-sm" style="max-width:820px;margin-top:16px">Dates follow the commit history in this repository.</div>`;
+}
+
 //============================================================ GLOBAL FILTER
 // A site-wide scope (year range + sport) applied to the Dashboard, Insights and
 // Records pages. Kept in one place so switching tabs preserves the selection.
@@ -2722,9 +2831,10 @@ fetch("data.json").then(r=>r.json()).then(j=>{
     wrapped: '<path d="M12 3l2.3 5.4L20 9l-4 3.6L17.2 19 12 16l-5.2 3L8 12.6 4 9l5.7-.6z"/>',
     browse:  '<path d="M4 6h16M4 12h16M4 18h16"/>',
     qa:      '<path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/>',
+    changelog:'<path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 4v4h4"/><path d="M12 8v4.2l2.8 1.7"/>',
     about:   '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1.1" fill="currentColor" stroke="none"/>',
   };
-  const SHORT = {dash:"Home", insights:"Insights", calendar:"Calendar", records:"Records", wrapped:"Recap", reports:"Reports", browse:"Data", qa:"QA", about:"About"};
+  const SHORT = {dash:"Home", insights:"Insights", calendar:"Calendar", records:"Records", wrapped:"Recap", reports:"Reports", browse:"Data", qa:"QA", changelog:"History", about:"About"};
   const nav = document.getElementById("bottomnav");
   if(!nav || typeof TABS==="undefined") return;
   nav.innerHTML = TABS.map(([id])=>
