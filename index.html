@@ -3014,7 +3014,6 @@ function renderWrapped(app){
   const mc={}; cur.forEach(r=>{const m=monthOf(r)-1; mc[m]=(mc[m]||0)+1;});
   const bm=Object.keys(mc).sort((m,n)=>mc[n]-mc[m])[0];
   const st=streakInfo(cur);
-  const prsThisYear=distancePRs(DATA.filter(r=>r.s!=="note")).filter(p=>yearOf(p.row)===y);
   const delta=(c,p)=>{ if(!p) return ""; const d=(c-p)/p*100, up=d>=0;
     return `<span class="delta ${up?"up":"down"}">${up?"▲":"▼"} ${Math.abs(d).toFixed(0)}% vs ${y-1}</span>`; };
   app.innerHTML=`<h2 class="section">Year in Review</h2>
@@ -3031,7 +3030,6 @@ function renderWrapped(app){
      ${bd&&dm[bd].k>0?`<div class="card clk" ${focusAttrs(bd,bd,null,"Biggest day of "+y)}><h3>Biggest day</h3><div class="factnum">${fmtNum(dm[bd].k,1)} km</div><div class="factsub">${bd} <span class="drillcue">→</span></div></div>`:""}
      ${ls?`<div class="card clk" ${focusAttrs(ls.d,ls.d,rowId(ls),"Longest session of "+y)}><h3>Longest session</h3><div class="factnum">${fmtDurShort(ls.t)}</div><div class="factsub">${sportName(ls.s)} · ${ls.d} <span class="drillcue">→</span></div></div>`:""}
      ${bm!=null?(()=>{const[bmf,bmt]=monthRange(y+"-"+String(bm+1).padStart(2,"0"));return `<div class="card clk" ${focusAttrs(bmf,bmt,null,"Busiest month ("+MONTHS[bm]+" "+y+")")}><h3>Busiest month</h3><div class="factnum">${MONTHS[bm]}</div><div class="factsub">${mc[bm]} sessions <span class="drillcue">→</span></div></div>`;})():""}
-     <div class="card"><h3>Personal records set</h3><div class="factnum">${prsThisYear.length}</div><div class="factsub">${prsThisYear.length?prsThisYear.map(p=>p.name).join(", "):"No new distance PRs this year"}</div></div>
    </div>
    <div class="card" style="margin-top:16px"><h3>Sessions by month</h3>${columnChart(MONTHS.map((m,i)=>({label:m,value:mc[i]||0})),{shortLabel:l=>l[0]})}</div>`;
   const yp=document.getElementById("wrap-years");
