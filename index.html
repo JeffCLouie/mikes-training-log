@@ -1504,23 +1504,29 @@ const entryNav=(row,label)=>({from:row.d,to:row.d,idx:rowId(row),label});
 const rangeNav=(from,to,label)=>({from,to,label});
 const entryFocus=entryNav, rangeFocus=rangeNav;   // aliases
 // build the data-* attributes that mark any element as a drill-in target
-function focusAttrs(from,to,idx,label){
+function focusAttrs(from,to,idx,label,pin){
   let a=`data-focus="1" data-from="${from}" role="button" tabindex="0"`;
   if(to&&to!==from) a+=` data-to="${to}"`;
   if(idx!=null) a+=` data-idx="${idx}"`;
+  if(pin) a+=` data-fpin="${pin}"`;
   if(label) a+=` data-flabel="${escapeHTML(label)}"`;
   return a+` title="View in Raw Data"`;
 }
-// navigate to Raw Data focused on a date / range / single entry
-function openFocus(from,to,idx,label){
+// navigate to Raw Data focused on a date / range / single entry.
+// pin: a date to highlight within the range when no single entry (idx) is targeted
+// — used by day drill-ins so a ±2-week context window still spotlights the day.
+function openFocus(from,to,idx,label,pin){
   if(!from) return;
   const p=new URLSearchParams();
   p.set("f0",from); if(to&&to!==from) p.set("f1",to);
   if(idx!=null&&idx!=="") p.set("fi",String(idx));
+  if(pin) p.set("fp",pin);
   if(label) p.set("fl",label);
   document.getElementById("day-overlay")?.classList.remove("show");   // if opened from a day popup
   current="browse"; renderTabs();
-  history.replaceState(null,"","#browse?"+p.toString());   // set URL first so render restores from it
+  // push (not replace) so the browser Back button returns to wherever you drilled
+  // in from — the calendar (with its category filter), a record card, etc.
+  history.pushState(null,"","#browse?"+p.toString());
   renderBrowse(document.getElementById("app"));
   window.scrollTo(0,0);
 }
@@ -1531,7 +1537,7 @@ function restoreFocusFromURL(){
   if(!p.has("f0")) return;
   const from=p.get("f0"), to=p.get("f1")||from;
   const fi=p.has("fi")?+p.get("fi"):null;
-  BROWSE_FOCUS={from,to,idx:(fi!=null&&!isNaN(fi))?fi:null,label:p.get("fl")||""};
+  BROWSE_FOCUS={from,to,idx:(fi!=null&&!isNaN(fi))?fi:null,pin:p.get("fp")||null,label:p.get("fl")||""};
 }
 function focusBanner(){
   if(!BROWSE_FOCUS) return "";
@@ -1550,13 +1556,13 @@ function clearFocus(){
 // delegated: any [data-focus] element (record card, best row, day link) drills in
 document.addEventListener("click",e=>{
   const el=e.target.closest("[data-focus]"); if(!el) return;
-  openFocus(el.dataset.from,el.dataset.to,el.dataset.idx,el.dataset.flabel);
+  openFocus(el.dataset.from,el.dataset.to,el.dataset.idx,el.dataset.flabel,el.dataset.fpin);
 });
 document.addEventListener("keydown",e=>{
   if(e.key!=="Enter"&&e.key!==" ") return;
   const el=e.target.closest&&e.target.closest("[data-focus]"); if(!el) return;
   e.preventDefault();
-  openFocus(el.dataset.from,el.dataset.to,el.dataset.idx,el.dataset.flabel);
+  openFocus(el.dataset.from,el.dataset.to,el.dataset.idx,el.dataset.flabel,el.dataset.fpin);
 });
 
 // reflect current filters into the URL so refresh / sharing keeps them
@@ -1566,6 +1572,7 @@ function syncBrowseURL(){
   if(BROWSE_FOCUS){ p.set("f0",BROWSE_FOCUS.from);
     if(BROWSE_FOCUS.to!==BROWSE_FOCUS.from) p.set("f1",BROWSE_FOCUS.to);
     if(BROWSE_FOCUS.idx!=null) p.set("fi",String(BROWSE_FOCUS.idx));
+    if(BROWSE_FOCUS.pin) p.set("fp",BROWSE_FOCUS.pin);
     if(BROWSE_FOCUS.label) p.set("fl",BROWSE_FOCUS.label); }
   const qs=p.toString();
   history.replaceState(null,"","#browse"+(qs?"?"+qs:""));   // replaceState => no hashchange loop
@@ -1662,12 +1669,16 @@ function drawBrowse(){
     if(av<bv)return -dir; if(av>bv)return dir; return 0;
   });
   BROWSE.rows=rows;
-  // If a specific entry is focused, jump to the page that contains it.
-  let focusPos=-1;
+  // Jump to the page holding the focused entry (idx) or the first row of a
+  // pinned day (pin) — the latter lets a ±2-week context window still land on
+  // the day you drilled in from.
+  let focusPos=-1, pinDate=null;
   if(BROWSE_FOCUS&&BROWSE_FOCUS.idx!=null){
     const fr=DATA[BROWSE_FOCUS.idx]; focusPos=fr?rows.indexOf(fr):-1;
-    if(focusPos>=0) BROWSE.page=Math.floor(focusPos/BROWSE.per);
+  } else if(BROWSE_FOCUS&&BROWSE_FOCUS.pin){
+    pinDate=BROWSE_FOCUS.pin; focusPos=rows.findIndex(r=>r.d===pinDate);
   }
+  if(focusPos>=0) BROWSE.page=Math.floor(focusPos/BROWSE.per);
   const total=rows.length, pages=Math.max(1,Math.ceil(total/BROWSE.per));
   if(BROWSE.page>=pages)BROWSE.page=0;
   const start=BROWSE.page*BROWSE.per;
@@ -1702,11 +1713,18 @@ function drawBrowse(){
     const tr=e.target.closest("tr.datarow");
     if(tr) toggleDetail(tr);
   };
-  // Highlight + expand + scroll to the focused entry once it's on this page.
+  // Highlight + scroll to the focus once it's on this page. A single entry (idx)
+  // is highlighted and expanded; a pinned day highlights every row it holds.
   if(focusPos>=start&&focusPos<start+slice.length){
-    const tr=tbl.querySelectorAll("tbody tr.datarow")[focusPos-start];
-    if(tr){ tr.classList.add("focusrow");
-      if(!(tr.nextElementSibling&&tr.nextElementSibling.classList.contains("row-detail"))) toggleDetail(tr);
+    const trs=tbl.querySelectorAll("tbody tr.datarow");
+    const tr=trs[focusPos-start];
+    if(tr){
+      if(pinDate){
+        trs.forEach((row,i)=>{ if(slice[i]&&slice[i].d===pinDate) row.classList.add("focusrow"); });
+      } else {
+        tr.classList.add("focusrow");
+        if(!(tr.nextElementSibling&&tr.nextElementSibling.classList.contains("row-detail"))) toggleDetail(tr);
+      }
       requestAnimationFrame(()=>tr.scrollIntoView({behavior:"smooth",block:"center"}));
     }
   }
@@ -2058,7 +2076,7 @@ function dayPopup(ds){
     return `<div class="e"><span class="note-tag" style="background:${col}">${lab}</span><span class="meta">${escapeHTML(txt)||"—"}</span></div>`; }).join("");
   const body=(wbody+nbody)||`<div class="muted">Nothing recorded.</div>`;
   const tot=rows.length>1?`<div class="day-tot"><span><b>${rows.length}</b> sessions</span><span><b>${fmtDurShort(totDur)}</b> total</span>${totKm?`<span><b>${fmtNum(totKm,1)}</b> km</span>`:""}</div>`:"";
-  const link=all.length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)"><span class="daylink" ${focusAttrs(ds,ds,null,"Day: "+ds)}>View in Raw Data →</span></div>`:"";
+  const link=all.length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)"><span class="daylink" ${focusAttrs(addDays(ds,-14),addDays(ds,14),null,"Day: "+ds,ds)}>View in Raw Data →</span></div>`:"";
   return `<div class="day-card">
     <div class="cardhead" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">${title}</h3><button class="day-x" aria-label="Close">✕</button></div>
     ${tot}<div class="cal-detail">${body}</div>${link}
@@ -2170,6 +2188,16 @@ const CAL_CATS=[
   ["rest",NOTE_COL.rest,"rest"], ["recovery",NOTE_COL.recovery,"recovery"],
   ["travel",NOTE_COL.travel,"travel"], ["home",NOTE_COL.home,"home"],
 ];
+// The category filter lives in the URL (#calendar?cats=travel,race) so it's
+// deep-linkable and — the point here — survives a Back from a day's Raw Data
+// drill-in. Returns null when no filter is set (→ all categories), [] for None.
+function calCatsFromURL(){
+  const qi=location.hash.indexOf("?"); if(qi<0) return null;
+  const p=new URLSearchParams(location.hash.slice(qi+1));
+  if(!p.has("cats")) return null;
+  const valid=new Set(CAL_CATS.map(c=>c[0]));
+  return p.get("cats").split(",").filter(k=>valid.has(k));
+}
 function renderCalendar(app){
   const {day,noteDay,minY,maxY,hot}=activityModel();
   if(!isFinite(minY)){ app.innerHTML=`<h2 class="section">Activity calendar</h2><div class="card muted">No activity recorded.</div>`; return; }
@@ -2305,8 +2333,11 @@ function renderCalendar(app){
   // an `off-<cat>` class on the GRID (one node) — static CSS then fades just the
   // matching cells via opacity. No per-cell writes, no filter/transition, so even
   // "None" (dim everything) is instant on mobile.
-  const active=new Set(CAL_CATS.map(c=>c[0]));
+  const active=new Set(calCatsFromURL()||CAL_CATS.map(c=>c[0]));   // restore filter from URL, else all
   const applyFilter=()=>CAL_CATS.forEach(c=>grid.classList.toggle("off-"+c[0], !active.has(c[0])));
+  // keep the URL in step with the filter so a Back from Raw Data restores this view
+  const syncCalURL=()=>{ const all=active.size===CAL_CATS.length;
+    history.replaceState(null,"","#calendar"+(all?"":"?cats="+[...active].join(","))); };
 
   // ---- companion table: lists the days matching the active categories, so a
   // sparse category (travel, races, injuries…) can be read off directly instead
@@ -2341,10 +2372,15 @@ function renderCalendar(app){
     tableEl.innerHTML=`<div class="vcal-table-head"><b>${fmtNum(total)}</b> matching day${total===1?"":"s"}${total>TCAP?` <span class="muted">· showing the ${TCAP} most recent</span>`:""}</div>
       <div class="vcal-table-scroll"><table class="vcal-ttable"><tbody>${rows||`<tr><td class="muted" style="padding:12px">No matching days.</td></tr>`}</tbody></table></div>`;
   };
-  tableEl.addEventListener("click",e=>{ const tr=e.target.closest("tr[data-d]"); if(tr) showDayOverlay(tr.dataset.d); });
-  const refresh=()=>{ applyFilter(); updateTable(); };
+  // Tap a row → straight to that day in Raw Data, opened on a ±2-week context
+  // window with the day highlighted. No intermediate popup; Back returns here
+  // (the filtered table) because openFocus pushes history and the filter is in the URL.
+  tableEl.addEventListener("click",e=>{ const tr=e.target.closest("tr[data-d]"); if(!tr) return;
+    const ds=tr.dataset.d; openFocus(addDays(ds,-14),addDays(ds,14),null,"Day: "+ds,ds); });
+  const refresh=()=>{ applyFilter(); updateTable(); syncCalURL(); };
 
   const chipEls=[...document.querySelectorAll(".vcal-chip")];
+  chipEls.forEach(ch=>ch.setAttribute("aria-pressed", active.has(ch.dataset.cat)?"true":"false"));   // reflect restored filter
   chipEls.forEach(ch=>ch.onclick=()=>{ const k=ch.dataset.cat;
     if(active.has(k)) active.delete(k); else active.add(k);
     ch.setAttribute("aria-pressed", active.has(k)?"true":"false"); refresh(); });
@@ -2352,9 +2388,12 @@ function renderCalendar(app){
     chipEls.forEach(ch=>ch.setAttribute("aria-pressed","true")); refresh(); };
   document.getElementById("vcal-none").onclick=()=>{ active.clear();
     chipEls.forEach(ch=>ch.setAttribute("aria-pressed","false")); refresh(); };
-  updateTable();
+  refresh();   // apply restored filter (grid dimming + table + URL) on first render
   // open on the default (most-active) year without a scroll animation
-  requestAnimationFrame(()=>{ scroll.scrollTop=Math.max(0,topOfYear(_calYear)-headH()-4); fillSum(_calYear); });
+  requestAnimationFrame(()=>{ scroll.scrollTop=Math.max(0,topOfYear(_calYear)-headH()-4); fillSum(_calYear);
+    // Arrived with a filter already set (a Back from a day's Raw Data, or a shared
+    // link)? Land on the matching-days table — that's the view being returned to.
+    if(calCatsFromURL()!==null) tableEl.scrollIntoView({block:"start"}); });
 }
 
 //============================================================ ABOUT
@@ -2481,6 +2520,8 @@ const VH_CATS = {
 };
 const VERSION_HISTORY = [
   { date:"2026-07-14", entries:[
+    { c:"ux",   t:"Calendar <b>matching-days</b> rows now jump <b>straight into Raw Data</b> — no intermediate day popup — on a ±2-week window with that day highlighted." },
+    { c:"ux",   t:"The calendar <b>category filter now lives in the URL</b>, so browser <b>Back</b> from a day's Raw Data returns you to the same filtered matching-days table you left." },
     { c:"ux",   t:"<b>View in Raw Data</b> from Data QA now lands on a <b>±2-week window</b> around the flagged entry (still pinned &amp; expanded) instead of just that one day — so the surrounding training reads as context for the ruling." },
     { c:"feat", t:"Added a <b>Month</b> filter on Raw Data alongside Year — narrow the table to a specific year + month." },
     { c:"feat", t:"New <b>Performance</b> tab — a lens on Mike's <b>best</b> efforts, not his volume: races only, age-graded, and split by era." },
