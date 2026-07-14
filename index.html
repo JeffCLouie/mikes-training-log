@@ -245,7 +245,7 @@
   .vcal-head{position:sticky;top:0;z-index:2;background:var(--panel);padding:8px 0 6px;border-bottom:1px solid var(--line)}
   .vcal-head .dow{font-size:10.5px;color:var(--muted);text-align:center;font-weight:700;letter-spacing:.3px}
   .vcal-head .dow.we{color:var(--accent2)}
-  .vcal{display:flex;flex-direction:column;gap:3px;padding-top:5px}
+  .vcal{--vcal-cell-h:44px;display:flex;flex-direction:column;gap:3px;padding-top:5px}
   /* content-visibility:auto lets the browser SKIP layout/style/paint for off-screen
      weeks — so initial render, scrolling, and filter re-styling only touch the ~15
      visible rows instead of all ~1,700. Critical for the large grid on mobile. */
@@ -305,7 +305,7 @@
   @media (max-width:600px){
     .vcal-scroll{max-width:none;max-height:62vh}
     .vcal-head,.vcal{--vcal-gut:34px}
-    .vcal-cell{--vcal-cell-h:38px}
+    .vcal{--vcal-cell-h:38px}   /* on the container so BOTH cell height and row intrinsic-size match */
     .vcal-cell .dn{font-size:8.5px;top:1px;left:3px}
     .vcal-catgrid{grid-template-columns:1fr}
     .vcal-ttable td{padding:8px 7px;font-size:12px}
@@ -2272,6 +2272,13 @@ function renderCalendar(app){
   const pitch=rowEls.length>1?((rowEls[1].offsetTop-rowEls[0].offsetTop)||1):1;
   const yearIndex={}; rowEls.forEach((el,i)=>{ const y=+el.dataset.y; if(yearIndex[y]==null) yearIndex[y]=i; });
   const topOfYear=y=>firstTop+(yearIndex[y]||0)*pitch;
+  // scroll a specific date's week to just under the sticky header (rows[0] starts
+  // on `start`, one week per row) and sync the year label + summary to it.
+  const startMs=start.getTime();
+  const scrollToDate=ds=>{ const wi=Math.floor((Date.parse(ds+"T00:00:00Z")-startMs)/(7*864e5));
+    const i=Math.max(0,Math.min(rowEls.length-1,wi));
+    scroll.scrollTop=Math.max(0, firstTop+i*pitch-headH()-4);
+    const y=+ds.slice(0,4); if(ysel)ysel.value=y; _calYear=y; fillSum(y); };
   const fillSum=y=>{ const o=ysum[y];
     sumEl.innerHTML = o
       ? `<b>${y}</b> · <b>${o.days}</b> active day${o.days===1?"":"s"} · <b>${fmtNum(o.sess)}</b> session${o.sess===1?"":"s"} · <b>${Math.round(o.dur/3600)}h</b> trained · <b>${o.top}</b> top-1% day${o.top===1?"":"s"}`
@@ -2333,14 +2340,33 @@ function renderCalendar(app){
   tableEl.addEventListener("click",e=>{ const tr=e.target.closest("tr[data-d]"); if(tr) showDayOverlay(tr.dataset.d); });
   const refresh=()=>{ applyFilter(); updateTable(); };
 
+  // earliest day matching a single active category (for the jump-on-isolate below)
+  const NOTE_CAT_KEYS=new Set(["race","injury","illness","weather","rest","recovery","travel","home"]);
+  const firstMatchDate=()=>{
+    if(active.size!==1) return null;
+    const cat=[...active][0]; let best=null;
+    if(NOTE_CAT_KEYS.has(cat)){ for(const ds in noteDay){ if(noteDay[ds]===cat&&!day[ds]&&(best===null||ds<best)) best=ds; } }
+    else if(cat==="trained"||cat==="top"){ for(const ds in day){ const dd=day[ds], top=dd.load>0&&dd.load>=hot;
+      if((top?"top":"trained")===cat&&(best===null||ds<best)) best=ds; } }
+    return best;
+  };
   const chipEls=[...document.querySelectorAll(".vcal-chip")];
-  chipEls.forEach(ch=>ch.onclick=()=>{ const k=ch.dataset.cat;
-    if(active.has(k)) active.delete(k); else active.add(k);
-    ch.setAttribute("aria-pressed", active.has(k)?"true":"false"); refresh(); });
-  document.getElementById("vcal-all").onclick=()=>{ active.clear(); CAL_CATS.forEach(c=>active.add(c[0]));
-    chipEls.forEach(ch=>ch.setAttribute("aria-pressed","true")); refresh(); };
-  document.getElementById("vcal-none").onclick=()=>{ active.clear();
-    chipEls.forEach(ch=>ch.setAttribute("aria-pressed","false")); refresh(); };
+  const syncChips=()=>chipEls.forEach(ch=>ch.setAttribute("aria-pressed", active.has(ch.dataset.cat)?"true":"false"));
+  // Tapping a category ISOLATES it (drop the rest) when everything is currently
+  // shown — so "click travel" means "show only travel", not "hide travel". Tapping
+  // the lone selected one again restores all; from a partial selection it toggles.
+  // Isolating down to a single category jumps the grid to that category's first day.
+  const onCat=k=>{
+    if(active.size===CAL_CATS.length){ active.clear(); active.add(k); }
+    else if(active.size===1&&active.has(k)){ CAL_CATS.forEach(c=>active.add(c[0])); }
+    else if(active.has(k)){ active.delete(k); }
+    else { active.add(k); }
+    syncChips(); refresh();
+    const fd=firstMatchDate(); if(fd) scrollToDate(fd);
+  };
+  chipEls.forEach(ch=>ch.onclick=()=>onCat(ch.dataset.cat));
+  document.getElementById("vcal-all").onclick=()=>{ CAL_CATS.forEach(c=>active.add(c[0])); syncChips(); refresh(); };
+  document.getElementById("vcal-none").onclick=()=>{ active.clear(); syncChips(); refresh(); };
   updateTable();
   // open on the default (most-active) year without a scroll animation
   requestAnimationFrame(()=>{ scroll.scrollTop=Math.max(0,topOfYear(_calYear)-headH()-4); fillSum(_calYear); });
