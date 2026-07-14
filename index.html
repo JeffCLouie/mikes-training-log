@@ -345,13 +345,7 @@
   .kvgrid div.clk:hover,.kvgrid div.clk:focus-visible{transform:none;background:var(--panel2)}
   .clk .drillcue{opacity:0;transition:opacity .12s;color:var(--accent);font-weight:700}
   .clk:hover .drillcue,.clk:focus-visible .drillcue{opacity:1}
-  /* Performance: age-grade pills + records-by-era cards */
-  .agpill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:700}
-  .ag-base{background:rgba(138,160,181,.14);color:#8aa0b5}
-  .ag-ok{background:rgba(77,159,255,.16);color:#7fbcff}
-  .ag-good{background:rgba(54,194,168,.18);color:#4fd6bb}
-  .ag-strong{background:rgba(120,210,120,.20);color:#8fe08f}
-  .ag-elite{background:rgba(255,178,90,.22);color:#ffc072}
+  /* Performance: records-by-era cards */
   .eragrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
   .eracard{padding:14px 16px}
   .erarecs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
@@ -1115,17 +1109,15 @@ function reportRunning(){
   const prs=distancePRs(runs);
   const prCards=prs.map(p=>_recCard(p.name,fmtDur(Math.round(p.sec)),fmtPace(_pace(p.row))+"/km · "+fmtNum(p.row.k,1)+" km",p.row)).join("");
   const races=runs.filter(isRace);
-  const graded=races.map(r=>({r,ag:ageGradeRun(r)})).filter(x=>x.ag);
-  const bestAG=graded.length?graded.reduce((x,y)=>y.ag.pct>x.ag.pct?y:x):null;
   return `
    ${_statRow([_stat(fmtNum(a.count),"runs"),_stat(fmtNum(Math.round(a.dist)),"total km"),_stat(Math.round(a.dur/3600),"hours"),_stat(years[0]+"–"+years[years.length-1],"span")])}
    <div class="card" style="margin-bottom:16px"><h3>Distance per year</h3>${columnChart(kmByYear,{shortLabel:l=>"'"+l.slice(2),unit:"km",fmt:v=>fmtNum(v)+" km",axisFmt:v=>fmtK(v)})}</div>
    ${paceByYear.length>1?`<div class="card" style="margin-bottom:16px"><h3>Average pace per year</h3>${lineChart(paceByYear,{unit:"min/km",fmt:v=>fmtPace(v)+"/km",axisFmt:v=>fmtPace(v)})}
-     <div class="note-sm">Mean pace of runs ≥3 km. Lower is faster — the drift upward over the years is largely age (see the <b>Performance → Age-Graded</b> tab, which factors that out).</div></div>`:""}
+     <div class="note-sm">Mean pace of runs ≥3 km. Lower is faster; the drift upward over the years mostly tracks age.</div></div>`:""}
    <div class="card" style="margin-bottom:16px"><h3>Distance personal records</h3><div class="note-sm" style="margin-bottom:8px">Best average pace held for at least each distance, in training or racing.</div><div class="grid recgrid">${prCards}</div></div>
    ${races.length?`<div class="card" style="margin-bottom:16px"><h3>Racing</h3>
-     ${_statRow([_stat(races.length,"races run"),_stat(new Set(races.map(yearOf)).size,"years raced"),bestAG?_stat(fmtPct(bestAG.ag.pct),"best age-grade"):""])}
-     <div class="note-sm">Full race breakdown — including age-graded results — is on the <b>Performance → Races</b> tab.</div></div>`:""}
+     ${_statRow([_stat(races.length,"races run"),_stat(new Set(races.map(yearOf)).size,"years raced")])}
+     <div class="note-sm">Full race breakdown — with race-day PRs — is on the <b>Performance → Races</b> tab.</div></div>`:""}
    <div class="card"><h3>Cumulative distance by year</h3>${cumulativeChart(runs)}</div>`;
 }
 
@@ -1181,17 +1173,17 @@ function reportTri(){
   const years=[...new Set(tri.map(yearOf))].sort();
   const byYear=years.map(y=>({label:String(y),value:tri.filter(r=>yearOf(r)===y&&r.s==="run").length||tri.filter(r=>yearOf(r)===y).length}));
   const sorted=runLegs.slice().sort((a,b)=>a.d<b.d?1:-1);
-  const rows=sorted.map(r=>{ const ag=ageGradeRun(r);
-    return `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
+  const rows=sorted.map(r=>
+    `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
       <td>${r.d}</td><td>${escapeHTML(raceName(r))}</td><td class="num">${fmtNum(r.k,1)}</td>
-      <td class="num">${fmtDur(r.t)}</td><td class="num">${fmtPace(_pace(r))}</td><td class="num">${ag?ag.age:""}</td>
-      <td class="num">${ag?`<span class="agpill ${agClass(ag.pct)}">${fmtPct(ag.pct)}</span>`:"—"}</td></tr>`; }).join("");
+      <td class="num">${fmtDur(r.t)}</td><td class="num">${fmtPace(_pace(r))}</td></tr>`
+  ).join("");
   return `
    ${_statRow([_stat(new Set(tri.map(r=>r.d)).size,"triathlons"),_stat(years[0]+"–"+years[years.length-1],"span"),_stat(new Set(tri.map(yearOf)).size,"years")])}
    <div class="card" style="margin-bottom:16px"><h3>Triathlons per year</h3>${columnChart(byYear,{shortLabel:l=>"'"+l.slice(2),unit:"races"})}</div>
    <div class="card"><h3>Run legs</h3>
-     <div class="note-sm" style="margin-bottom:8px">The precise log records each triathlon's <b>run leg</b> (swim &amp; bike legs live in the weekly grid). Pace and age-grade are for the run. Newest first.</div>
-     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">Run km</th><th class="num">Run time</th><th class="num">Pace</th><th class="num">Age</th><th class="num">AG %</th></tr></thead>
+     <div class="note-sm" style="margin-bottom:8px">The precise log records each triathlon's <b>run leg</b> (swim &amp; bike legs live in the weekly grid). Pace is for the run. Newest first.</div>
+     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">Run km</th><th class="num">Run time</th><th class="num">Pace</th></tr></thead>
      <tbody>${rows}</tbody></table></div></div>`;
 }
 
@@ -2439,15 +2431,11 @@ function renderAbout(app){
          These power the <i>Why days were skipped</i> chart and the tinted,
          tappable squares on the activity calendar. Classification is keyword-based
          (medium confidence), so the odd note may be mis-bucketed.</li>
-       <li><span class="pill d">interpreted</span> <b>Age grading &amp; race detection
+       <li><span class="pill d">interpreted</span> <b>Race detection
          (Performance tab).</b> A "race" is any effort Mike tagged <code>RACE</code>
-         in his log — his own high-precision marker. Age grading uses approximate
-         WMA-style men's road factors and Mike's birth <b>year</b> only (age = race
-         year − birth year); the default birth year is an estimate from his 2017
-         50–59 age-category placing and is editable on the Age-Graded tab. It's for
-         comparing his own efforts across ages, not for official records. Age-graded
-         figures use races only — training runs, age-graded, throw up efforts too
-         good to be true.</li>
+         in his log — his own high-precision marker, far cleaner than keyword-guessing
+         "race"/"sprint" out of prose. Race-day PRs and the by-era records draw only
+         on these, so a hard training run doesn't set a record.</li>
      </ul>
      <p class="note-sm">Spotted something off? It's almost certainly in the
      original shorthand — open the <b>Raw Data</b> tab to see exactly what Mike
@@ -2478,10 +2466,9 @@ const VH_CATS = {
 };
 const VERSION_HISTORY = [
   { date:"2026-07-14", entries:[
-    { c:"feat", t:"New <b>Performance</b> tab — a lens on Mike's <b>best</b> efforts, not his volume: races only, age-graded, and split by era." },
+    { c:"feat", t:"New <b>Performance</b> tab — a lens on Mike's <b>best</b> efforts, not his volume: races only, and split by era." },
     { c:"feat", t:"<b>Races</b> view: every RACE-tagged effort, race-day PRs at each standard distance, and a per-year race count — training days excluded." },
-    { c:"feat", t:"<b>Age-graded</b> racing (WMA-style) with an editable birth year — a 4:20/km 10 K at 55 now compares fairly with a 3:40/km one at 30; form by year comes out near-flat." },
-    { c:"feat", t:"<b>Records by era</b> (decade / 5-year) so his later-life bests aren't buried by his 20s–30s; each era is tagged with his age." },
+    { c:"feat", t:"<b>Records by era</b> (decade / 5-year) so his later-life bests aren't buried by his 20s–30s." },
     { c:"feat", t:"Sport-specific premade <b>reports</b> — running, cycling, swimming and triathlon deep-dives in the Reports tab." },
     { c:"ux",   t:"Rebuilt the <b>Data QA</b> review cards — each now shows what was interpreted, why it's flagged, the raw shorthand and a ruling box with one-tap <i>Looks right</i> / <i>Drop</i>; the tab opens straight on Spot-check." },
     { c:"ux",   t:"Added a per-row <b>“add context”</b> button on Raw Data — rule on any entry inline; it feeds the same Data QA store." },
@@ -2639,10 +2626,9 @@ function cumulativeChart(rows){
 }
 
 //============================================================ PERFORMANCE ANALYTICS
-// Four related lenses on Mike's *best* performance rather than his volume:
-//   Races      — only the efforts Mike tagged RACE, so training noise is excluded.
-//   Age-Graded — WMA-style age grading so a 55-year-old effort compares fairly to a 30-year-old one.
-//   By Era     — records per decade / 5-year block, since all-time bests skew to his youth.
+// Two related lenses on Mike's *best* performance rather than his volume:
+//   Races  — only the efforts Mike tagged RACE, so training noise is excluded.
+//   By Era — records per decade / 5-year block, since all-time bests skew to his youth.
 // Plus sport-specific premade reports live in the Reports tab.
 
 // A race is any effort Mike flagged with an explicit uppercase RACE tag in his log
@@ -2659,69 +2645,6 @@ function raceName(r){
   n=n.replace(/\s+1\/2\s*$/,"").trim();
   return (n||"Race").slice(0,44);
 }
-
-// ---- Age grading (WMA-style, men's road running) --------------------------
-// Age grading normalises a performance for age: it expresses a time as a % of the
-// world-class standard for someone that age, so efforts set decades apart compare
-// fairly. Mike's raw times are naturally fastest in his youth; age grading reveals
-// how strong an effort *was for his age at the time*.
-//
-// We only know Mike's birth YEAR (see below), so age ≈ race-year − birth-year.
-// Standards/factors are approximate WMA-style men's road values — good enough to
-// rank Mike's own efforts against each other, not for official record purposes.
-const BIRTH_KEY="mtl_birthYear";
-const BIRTH_DEFAULT=1962;   // best estimate: he placed in the 50-59 category in Aug 2017. Editable in the UI.
-function birthYear(){
-  try{ const v=+localStorage.getItem(BIRTH_KEY); if(v>=1930&&v<=2010) return v; }catch(e){}
-  return BIRTH_DEFAULT;
-}
-function setBirthYear(y){ try{ localStorage.setItem(BIRTH_KEY,String(y)); }catch(e){} }
-function ageAt(dateStr){ return (+dateStr.slice(0,4)) - birthYear(); }
-// Open-class world-class standards (men, road) — the 100% reference time per distance.
-const AG_STD = {
-  "5K":       {km:5,        sec:780},   // 13:00
-  "10K":      {km:10,       sec:1605},  // 26:45
-  "Half":     {km:21.0975,  sec:3510},  // 58:30
-  "Marathon": {km:42.195,   sec:7380},  // 2:03:00
-};
-// Age factors (multiply-your-time, ≤1) at 5-year anchors, interpolated per year.
-// Men's road running, WMA-style; ~0.5%/yr decline in the 30s steepening with age.
-const AG_AGES = [30,35,40,45,50,55,60,65,70,75,80];
-const AG_FACT = {
-  "5K":       [1.000,0.976,0.947,0.913,0.874,0.831,0.784,0.732,0.675,0.613,0.546],
-  "10K":      [1.000,0.975,0.945,0.910,0.871,0.828,0.780,0.728,0.671,0.609,0.542],
-  "Half":     [1.000,0.973,0.942,0.906,0.866,0.822,0.774,0.721,0.663,0.600,0.532],
-  "Marathon": [1.000,0.971,0.939,0.902,0.861,0.817,0.768,0.714,0.655,0.591,0.523],
-};
-// Which standard distance an arbitrary run is closest to (on a log scale, so a 15 km
-// run maps to Half not 10K), so any run — not just exact-distance ones — can be graded.
-function nearestStd(km){
-  let best="10K", bd=Infinity;
-  for(const k in AG_STD){ const d=Math.abs(Math.log(km/AG_STD[k].km)); if(d<bd){bd=d;best=k;} }
-  return best;
-}
-function agFactor(std, age){
-  const f=AG_FACT[std];
-  if(age<=AG_AGES[0]) return f[0];
-  if(age>=AG_AGES[AG_AGES.length-1]) return f[f.length-1];
-  for(let i=1;i<AG_AGES.length;i++){ if(age<=AG_AGES[i]){
-    const t=(age-AG_AGES[i-1])/(AG_AGES[i]-AG_AGES[i-1]); return f[i-1]+t*(f[i]-f[i-1]); } }
-  return f[f.length-1];
-}
-// Age-grade a run by comparing its pace to the age-adjusted world-class pace for the
-// nearest standard distance. Returns {pct, agPace(open-equiv min/km), factor, age, std}.
-function ageGradeRun(r){
-  if(!(r.s==="run" && r.t>0 && r.k>=1.5)) return null;
-  const pace=_pace(r); if(pace<3.0 || pace>10) return null;   // drop parse artifacts
-  const std=nearestStd(r.k), S=AG_STD[std];
-  const openPace=(S.sec/60)/S.km;                 // world-class open pace at that distance
-  const age=ageAt(r.d), f=agFactor(std,age);
-  const stdPaceAge=openPace/f;                    // age-adjusted world-class pace (slower when older)
-  return {pct: stdPaceAge/pace*100, agPace: pace*f, factor:f, age, std, pace, km:r.k};
-}
-const fmtPct = v => v.toFixed(1)+"%";
-// Colour a % so strong age grades read at a glance (WMA-style bands).
-function agClass(p){ return p>=80?"ag-elite":p>=70?"ag-strong":p>=60?"ag-good":p>=50?"ag-ok":"ag-base"; }
 
 // ---- Performance tab ------------------------------------------------------
 let perfSub="races";
@@ -2752,9 +2675,10 @@ function wirePerfYearBar(){
   if(cl) cl.onclick=()=>{ const ys=allYears(); FILTER.fromY=ys[0]; FILTER.toY=ys[ys.length-1]; rerender(); };
 }
 function renderPerf(app){
-  const subs=[["races","Races"],["age","Age-Graded"],["era","By Era"]];
+  const subs=[["races","Races"],["era","By Era"]];
+  if(perfSub!=="races"&&perfSub!=="era") perfSub="races";   // old #age deep-links fall back to Races
   app.innerHTML=`<h2 class="section">Performance</h2>
-    <div class="note-sm" style="margin:-6px 0 12px">Your <b>best</b> efforts, not your volume — races only, age-graded, and split by era. Running-based.</div>
+    <div class="note-sm" style="margin:-6px 0 12px">Your <b>best</b> efforts, not your volume — races only, and split by era. Running-based.</div>
     <div class="qa-subnav" id="perf-nav">${subs.map(([s,n])=>`<button data-s="${s}" class="${perfSub===s?"on":""}">${n}</button>`).join("")}</div>
     ${perfYearBar()}
     <div id="perf-out"></div>`;
@@ -2762,7 +2686,6 @@ function renderPerf(app){
   wirePerfYearBar();
   const out=document.getElementById("perf-out");
   if(perfSub==="races"){ out.innerHTML=perfRaces(); }
-  else if(perfSub==="age"){ out.innerHTML=perfAge(); wireBirthInput(); }
   else { out.innerHTML=perfEra(); wireEraToggle(); }
 }
 
@@ -2775,30 +2698,27 @@ function perfRaces(){
   const sorted=races.slice().sort((a,b)=>a.d<b.d?1:-1);   // newest first
   const years=[...new Set(races.map(yearOf))].sort();
   const byYear=years.map(y=>({label:String(y),value:races.filter(r=>yearOf(r)===y).length}));
-  // best age-graded race in range
-  const graded=races.map(r=>({r,ag:ageGradeRun(r)})).filter(x=>x.ag);
-  const bestAG=graded.length?graded.reduce((a,b)=>b.ag.pct>a.ag.pct?b:a):null;
+  const raceKm=races.reduce((s,r)=>s+(r.k||0),0);
   // race PRs at standard distances (races only — fastest actual finishing time in band)
   const prCards=RACE_BANDS.map(([name,D,lo,hi])=>{
     const c=races.filter(r=>r.k>=lo&&r.k<=hi); if(!c.length) return "";
-    const b=c.reduce((x,y)=>y.t<x.t?y:x); const ag=ageGradeRun(b);
+    const b=c.reduce((x,y)=>y.t<x.t?y:x);
     return `<div class="card stat rec clk" ${focusAttrs(b.d,b.d,rowId(b),name+" race PR")}>
       <div class="l">${name} race PR</div><div class="v">${fmtDur(b.t)}</div>
-      <div class="sub">${fmtPace(_pace(b))}/km · ${fmtNum(b.k,1)} km${ag?" · "+fmtPct(ag.pct)+" AG":""}</div>
-      <div class="d">${b.d}${ag?" · age "+ag.age:""} <span class="drillcue">→</span></div></div>`;
+      <div class="sub">${fmtPace(_pace(b))}/km · ${fmtNum(b.k,1)} km</div>
+      <div class="d">${b.d} <span class="drillcue">→</span></div></div>`;
   }).filter(Boolean).join("");
-  const rows=sorted.map(r=>{ const ag=ageGradeRun(r);
-    return `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
+  const rows=sorted.map(r=>
+    `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
       <td>${r.d}</td><td>${escapeHTML(raceName(r))}</td>
       <td class="num">${fmtNum(r.k,1)}</td><td class="num">${fmtDur(r.t)}</td>
-      <td class="num">${fmtPace(_pace(r))}</td><td class="num">${ag?ag.age:""}</td>
-      <td class="num">${ag?`<span class="agpill ${agClass(ag.pct)}">${fmtPct(ag.pct)}</span>`:"—"}</td></tr>`;
-  }).join("");
+      <td class="num">${fmtPace(_pace(r))}</td></tr>`
+  ).join("");
   return `
    <div class="grid stat-row" style="margin-bottom:16px">
      <div class="card stat"><div class="num">${races.length}</div><div class="lbl">races logged</div></div>
      <div class="card stat"><div class="num">${years[0]}–${years[years.length-1]}</div><div class="lbl">race span</div></div>
-     ${bestAG?`<div class="card stat"><div class="num">${fmtPct(bestAG.ag.pct)}</div><div class="lbl">best age-grade</div></div>`:""}
+     <div class="card stat"><div class="num">${fmtNum(Math.round(raceKm))}</div><div class="lbl">km raced</div></div>
      <div class="card stat"><div class="num">${new Set(races.map(yearOf)).size}</div><div class="lbl">years raced</div></div>
    </div>
    <div class="card" style="margin-bottom:16px"><h3>Races per year</h3>${columnChart(byYear,{shortLabel:l=>"'"+l.slice(2),unit:"races"})}
@@ -2807,63 +2727,9 @@ function perfRaces(){
      <div class="note-sm" style="margin-bottom:8px">Fastest <b>race-day</b> finish at each standard distance (a hard training run doesn't count).</div>
      <div class="grid recgrid">${prCards}</div></div>`:""}
    <div class="card"><h3>Every race</h3>
-     <div class="note-sm" style="margin-bottom:8px">Newest first. <b>AG</b> = age-graded % (higher is a stronger effort for his age that day). Tap a row to open it in Raw Data.</div>
-     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">km</th><th class="num">Time</th><th class="num">Pace</th><th class="num">Age</th><th class="num">AG %</th></tr></thead>
+     <div class="note-sm" style="margin-bottom:8px">Newest first. Tap a row to open it in Raw Data.</div>
+     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">km</th><th class="num">Time</th><th class="num">Pace</th></tr></thead>
      <tbody>${rows}</tbody></table></div></div>`;
-}
-
-function birthControl(){
-  return `<label class="fld" style="max-width:220px">Mike's birth year
-    <input id="birth-in" type="number" min="1930" max="2010" value="${birthYear()}" inputmode="numeric"></label>`;
-}
-function wireBirthInput(){
-  const el=document.getElementById("birth-in"); if(!el) return;
-  const apply=()=>{ const v=+el.value; if(v>=1930&&v<=2010){ setBirthYear(v); renderPerf(document.getElementById("app")); } };
-  el.onchange=apply;
-}
-function perfAge(){
-  // Race-based on purpose: age-grading training runs surfaces too-good-to-be-true
-  // efforts (a mis-measured short run at a hot pace grades like a masters record).
-  // Mike's flagged races are the clean signal — the whole reason for this lens.
-  const races=perfRows().filter(isRace).filter(r=>r.s==="run"&&r.t>0&&r.k>0);
-  const graded=races.map(r=>({r,ag:ageGradeRun(r)})).filter(x=>x.ag);
-  const method=`<div class="card" style="margin-bottom:16px"><div class="cardhead" style="justify-content:space-between;gap:12px;flex-wrap:wrap">
-     <h3 style="margin:0">Age-graded racing</h3>${birthControl()}</div>
-     <div class="note-sm">Age grading rescales each <b>race</b> to a % of the world-class standard for a man <b>that age</b>, so a 4:20/km 10 K at 55 compares fairly with a 3:40/km 10 K at 30. Uses WMA-style men's road factors (approximate); training runs are excluded (age-graded, they throw up efforts too good to be true). Only Mike's birth <b>year</b> is known, so age = race year − birth year — edit it above and every figure updates. Default ${BIRTH_DEFAULT} comes from his 50–59 age-category placing in 2017.</div></div>`;
-  if(!graded.length) return method+`<div class="card">No gradeable races in this range. Mike marks races with a “RACE –” tag; widen the year filter.</div>`;
-  const years=[...new Set(graded.map(x=>yearOf(x.r)))].sort();
-  const byYear=years.map(y=>{ const g=graded.filter(x=>yearOf(x.r)===y); const b=g.reduce((a,c)=>c.ag.pct>a.ag.pct?c:a); return {label:String(y),value:+b.ag.pct.toFixed(1),sub:"age "+b.ag.age}; });
-  const best=graded.reduce((a,b)=>b.ag.pct>a.ag.pct?b:a);
-  // age-graded PRs: best age-grade at each standard distance (may not be his fastest raw time)
-  const agPRs=RACE_BANDS.map(([name,D,lo,hi])=>{
-    const c=graded.filter(x=>x.r.k>=lo&&x.r.k<=hi); if(!c.length) return "";
-    const b=c.reduce((x,y)=>y.ag.pct>x.ag.pct?y:x);
-    return `<div class="card stat rec clk" ${focusAttrs(b.r.d,b.r.d,rowId(b.r),name+" best age-grade")}>
-      <div class="l">${name}</div><div class="v">${fmtPct(b.ag.pct)}</div>
-      <div class="sub">${fmtDur(b.r.t)} · ${fmtPace(b.ag.pace)}/km open-equiv</div>
-      <div class="d">${b.r.d} · age ${b.ag.age} <span class="drillcue">→</span></div></div>`;
-  }).filter(Boolean).join("");
-  const top=graded.slice().sort((a,b)=>b.ag.pct-a.ag.pct).slice(0,20).map(x=>{
-    const r=x.r,ag=x.ag;
-    return `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
-      <td>${r.d}</td><td>${escapeHTML(raceName(r))}</td>
-      <td class="num">${fmtNum(r.k,1)}</td><td class="num">${fmtDur(r.t)}</td><td class="num">${fmtPace(ag.pace)}</td>
-      <td class="num">${ag.age}</td><td class="num"><span class="agpill ${agClass(ag.pct)}">${fmtPct(ag.pct)}</span></td></tr>`;
-  }).join("");
-  return method+`
-   <div class="grid stat-row" style="margin-bottom:16px">
-     <div class="card stat"><div class="num">${fmtPct(best.ag.pct)}</div><div class="lbl">best race age-grade (age ${best.ag.age})</div></div>
-     <div class="card stat"><div class="num">${fmtPace(best.ag.agPace)}</div><div class="lbl">its open-age equivalent /km</div></div>
-     <div class="card stat"><div class="num">${graded.length}</div><div class="lbl">races age-graded</div></div>
-   </div>
-   <div class="card" style="margin-bottom:16px"><h3>Age-graded race form by year</h3>${columnChart(byYear,{shortLabel:l=>"'"+l.slice(2),unit:"age-grade %",fmt:v=>v.toFixed(1)+"%",axisFmt:v=>v+"%"})}
-     <div class="note-sm">His best race age-grade each year. Far flatter than raw pace, which just declines with age — age grading strips the aging out, so what's left is real competitive form.</div></div>
-   ${agPRs?`<div class="card" style="margin-bottom:16px"><h3>Best age-grade by distance</h3>
-     <div class="note-sm" style="margin-bottom:8px">The race that graded highest for his age at each distance — often <b>not</b> his fastest raw time, which is the point.</div>
-     <div class="grid recgrid">${agPRs}</div></div>`:""}
-   <div class="card"><h3>Top 20 age-graded races</h3>
-     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">km</th><th class="num">Time</th><th class="num">Open-equiv pace</th><th class="num">Age</th><th class="num">AG %</th></tr></thead>
-     <tbody>${top}</tbody></table></div></div>`;
 }
 
 function wireEraToggle(){
@@ -2874,7 +2740,7 @@ function perfEra(){
   const toggle=`<div class="card" style="margin-bottom:16px"><div class="cardhead" style="justify-content:space-between;gap:12px;flex-wrap:wrap">
     <h3 style="margin:0">Records by era</h3>
     <div class="qa-subnav" id="era-size"><button data-n="10" class="${eraSize===10?"on":""}">Decades</button><button data-n="5" class="${eraSize===5?"on":""}">5-year</button></div></div>
-    <div class="note-sm">Mike's all-time bests nearly all come from his 20s–30s, which buries what he ran later. Splitting records by era shows his best at every stage of life. Distance records are <b>race-day</b> bests (“—” = he didn't race that distance in the era); <b>longest run</b> counts any run. Age ranges assume birth year ${birthYear()} (edit it on the Age-Graded tab).</div></div>`;
+    <div class="note-sm">Mike's all-time bests nearly all come from his 20s–30s, which buries what he ran later. Splitting records by era shows his best at every stage of life. Distance records are <b>race-day</b> bests (“—” = he didn't race that distance in the era); <b>longest run</b> counts any run.</div></div>`;
   if(!runs.length) return toggle+`<div class="card">No runs in this range.</div>`;
   const ys=runs.map(yearOf); const y0=Math.min(...ys), y1=Math.max(...ys);
   const start=Math.floor(y0/eraSize)*eraSize;
@@ -2886,22 +2752,21 @@ function perfEra(){
   blocks.reverse();   // newest era first
   const cards=blocks.map(bl=>{
     // Distance records are RACE-DAY bests — a hard training run (whose parsed pace can
-    // be a mis-measured artifact) shouldn't set a record. Matches the Races/Age tabs.
+    // be a mis-measured artifact) shouldn't set a record. Matches the Races tab.
     const eraRaces=bl.rows.filter(isRace);
     const bandBest=(lo,hi)=>{ const c=eraRaces.filter(r=>r.k>=lo&&r.k<=hi&&_pace(r)>=3&&_pace(r)<=10); return c.length?c.reduce((x,y)=>y.t<x.t?y:x):null; };
-    const graded=eraRaces.map(r=>({r,ag:ageGradeRun(r)})).filter(x=>x.ag);
-    const bestAG=graded.length?graded.reduce((a,b)=>b.ag.pct>a.ag.pct?b:a):null;
+    const raceSane=eraRaces.filter(r=>_pace(r)>=3&&_pace(r)<=10);
+    const fastest=raceSane.length?raceSane.reduce((a,b)=>_pace(b)<_pace(a)?b:a):null;
     const longest=bl.rows.reduce((a,b)=>(b.k||0)>(a.k||0)?b:a);
     const rec=(l,v,sub,row)=> row?`<div class="erarec clk" ${focusAttrs(row.d,row.d,rowId(row),l)}><span class="el">${l}</span><span class="ev">${v}</span><span class="es">${sub}</span></div>`
                                  :`<div class="erarec"><span class="el">${l}</span><span class="ev muted">—</span><span class="es"></span></div>`;
-    const ageLo=bl.s-birthYear(), ageHi=Math.min(bl.e,y1)-birthYear();
     return `<div class="card eracard">
       <div class="cardhead" style="justify-content:space-between"><h3 style="margin:0">${bl.s}${eraSize>1?"–"+bl.e:""}</h3>
-        <span class="muted">${bl.rows.length} runs · ${eraRaces.length} races · age ${ageLo}–${ageHi}</span></div>
+        <span class="muted">${bl.rows.length} runs · ${eraRaces.length} races</span></div>
       <div class="erarecs">
         ${RACE_BANDS.map(([n,D,lo,hi])=>{ const b=bandBest(lo,hi); return b?rec(n,fmtDur(b.t),fmtPace(_pace(b))+"/km · "+b.d,b):rec(n,"—","",null); }).join("")}
+        ${rec("Fastest race pace",fastest?fmtPace(_pace(fastest))+"/km":"—",fastest?fmtNum(fastest.k,1)+" km · "+fastest.d:"",fastest)}
         ${rec("Longest run",longest.k?fmtNum(longest.k,1)+" km":"—",longest.d||"",longest.k?longest:null)}
-        ${rec("Best age-grade",bestAG?fmtPct(bestAG.ag.pct):"—",bestAG?"age "+bestAG.ag.age+" · "+bestAG.r.d:"",bestAG?bestAG.r:null)}
       </div></div>`;
   }).join("");
   return toggle+`<div class="eragrid">${cards}</div>`;
