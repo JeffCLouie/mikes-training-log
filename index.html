@@ -14,6 +14,7 @@
   :root{
     --bg:#0f1419; --panel:#161d26; --panel2:#1d2733; --line:#283546;
     --text:#e7edf3; --muted:#8aa0b5; --accent:#36c2a8; --accent2:#4d9fff;
+    --bad:#e0685f; --warn:#d8a24a;
     --shadow:0 2px 14px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box}
@@ -455,17 +456,53 @@
   .qa-edit tr.edited td:first-child{color:var(--accent)}
   .qa-flag{color:var(--accent)}
   .nowrap{white-space:nowrap}
-  .qa-item{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:9px}
-  .qa-meta{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:13px;margin-bottom:6px}
-  .qa-date{font-weight:700}
-  .chip-s{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600}
-  .qa-c{border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;text-transform:uppercase}
-  .qa-c.c-d{background:rgba(216,162,74,.16);color:#d8a24a} .qa-c.c-u{background:rgba(224,104,95,.16);color:#e0685f}
-  .qa-raw{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--text);
-    background:var(--panel2);border-radius:6px;padding:6px 9px;margin-bottom:7px;overflow-x:auto}
-  .qa-ruling{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
-    padding:8px 10px;border-radius:8px;font-size:13.5px}
-  .qa-ruling.saved{border-color:var(--accent)}
+  /* QA entry cards — one consistent layout across Spot-check & Outliers that
+     answers four questions in order: (1) what the parser made of the cell,
+     (2) why it's flagged, (3) the raw shorthand as Mike wrote it, (4) his ruling.
+     Reuses the Raw Data vocabulary (sport tags, confidence pills, km/pace fmt). */
+  .qa-item{position:relative;background:var(--panel);border:1px solid var(--line);
+    border-left:3px solid var(--line);border-radius:11px;padding:12px 14px 13px;margin-bottom:10px}
+  .qa-item.tone-bad{border-left-color:var(--bad)}
+  .qa-item.tone-warn{border-left-color:var(--warn)}
+  .qa-item.ruled{border-left-color:var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--panel))}
+  .qa-head{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+  .qa-date{font-weight:700;font-variant-numeric:tabular-nums}
+  .qa-ruledtag{display:none;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.4px}
+  .qa-item.ruled .qa-ruledtag{display:inline}
+  .qa-viewraw{margin-left:auto;font-size:12.5px;color:var(--accent2);text-decoration:underline;
+    text-decoration-style:dotted;text-underline-offset:2px;cursor:pointer;white-space:nowrap}
+  .qa-viewraw:hover,.qa-viewraw:focus-visible{color:var(--accent);outline:none}
+  /* (1) what we interpreted the cell as — the Raw Data columns, compact */
+  .qa-strip{display:flex;gap:6px 18px;align-items:baseline;flex-wrap:wrap;
+    background:var(--panel2);border-radius:8px;padding:8px 12px;margin-bottom:9px}
+  .qa-striplbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);align-self:center}
+  .qa-metric{font-size:14px;font-variant-numeric:tabular-nums;line-height:1.25}
+  .qa-metric b{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+  .qa-metric.emph{color:var(--bad);font-weight:700}
+  /* (2) why this entry is flagged */
+  .qa-why{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:10px;padding-left:23px;position:relative}
+  .qa-why::before{content:"⚠";position:absolute;left:2px;top:0;font-size:13px}
+  .qa-why.tone-bad::before{color:var(--bad)} .qa-why.tone-warn::before{color:var(--warn)}
+  .qa-badval{color:var(--bad);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+  /* (3) the raw shorthand */
+  .qa-rawrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:11px}
+  .qa-rawlbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);flex:none}
+  .qa-raw{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:#bcd;
+    background:#0c1116;border:1px solid var(--line);border-radius:6px;padding:5px 10px;
+    flex:1;min-width:120px;overflow-x:auto;white-space:pre}
+  /* (4) Mike's ruling */
+  .qa-rule{border-top:1px solid var(--line);padding-top:10px}
+  .qa-rulelbl{display:block;font-size:11px;font-weight:700;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .qa-ruleinput{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .qa-ruling{flex:1;min-width:200px;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    padding:9px 11px;border-radius:8px;font-size:13.5px}
+  .qa-ruling:focus{outline:none;border-color:var(--accent2)}
+  .qa-ruling.saved{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel2))}
+  .qa-quick{display:flex;gap:6px;flex-wrap:wrap}
+  .qa-qbtn{background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+    padding:9px 13px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:600;white-space:nowrap}
+  .qa-qbtn:hover{color:var(--text);border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -2577,7 +2614,7 @@ const QAStore = {
   clearEdit(id){ const e=this.edits(); delete e[id]; this._save(this.K_EDIT,e); },
   exportBlob(){ return JSON.stringify({exportedAt:new Date().toISOString(),rulings:this.rulings(),edits:this.edits()},null,2); },
 };
-let QADATA=null, qaSub="health";
+let QADATA=null, qaSub="review";   // land straight on Spot-check & rulings — the primary workflow
 const qaId = r => `${r.d}|${r.s}|${r.r||""}`;
 
 function renderQA(app){
@@ -2587,7 +2624,7 @@ function renderQA(app){
       .catch(()=>{QADATA={annual:{},runTable:{}}; if(current==="qa")renderQA(app);});
     return;
   }
-  const subs=[["health","Data health"],["outliers","Outliers"],["review","Spot-check &amp; rulings"],["edit","Edit entries"]];
+  const subs=[["review","Spot-check &amp; rulings"],["outliers","Outliers"],["health","Data health"],["edit","Edit entries"]];
   app.innerHTML=`
     <h2 class="section">Data QA</h2>
     <div class="card" style="margin-bottom:14px">
@@ -2655,6 +2692,67 @@ function qaHealth(el){
     jump.onclick=go; jump.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } }; }
 }
 
+// ---- Shared QA entry card ----
+// One consistent, compact card used by both Spot-check and Outliers, built to
+// answer four questions at a glance, top to bottom: (1) what the parser made of
+// the cell — the Raw Data columns; (2) why it's flagged; (3) the raw shorthand
+// exactly as Mike wrote it; (4) where he rules on it (free text + quick buttons).
+// Reuses the Raw Data vocabulary: sport tags, confidence pills, km/pace formatting.
+const capFirst = s => s ? s.charAt(0).toUpperCase()+s.slice(1) : s;
+function qaCard(r,{tone,why,emph,placeholder,focusLabel,quick,rv}){
+  const id=qaId(r), eid=escapeHtml(id);
+  const conf = r.c==="x" ? `<span class="pill">confirmed</span>`
+                         : `<span class="pill ${r.c}">${CONF[r.c]}</span>`;
+  const pace = perf(r) || (r.a!=null?fmtNum(r.a,1)+" km/h":"—");
+  const metrics=[
+    ["Distance", r.k!=null?fmtNum(r.k,r.s==="swim"?2:1)+" km":"—"],
+    ["Duration", fmtDur(r.t)||"—"],
+    ["Pace / Speed", pace],
+  ];
+  if(r.h) metrics.push(["HR", r.h+" bpm"]);
+  const strip=metrics.map(([l,v])=>
+    `<span class="qa-metric${l===emph?" emph":""}"><b>${l}</b>${v}</span>`).join("");
+  const qbtns=(quick||[]).map(q=>
+    `<button type="button" class="qa-qbtn" data-fill="${escapeHtml(q.fill)}">${escapeHtml(q.label)}</button>`).join("");
+  return `<div class="qa-item tone-${tone}${rv?" ruled":""}" data-id="${eid}">
+    <div class="qa-head">
+      <span class="qa-date">${r.d}</span>${sportTag(r.s)}${conf}
+      <span class="qa-ruledtag">✓ ruled</span>
+      <span class="qa-viewraw" ${focusAttrs(r.d,r.d,rowId(r),focusLabel)}>View in Raw Data →</span>
+    </div>
+    <div class="qa-strip"><span class="qa-striplbl">Interpreted as</span>${strip}</div>
+    <div class="qa-why tone-${tone}">${why}</div>
+    <div class="qa-rawrow"><span class="qa-rawlbl">Raw shorthand</span><span class="qa-raw">${escapeHtml(r.r||"—")}</span></div>
+    <div class="qa-rule">
+      <span class="qa-rulelbl">Mike's ruling</span>
+      <div class="qa-ruleinput">
+        <input class="qa-ruling${rv?" saved":""}" data-id="${eid}" placeholder="${escapeHtml(placeholder)}" value="${rv?escapeHtml(rv.val):""}">
+        ${qbtns?`<div class="qa-quick">${qbtns}</div>`:""}
+      </div>
+    </div>
+  </div>`;
+}
+// Persist a ruling and reflect the saved/ruled state on the card.
+function markRuled(inp){
+  const on=!!inp.value.trim();
+  inp.classList.toggle("saved",on);
+  const item=inp.closest(".qa-item"); if(item) item.classList.toggle("ruled",on);
+}
+// Wire ruling inputs + quick buttons for any QA view (Spot-check / Outliers).
+function wireQARulings(el){
+  el.querySelectorAll(".qa-ruling").forEach(inp=>{
+    inp.onchange=()=>{ QAStore.setRuling(inp.dataset.id, inp.value); markRuled(inp); };
+  });
+  el.querySelectorAll(".qa-qbtn").forEach(btn=>{
+    btn.onclick=()=>{
+      const item=btn.closest(".qa-item"), inp=item&&item.querySelector(".qa-ruling");
+      if(!inp) return;
+      inp.value=btn.dataset.fill;
+      QAStore.setRuling(inp.dataset.id, inp.value); markRuled(inp);
+    };
+  });
+}
+
 // ---- Outliers: physically-impossible entries, worst first ----
 // The systematic version of the manual hunt (Records → a bogus best → Raw Data →
 // compare to the source .txt): outlierInfo() flags any entry whose time+distance
@@ -2690,25 +2788,37 @@ function qaOutliers(el){
       ${sportBits?`Found in ${sportBits}. `:""}Sorted most-extreme first; each opens in Raw Data. These are excluded from pace/speed
       records automatically — ruling on them here also corrects the yearly totals. Showing ${shown.length} of ${cand.length}.</p>
     </div>
-    ${shown.map(({r,o})=>{ const id=qaId(r); const rv=rul[id];
-      return `<div class="qa-item">
-        <div class="qa-meta"><span class="qa-date">${r.d}</span> <span class="chip-s">${r.s}</span>
-          <span class="qa-c c-${r.c}">${r.c}</span>
-          <span style="color:var(--bad,#e0685f);font-weight:700">${o.value}</span>
-          ${r.k?`<span class="muted">${fmtNum(r.k,r.s==="swim"?2:1)} km</span>`:""}${r.t?`<span class="muted">${fmtDur(r.t)}</span>`:""}
-          <span class="clk" style="margin-left:auto;text-decoration:underline;text-decoration-style:dotted;cursor:pointer" ${focusAttrs(r.d,r.d,rowId(r),`Outlier — ${o.kind} ${o.value}`)}>View in Raw Data →</span></div>
-        <div class="note-sm" style="margin:2px 0 6px">${escapeHtml(o.why)}</div>
-        <div class="qa-raw">${escapeHtml(r.r||"")}</div>
-        <input class="qa-ruling" data-id="${id}" placeholder="Mike's ruling (e.g. 'time is 2:41:46 not 46s', 'distance doubled — 1.9k', 'drop')" value="${rv?escapeHtml(rv.val):""}">
-      </div>`;}).join("") || `<div class="card muted">Nothing matches this filter. 🎉</div>`}`;
+    ${shown.map(({r,o})=>qaCard(r,{
+        tone:"bad",
+        emph:"Pace / Speed",
+        why:`<b>Physically impossible ${escapeHtml(o.kind)}</b> — <span class="qa-badval">${o.value}</span>. ${capFirst(escapeHtml(o.why))}.`,
+        placeholder:"e.g. “time is 2:41:46 not 46s”, “distance doubled — 1.9k”, “drop”",
+        focusLabel:`Outlier — ${o.kind} ${o.value}`,
+        quick:[{label:"Drop entry",fill:"drop"}],
+        rv:rul[qaId(r)]
+      })).join("") || `<div class="card muted">Nothing matches this filter. 🎉</div>`}`;
   el.querySelector("#qo-filter").onchange=e=>{qaOutFilter=e.target.value; qaOutliers(el);};
   el.querySelector("#qo-export").onclick=qaExport;
-  el.querySelectorAll(".qa-ruling").forEach(inp=>{
-    inp.onchange=()=>{ QAStore.setRuling(inp.dataset.id, inp.value); inp.classList.toggle("saved",!!inp.value.trim()); };
-  });
+  wireQARulings(el);
 }
 
 // ---- Spot-check & rulings: work through the uncertain rows ----
+// Why an entry needs a look: it's physically impossible, an outright uncertain
+// parse, or a distance merely *deduced* from ambiguous grid shorthand. Returns
+// the tone + a plain-English reason + which interpreted metric to highlight.
+function reviewWhy(r){
+  const o=outlierInfo(r);
+  if(o) return {tone:"bad", emph:"Pace / Speed",
+    html:`<b>Physically impossible.</b> ${capFirst(escapeHtml(o.why))} <span class="qa-badval">(${o.value})</span>`};
+  const raw=r.r||"", nums=raw.match(/\d+(?:\.\d+)?/g)||[];
+  let hint="";
+  if(/\+/.test(raw)) hint=" It joins two figures with “+”, so the distance is a sum that may not be what Mike meant.";
+  else if(nums.length>=2) hint=" It holds more than one number, so which is distance vs. time or speed is a guess.";
+  if(r.c==="u") return {tone:"warn", emph:"Distance",
+    html:`<b>Uncertain parse.</b> This cell was too ambiguous to read with confidence.${hint}`};
+  return {tone:"warn", emph:"Distance",
+    html:`<b>Deduced distance.</b> Read from ambiguous grid shorthand, so it can overshoot Mike's real total.${hint}`};
+}
 let qaFilter={year:"",sport:"",only:"unruled"};
 function qaReview(el){
   const rul=QAStore.rulings();
@@ -2726,33 +2836,33 @@ function qaReview(el){
   el.innerHTML=`
     <div class="card" style="margin-bottom:12px">
       <div class="qa-row">
-        <span><b>${ruled}</b> ruled · <b>${total-ruled}</b> left</span>
+        <span><b>${ruled}</b> ruled · <b>${Math.max(0,total-ruled)}</b> left</span>
         <select id="qf-year"><option value="">All years</option>${years.map(y=>`<option ${qaFilter.year==String(y)?"selected":""}>${y}</option>`).join("")}</select>
-        <select id="qf-sport"><option value="">All sports</option>${sports.map(s=>`<option ${qaFilter.sport==s?"selected":""}>${s}</option>`).join("")}</select>
+        <select id="qf-sport"><option value="">All sports</option>${sports.map(s=>`<option ${qaFilter.sport==s?"selected":""}>${sportName(s)}</option>`).join("")}</select>
         <select id="qf-only">
           <option value="unruled" ${qaFilter.only==="unruled"?"selected":""}>Needs ruling</option>
           <option value="ruled" ${qaFilter.only==="ruled"?"selected":""}>Ruled</option>
           <option value="all" ${qaFilter.only==="all"?"selected":""}>All</option></select>
         <button class="btn ghost" id="qa-export">Export rulings + edits</button>
       </div>
-      <p class="muted" style="margin:8px 0 0">Sorted by distance (biggest impact first). Enter what an entry <i>should</i> be —
-      a note, a corrected distance, “drop this”, whatever — and I'll apply it. Showing ${shown.length} of ${cand.length}.</p>
+      <p class="muted" style="margin:8px 0 0">Low-confidence entries, biggest distance first. Each card shows what the parser
+      <b>made of the cell</b>, <b>why</b> it's uncertain, and the <b>raw shorthand</b> Mike wrote — then rule on it: type a
+      correction (“swim 1.8k”, “96 km bike”), or tap <b>Looks right</b> / <b>Drop</b>. Showing ${shown.length} of ${cand.length}.</p>
     </div>
-    ${shown.map(r=>{ const id=qaId(r); const rv=rul[id];
-      return `<div class="qa-item">
-        <div class="qa-meta"><span class="qa-date">${r.d}</span> <span class="chip-s">${r.s}</span>
-          <span class="qa-c c-${r.c}">${r.c}</span>
-          ${r.k?`<span class="muted">${r.k} km</span>`:""}${r.t?`<span class="muted">${fmtDur(r.t)}</span>`:""}</div>
-        <div class="qa-raw">${escapeHtml(r.r||"")}</div>
-        <input class="qa-ruling" data-id="${id}" placeholder="Mike's ruling (e.g. 'swim 1.8k', 'drop — placement', 'correct')" value="${rv?escapeHtml(rv.val):""}">
-      </div>`;}).join("") || `<div class="card muted">Nothing matches this filter. 🎉</div>`}`;
+    ${shown.map(r=>{ const w=reviewWhy(r);
+      return qaCard(r,{
+        tone:w.tone, why:w.html, emph:w.emph,
+        placeholder:"e.g. “swim 1.8k”, “96 km bike”, “drop — placement”",
+        focusLabel:"Spot-check entry",
+        quick:[{label:"Looks right",fill:"correct"},{label:"Drop",fill:"drop"}],
+        rv:rul[qaId(r)]
+      });
+    }).join("") || `<div class="card muted">Nothing matches this filter. 🎉</div>`}`;
   el.querySelector("#qf-year").onchange=e=>{qaFilter.year=e.target.value; qaReview(el);};
   el.querySelector("#qf-sport").onchange=e=>{qaFilter.sport=e.target.value; qaReview(el);};
   el.querySelector("#qf-only").onchange=e=>{qaFilter.only=e.target.value; qaReview(el);};
   el.querySelector("#qa-export").onclick=qaExport;
-  el.querySelectorAll(".qa-ruling").forEach(inp=>{
-    inp.onchange=()=>{ QAStore.setRuling(inp.dataset.id, inp.value); inp.classList.toggle("saved",!!inp.value.trim()); };
-  });
+  wireQARulings(el);
 }
 
 // ---- Edit entries: correct raw values directly, tracked ----
