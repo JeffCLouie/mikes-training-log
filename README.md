@@ -4,7 +4,14 @@ A browsable, filterable website for 30+ years of Mike's training data
 (1991–2022): runs, rides, swims, hockey, karate, XC skiing and more.
 
 - **Dashboard** — lifetime totals and per-sport breakdowns.
-- **Reports** — year summaries, sport summaries, a year × sport matrix, and personal bests.
+- **Performance** — Mike's *best* efforts rather than his volume, in three views:
+  **Races** (only the efforts he tagged `RACE`, with race-day PRs at each standard
+  distance), **Age-Graded** (WMA-style age grading of every race, with an editable
+  birth year, so a 4:20/km 10 K at 55 compares fairly with a 3:40/km one at 30), and
+  **By Era** (records per decade / 5-year block, tagged with his age, since his
+  all-time bests otherwise all come from his 20s–30s).
+- **Reports** — year summaries, a year × sport matrix, personal bests, and
+  sport-specific premade deep-dives (running, cycling, swimming, triathlon).
 - **Report Builder** — filter by year / sport / source / distance, group and measure however you like, export CSV.
 - **Raw Data** — every parsed entry with its original shorthand preserved.
 - **Data QA** — cross-check the live data against Mike's own written totals,
