@@ -365,10 +365,9 @@
   .erarec .es{font-size:10.5px;color:var(--muted);margin-top:3px;min-height:12px}
   .erarec.clk{transition:transform .08s,border-color .12s}
   .erarec.clk:hover,.erarec.clk:focus-visible{border-color:var(--accent);transform:translateY(-1px);outline:none}
-  /* Performance: race-series quick filter (one scrollable row, mobile-first) */
-  .racechips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
-    scrollbar-width:none;padding-bottom:2px;margin-bottom:8px}
-  .racechips::-webkit-scrollbar{display:none}
+  /* Performance: race-series quick filter (wraps to show every option, no
+     horizontal scroll on mobile) */
+  .racechips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
   .racechips button{flex:none;display:inline-flex;align-items:center;gap:6px;background:var(--panel2);
     border:1px solid var(--line);color:var(--muted);padding:6px 11px;border-radius:20px;cursor:pointer;
     font-size:12.5px;font-weight:600;white-space:nowrap}
@@ -2825,7 +2824,7 @@ function raceName(r){
 // one-off and gets no series (no button — you can't chart improvement off one run).
 const RACE_SERIES=[
   {key:"countdown", label:"Countdown Race",             re:/count-?down race/i},
-  {key:"dls",       label:"Dalhousie Lake Shuffle",     re:/dalhousie lake shuffle|\bdls\b/i},
+  {key:"dls",       label:"Dalhousie Lake Shuffle",     re:/dalhousie lake shuffle|\bdls\b/i, chip:"DLS"},
   {key:"oac-relay", label:"OAC Relay",                  re:/oac relay/i},
   {key:"oac-tri",   label:"OAC Triathlon",              re:/oac tri/i},
   {key:"sharbot",   label:"Sharbot Lake Triathlon",     re:/sharbot lake/i},
@@ -2845,6 +2844,10 @@ const RACE_SERIES=[
   {key:"nc-mara",   label:"NC Marathon",                re:/\bnc marathon\b/i},
 ];
 function raceSeries(name){ for(const s of RACE_SERIES) if(s.re.test(name)) return s; return null; }
+// Compact label for the quick-toggle filter chips ONLY — abbreviate "Triathlon"
+// to "Tri" and honour a series' `chip` override (e.g. DLS). Everywhere else
+// (series summary, etc.) keeps the full `label`.
+function seriesChip(s){ return s.chip || s.label.replace(/\bTriathlon\b/,"Tri"); }
 
 // ---- Performance tab ------------------------------------------------------
 let perfSub="races";
@@ -2907,8 +2910,8 @@ function perfRaces(){
   for(const r of races){ const s=raceSeries(raceName(r)); if(s) seriesCount[s.key]=(seriesCount[s.key]||0)+1; }
   if(perfRaceSeries && !seriesCount[perfRaceSeries]) perfRaceSeries=null;   // selection fell outside the year filter
   const chips=RACE_SERIES.filter(s=>seriesCount[s.key]>=2 || s.key===perfRaceSeries)
-    .map(s=>({key:s.key,label:s.label,count:seriesCount[s.key]}))
-    .sort((a,b)=>b.count-a.count);   // most-raced first — the useful ones lead the scroll row
+    .map(s=>({key:s.key,label:seriesChip(s),count:seriesCount[s.key]}))
+    .sort((a,b)=>b.count-a.count);   // most-raced first — the useful ones lead the row
   const selSeries=perfRaceSeries?RACE_SERIES.find(s=>s.key===perfRaceSeries):null;
   const tableRaces=selSeries?races.filter(r=>raceSeries(raceName(r))?.key===perfRaceSeries):races;
   const sorted=tableRaces.slice().sort((a,b)=>a.d<b.d?1:-1);   // newest first
@@ -2964,9 +2967,6 @@ function perfRaces(){
 function wirePerfRaces(){
   const bar=document.getElementById("race-chips"); if(!bar) return;
   bar.querySelectorAll("button").forEach(b=>b.onclick=()=>{ perfRaceSeries=b.dataset.k||null; renderPerf(document.getElementById("app")); });
-  // keep the active chip visible in the scroll row without nudging page scroll
-  const on=bar.querySelector("button.on");
-  if(on&&perfRaceSeries){ const br=bar.getBoundingClientRect(), or=on.getBoundingClientRect(); bar.scrollLeft+=(or.left-br.left)-(bar.clientWidth-or.width)/2; }
 }
 function wireEraToggle(){
   document.querySelectorAll("#era-size button").forEach(b=>b.onclick=()=>{ eraSize=+b.dataset.n; renderPerf(document.getElementById("app")); });
