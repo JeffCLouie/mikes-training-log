@@ -365,6 +365,23 @@
   .erarec .es{font-size:10.5px;color:var(--muted);margin-top:3px;min-height:12px}
   .erarec.clk{transition:transform .08s,border-color .12s}
   .erarec.clk:hover,.erarec.clk:focus-visible{border-color:var(--accent);transform:translateY(-1px);outline:none}
+  /* Performance: race-series quick filter (one scrollable row, mobile-first) */
+  .racechips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding-bottom:2px;margin-bottom:8px}
+  .racechips::-webkit-scrollbar{display:none}
+  .racechips button{flex:none;display:inline-flex;align-items:center;gap:6px;background:var(--panel2);
+    border:1px solid var(--line);color:var(--muted);padding:6px 11px;border-radius:20px;cursor:pointer;
+    font-size:12.5px;font-weight:600;white-space:nowrap}
+  .racechips button.on{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel2))}
+  .racechips button:active{transform:scale(.96)}
+  .racechips .cc{font-size:10.5px;font-weight:700;color:var(--muted);background:var(--panel);
+    border-radius:10px;padding:0 6px;min-width:16px;text-align:center}
+  .racechips button.on .cc{color:var(--accent)}
+  .raceseries-sum{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:8px;
+    padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-size:12.5px}
+  .raceseries-sum .rs-t{font-weight:700;color:var(--text);font-size:13.5px}
+  .raceseries-sum .rs-b{color:var(--muted)}
+  .raceseries-sum .rs-b b{color:var(--accent);font-weight:700}
   /* Raw Data: focus banner + highlighted target row */
   .focusbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--accent);
     border-radius:10px;padding:9px 13px;margin-bottom:10px;font-size:13px}
@@ -2774,8 +2791,40 @@ function raceName(r){
   return (n||"Race").slice(0,44);
 }
 
+// Group races that are the SAME recurring event so Mike can filter the race
+// table to one series and watch his time on it move over the years. His log
+// spells a race several ways — "Dalhousie Lake Shuffle" is also just "DLS", the
+// whole Countdown Race family, "Army Half"/"Army half"/"Army" — so each series
+// is an explicit alias rule matched against the cleaned race name. Ordered
+// most-specific first; the first hit wins (so "Nortel Countdown Race Route DLS
+// entry" is a Countdown Race, not a DLS). A name that matches nothing is a
+// one-off and gets no series (no button — you can't chart improvement off one run).
+const RACE_SERIES=[
+  {key:"countdown", label:"Countdown Race",             re:/count-?down race/i},
+  {key:"dls",       label:"Dalhousie Lake Shuffle",     re:/dalhousie lake shuffle|\bdls\b/i},
+  {key:"oac-relay", label:"OAC Relay",                  re:/oac relay/i},
+  {key:"oac-tri",   label:"OAC Triathlon",              re:/oac tri/i},
+  {key:"sharbot",   label:"Sharbot Lake Triathlon",     re:/sharbot lake/i},
+  {key:"orw",       label:"Ottawa Race Weekend",        re:/ottawa race weekend/i},
+  {key:"perth-kilt",label:"Perth Kilt Run",             re:/perth kilt/i},
+  {key:"army",      label:"Army Run",                   re:/\barmy\b/i},
+  {key:"deep-river",label:"Deep River Triathlon",       re:/deep river/i},
+  {key:"richmond",  label:"Richmond",                   re:/richmond/i},
+  {key:"kingston",  label:"Kingston Triathlon",         re:/kingston/i},
+  {key:"natcap-tri",label:"National Capital Triathlon", re:/national capital tri/i},
+  {key:"canada-day",label:"Canada Day",                 re:/canada day/i},
+  {key:"perth-tri", label:"Perth Triathlon",            re:/perth tri/i},
+  {key:"barrys-bay",label:"Barry's Bay Triathlon",      re:/barry.?s bay/i},
+  {key:"gatineau",  label:"Gatineau Triathlon",         re:/gatineau/i},
+  {key:"smiths-tri",label:"Smith's Falls Triathlon",    re:/smith.?s falls tri/i},
+  {key:"nordion",   label:"Nordion",                    re:/nordion/i},
+  {key:"nc-mara",   label:"NC Marathon",                re:/\bnc marathon\b/i},
+];
+function raceSeries(name){ for(const s of RACE_SERIES) if(s.re.test(name)) return s; return null; }
+
 // ---- Performance tab ------------------------------------------------------
 let perfSub="races";
+let perfRaceSeries=null;   // null = All; else a RACE_SERIES key the race table is filtered to
 let eraSize=10;   // decade vs 5-year blocks in the By-Era view
 // Rows inside the current year filter, IGNORING the sport filter — the Performance
 // tab is inherently running-based, so a stray "sport: bike" filter shouldn't empty it.
@@ -2813,7 +2862,7 @@ function renderPerf(app){
   document.querySelectorAll("#perf-nav button").forEach(b=>b.onclick=()=>{ perfSub=b.dataset.s; renderPerf(app); });
   wirePerfYearBar();
   const out=document.getElementById("perf-out");
-  if(perfSub==="races"){ out.innerHTML=perfRaces(); }
+  if(perfSub==="races"){ out.innerHTML=perfRaces(); wirePerfRaces(); }
   else { out.innerHTML=perfEra(); wireEraToggle(); }
 }
 
@@ -2823,10 +2872,22 @@ const RACE_BANDS=[["5K",5,4.6,5.6],["10K",10,9.2,10.8],["Half",21.0975,20.4,22.2
 function perfRaces(){
   const races=perfRows().filter(isRace).filter(r=>r.s==="run"&&r.t>0&&r.k>0&&_pace(r)>=3.0&&_pace(r)<=10);
   if(!races.length) return `<div class="card">No <b>RACE</b>-tagged efforts in this range. Mike marks races with a “RACE –” tag in his log; widen the year filter to see them.</div>`;
-  const sorted=races.slice().sort((a,b)=>a.d<b.d?1:-1);   // newest first
   const years=[...new Set(races.map(yearOf))].sort();
   const byYear=years.map(y=>({label:String(y),value:races.filter(r=>yearOf(r)===y).length}));
   const raceKm=races.reduce((s,r)=>s+(r.k||0),0);
+  // Quick race-series filter: bucket each race into its recurring event (if any)
+  // so the table can be narrowed to one race Mike has run repeatedly and he can
+  // watch his time on it move over the years. Counts drive both the chips and
+  // which series earn a button (>=2 runnings — one run charts no progress).
+  const seriesCount={};
+  for(const r of races){ const s=raceSeries(raceName(r)); if(s) seriesCount[s.key]=(seriesCount[s.key]||0)+1; }
+  if(perfRaceSeries && !seriesCount[perfRaceSeries]) perfRaceSeries=null;   // selection fell outside the year filter
+  const chips=RACE_SERIES.filter(s=>seriesCount[s.key]>=2 || s.key===perfRaceSeries)
+    .map(s=>({key:s.key,label:s.label,count:seriesCount[s.key]}))
+    .sort((a,b)=>b.count-a.count);   // most-raced first — the useful ones lead the scroll row
+  const selSeries=perfRaceSeries?RACE_SERIES.find(s=>s.key===perfRaceSeries):null;
+  const tableRaces=selSeries?races.filter(r=>raceSeries(raceName(r))?.key===perfRaceSeries):races;
+  const sorted=tableRaces.slice().sort((a,b)=>a.d<b.d?1:-1);   // newest first
   // race PRs at standard distances (races only — fastest actual finishing time in band)
   const prCards=RACE_BANDS.map(([name,D,lo,hi])=>{
     const c=races.filter(r=>r.k>=lo&&r.k<=hi); if(!c.length) return "";
@@ -2842,6 +2903,20 @@ function perfRaces(){
       <td class="num">${fmtNum(r.k,1)}</td><td class="num">${fmtDur(r.t)}</td>
       <td class="num">${fmtPace(_pace(r))}</td></tr>`
   ).join("");
+  const chipBar=`<div class="racechips" id="race-chips">
+      <button data-k="" class="${!perfRaceSeries?"on":""}">All <span class="cc">${races.length}</span></button>
+      ${chips.map(c=>`<button data-k="${c.key}" class="${perfRaceSeries===c.key?"on":""}">${escapeHTML(c.label)} <span class="cc">${c.count}</span></button>`).join("")}
+     </div>`;
+  let seriesSum="";
+  if(selSeries){
+    const best=sorted.reduce((x,y)=>y.t<x.t?y:x);   // fastest running of this event
+    const yy=[...new Set(sorted.map(yearOf))].sort();
+    seriesSum=`<div class="raceseries-sum">
+       <span class="rs-t">${escapeHTML(selSeries.label)}</span>
+       <span class="rs-b">${sorted.length} ${sorted.length===1?"running":"runnings"} · ${yy[0]}${yy.length>1?"–"+yy[yy.length-1]:""}</span>
+       <span class="rs-b">best <b>${fmtDur(best.t)}</b> at ${fmtPace(_pace(best))}/km · ${best.d.slice(0,4)}</span>
+      </div>`;
+  }
   return `
    <div class="grid stat-row" style="margin-bottom:16px">
      <div class="card stat"><div class="num">${races.length}</div><div class="lbl">races logged</div></div>
@@ -2855,11 +2930,20 @@ function perfRaces(){
      <div class="note-sm" style="margin-bottom:8px">Fastest <b>race-day</b> finish at each standard distance (a hard training run doesn't count).</div>
      <div class="grid recgrid">${prCards}</div></div>`:""}
    <div class="card"><h3>Every race</h3>
-     <div class="note-sm" style="margin-bottom:8px">Newest first. Tap a row to open it in Raw Data.</div>
+     <div class="note-sm" style="margin-bottom:8px">Tap a race to see just that event across the years. Newest first; tap a row to open it in Raw Data.</div>
+     ${chipBar}
+     ${seriesSum}
      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">km</th><th class="num">Time</th><th class="num">Pace</th></tr></thead>
      <tbody>${rows}</tbody></table></div></div>`;
 }
 
+function wirePerfRaces(){
+  const bar=document.getElementById("race-chips"); if(!bar) return;
+  bar.querySelectorAll("button").forEach(b=>b.onclick=()=>{ perfRaceSeries=b.dataset.k||null; renderPerf(document.getElementById("app")); });
+  // keep the active chip visible in the scroll row without nudging page scroll
+  const on=bar.querySelector("button.on");
+  if(on&&perfRaceSeries){ const br=bar.getBoundingClientRect(), or=on.getBoundingClientRect(); bar.scrollLeft+=(or.left-br.left)-(bar.clientWidth-or.width)/2; }
+}
 function wireEraToggle(){
   document.querySelectorAll("#era-size button").forEach(b=>b.onclick=()=>{ eraSize=+b.dataset.n; renderPerf(document.getElementById("app")); });
 }
