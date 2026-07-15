@@ -2501,14 +2501,19 @@ function renderAbout(app){
          into a single distance — together producing absurd figures (e.g. 140 km/h
          "rides"). The yearly <b>Avg bike speed</b> and <b>Avg run pace</b> charts
          now ignore physically impossible entries; a year left with fewer than 8
-         sane rides reads <i>“Not enough data.”</i> The new <b>Data QA →
-         Outliers</b> tab lists every such entry (~150), most-extreme first, each
+         sane rides reads <i>“Not enough data.”</i> The <b>Data QA →
+         Outliers</b> tab lists every such entry, most-extreme first, each
          linking to its Raw Data row — the systematic version of scanning the
-         Records page for a bogus best. The 2018 Tremblant Half Ironman, whose
-         garbled cell became a phantom 445 km/h "ride" and briefly topped the
-         biggest-day record, is the first corrected at source
-         (<code>tools/fix-tremblant-2018.js</code>): it now reads as a proper
-         swim + bike + run.</li>
+         Records page for a bogus best. Most are now corrected at source: the
+         2018 Tremblant Half Ironman (a phantom 445 km/h "ride" that briefly
+         topped the biggest-day record) plus eight early triathlons whose stacked
+         race cells mis-read finish times, transitions and metre swim distances
+         as 100–442 km/h bikes (<code>tools/fix-triathlon-legs*.js</code>), and
+         the recurring commute mis-parse — two ride legs logged as bare distances
+         (<code>25 25</code>) given a fabricated minute-time, plus runs read as
+         bikes (<code>tools/fix-commute-run-outliers.js</code>). The list dropped
+         from ~130 to ~14; the remainder are impossible-<i>pace</i> runs awaiting
+         Mike's call.</li>
        <li><span class="pill d">mitigated</span> <b>Track intervals filed as cycling.</b>
          Workouts written as track repeats (<code>8×475 @1:27</code>,
          <code>6×800 on 2:41</code>) had been deduced as bike rides. 42 such
@@ -2586,7 +2591,8 @@ const VH_CATS = {
 };
 const VERSION_HISTORY = [
   { date:"2026-07-15", entries:[
-    { c:"data", t:"Un-garbled six early triathlons (1993–97): National Capital, Kingston, Kingston Y, Sharbot Lake, Mactaquac and Perth. Each packed swim / bike / run + finish + placement into one cell, and the parser had turned finish times, transitions and swim distances into <b>phantom bike rides</b> — up to 442 km/h. Recovered the real legs (each set reconciles to the printed finish time) and cleared all 11 from the <b>Outliers</b> view." },
+    { c:"data", t:"Un-garbled <b>eight early triathlons</b> (1993–98): National Capital, Kingston, Kingston Y, Sharbot Lake, Mactaquac, two Perths and the OAC. Each packed swim / bike / run + finish + placement into one cell, and the parser had turned finish times, transitions and swim distances into <b>phantom bike rides</b> — up to 442 km/h. Recovered the real legs, each set reconciling to the printed finish time (<code>fix-triathlon-legs*.js</code>)." },
+    { c:"data", t:"Cleared the recurring non-race impossible speeds: <b>commute-pair distance logs</b> (<code>25 25</code> = 25 km in + 25 km out) that had been given a fabricated minute-time → 120 km/h, and <b>runs mis-read as bikes</b> (<code>8 50</code> = an 8 km / 50-min run) that duplicate the running log. Distances are unchanged; annual totals hold (<code>fix-commute-run-outliers.js</code>). The Outliers list dropped from <b>130 to 14</b> — the rest are impossible-<i>pace</i> runs awaiting Mike's judgment." },
   ]},
   { date:"2026-07-14", entries:[
     { c:"ux",   t:"Calendar <b>matching-days</b> rows now jump <b>straight into Raw Data</b> — no intermediate day popup — on a ±2-week window with that day highlighted." },

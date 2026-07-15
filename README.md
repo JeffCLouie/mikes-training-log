@@ -78,11 +78,16 @@ the weekly totals or the running log),
 `fix-tremblant-2018.js` (un-garble the 2018 Tremblant Half Ironman cell — recover
 the dropped swim leg, restore the bike-leg time, and remove the phantom 445 km/h
 "ride" the mis-parse produced),
-`fix-triathlon-legs.js` (the same class of fix across six early triathlons —
-National Capital 1993, Kingston 1994, Kingston Y 1995, Sharbot Lake &amp; Mactaquac
-1996, Perth 1997 — where finish times, transitions and swim distances had been read
-as phantom bikes up to 442 km/h; recovers the real legs, each reconciled to the
-printed finish time, clearing all 11 triathlon-caused entries from the Outliers view).
+`fix-triathlon-legs.js` and `fix-triathlon-legs-2.js` (the same class of fix across
+eight early triathlons — National Capital 1993, Kingston 1994, Kingston Y 1995,
+Sharbot Lake &amp; Mactaquac 1996, Perth 1996 &amp; 1997, OAC 1998 — where finish
+times, transitions and swim distances had been read as phantom bikes up to 442 km/h;
+recovers the real legs, each reconciled to the printed finish time),
+`fix-commute-run-outliers.js` (the recurring non-race impossible speeds: commute-pair
+distance logs like `25 25` — 25 km in + 25 km out — that were given a fabricated
+minute-time, and runs mis-read as bikes that duplicate the running log; strips the
+fabricated time or drops the duplicate, leaving distances unchanged, and takes the
+Outliers list from ~130 to ~14 — the remainder impossible-*pace* runs left for Mike).
 
 ### Outlier validation
 
