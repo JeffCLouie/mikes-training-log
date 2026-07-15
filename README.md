@@ -77,7 +77,12 @@ swims — and recover the real distances they displaced; each fix is corroborate
 the weekly totals or the running log),
 `fix-tremblant-2018.js` (un-garble the 2018 Tremblant Half Ironman cell — recover
 the dropped swim leg, restore the bike-leg time, and remove the phantom 445 km/h
-"ride" the mis-parse produced).
+"ride" the mis-parse produced),
+`fix-triathlon-legs.js` (the same class of fix across six early triathlons —
+National Capital 1993, Kingston 1994, Kingston Y 1995, Sharbot Lake &amp; Mactaquac
+1996, Perth 1997 — where finish times, transitions and swim distances had been read
+as phantom bikes up to 442 km/h; recovers the real legs, each reconciled to the
+printed finish time, clearing all 11 triathlon-caused entries from the Outliers view).
 
 ### Outlier validation
 
