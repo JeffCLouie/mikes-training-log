@@ -39,6 +39,9 @@
   }
   nav.tabs button:hover{color:var(--text);background:var(--panel)}
   nav.tabs button.active{color:var(--text);background:var(--panel2);border-color:var(--line)}
+  /* Hamburger + slide-out drawer: mobile only (desktop keeps the top tabs above). */
+  .hamburger{display:none;background:transparent;border:none;color:var(--text);padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .drawer,.drawer-backdrop{display:none}
   main{max-width:1180px;margin:0 auto;padding:22px 18px 70px}
   h2.section{font-size:20px;margin:6px 0 16px;font-weight:700}
   h3{font-size:15px;margin:0 0 10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
@@ -445,30 +448,55 @@
   html{-webkit-text-size-adjust:100%}
   header.top{padding-top:env(safe-area-inset-top)}
   .tablewrap{-webkit-overflow-scrolling:touch}
-  /* Bottom tab bar: hidden on desktop, shown on phones. */
-  .bottomnav{display:none}
-
   @media(max-width:640px){
-    /* Move primary navigation to a fixed, thumb-reachable bottom bar. */
+    /* Primary navigation moves to a hamburger drawer (top-left). */
     nav.tabs{display:none}
-    .bottomnav{
-      display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
-      background:rgba(16,21,28,.97);backdrop-filter:blur(12px);
-      border-top:1px solid var(--line);
-      padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+    .top-inner{position:relative}
+    .hamburger{
+      display:flex;align-items:center;justify-content:center;
+      position:absolute;left:8px;top:50%;transform:translateY(-50%);
+      width:42px;height:42px;border-radius:10px;z-index:2;
     }
-    .bottomnav button{
-      flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-      background:none;border:none;color:var(--muted);
-      font-size:10px;font-weight:600;line-height:1;padding:6px 2px;
-      cursor:pointer;min-height:46px;
+    .hamburger:active{background:var(--panel2)}
+    .hamburger svg{width:26px;height:26px;stroke:currentColor;fill:none;
+      stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    /* Keep the centred title clear of the hamburger on both sides. */
+    .brand{padding:0 46px;font-size:17px}
+
+    /* Slide-out navigation drawer + dimmed backdrop. */
+    .drawer-backdrop{
+      display:block;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.5);
+      opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s;
     }
-    .bottomnav button svg{width:23px;height:23px;stroke:currentColor;fill:none;
+    .drawer-backdrop.open{opacity:1;visibility:visible}
+    .drawer{
+      display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:71;
+      width:min(80vw,290px);background:var(--panel);border-right:1px solid var(--line);
+      box-shadow:2px 0 26px rgba(0,0,0,.55);
+      transform:translateX(-100%);transition:transform .22s ease;
+      padding-top:env(safe-area-inset-top);overflow-y:auto;-webkit-overflow-scrolling:touch;
+    }
+    .drawer.open{transform:none}
+    .drawer-head{display:flex;align-items:center;justify-content:space-between;
+      padding:16px 14px 14px 18px;border-bottom:1px solid var(--line)}
+    .drawer-head .dtitle{font-weight:700;font-size:16px;display:flex;align-items:center;gap:9px}
+    .drawer-head .dtitle .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+    .drawer-close{background:transparent;border:none;color:var(--muted);cursor:pointer;
+      width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px}
+    .drawer-close:active{background:var(--panel2)}
+    .drawer-close svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .drawer nav{display:flex;flex-direction:column;gap:2px;padding:8px}
+    .drawer nav button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+      background:none;border:none;color:var(--muted);cursor:pointer;
+      padding:13px 14px;border-radius:10px;font-size:15.5px;font-weight:600}
+    .drawer nav button svg{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;
       stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-    .bottomnav button.active{color:var(--accent)}
-    .bottomnav button:active{opacity:.55}
-    /* Keep content clear of the fixed bottom bar. */
-    main{padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+    .drawer nav button.active{color:var(--text);background:var(--panel2)}
+    .drawer nav button.active svg{color:var(--accent)}
+    .drawer nav button:active{background:var(--panel2)}
+
+    /* Content no longer needs to clear a fixed bottom bar. */
+    main{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 
     /* Bigger, zoom-proof controls — iOS Safari zooms inputs under 16px on focus. */
     select,input[type=text],input[type=number],input[type=date]{font-size:16px;padding:10px 12px}
@@ -511,7 +539,7 @@
   #toTop.show{opacity:1;visibility:visible;transform:none}
   #toTop:active{filter:brightness(.92)}
   #toTop svg{width:22px;height:22px;stroke:#04201a;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-  @media(max-width:640px){ #toTop{bottom:calc(70px + env(safe-area-inset-bottom));width:40px;height:40px} }
+  @media(max-width:640px){ #toTop{bottom:calc(18px + env(safe-area-inset-bottom));width:40px;height:40px} }
   /* ---- Data QA ---- */
   .qa-subnav{display:flex;gap:6px;flex-wrap:wrap}
   .qa-subnav button{background:var(--panel2);border:1px solid var(--line);color:var(--muted);
@@ -582,12 +610,14 @@
 <body>
 <header class="top">
   <div class="top-inner">
+    <button class="hamburger" id="hamburger" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
+    </button>
     <div class="brand">Mike's Training Log</div>
     <nav class="tabs" id="tabs"></nav>
   </div>
 </header>
 <main id="app"><div class="loading">Loading training data…</div></main>
-<nav class="bottomnav" id="bottomnav"></nav>
 
 <script>
 //============================================================ data + config
@@ -3397,10 +3427,10 @@ fetch("data.json").then(r=>r.json()).then(j=>{
      <div class="rawbox">${e}</div></div>`;
 });
 
-//============================================================ mobile bottom nav
-// A fixed, thumb-reachable tab bar for phones. Built additively: it drives the
-// existing go() router and mirrors its active state, so it needs no changes to
-// the routing code above.
+//============================================================ mobile nav drawer
+// A slide-out menu (hamburger, top-left) for phones — replaces the old crowded
+// bottom bar. Built additively: it drives the existing go() router and mirrors
+// its active state, so it needs no changes to the routing code above.
 (function(){
   const ICONS = {
     dash:    '<path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.6V21h13V9.6"/>',
@@ -3415,17 +3445,50 @@ fetch("data.json").then(r=>r.json()).then(j=>{
     changelog:'<path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 4v4h4"/><path d="M12 8v4.2l2.8 1.7"/>',
     about:   '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1.1" fill="currentColor" stroke="none"/>',
   };
-  const SHORT = {dash:"Home", insights:"Insights", calendar:"Calendar", records:"Records", perf:"Perf", wrapped:"Recap", reports:"Reports", browse:"Data", qa:"QA", changelog:"History", about:"About"};
-  const nav = document.getElementById("bottomnav");
-  if(!nav || typeof TABS==="undefined") return;
-  nav.innerHTML = TABS.map(([id])=>
-    `<button data-tab="${id}" aria-label="${SHORT[id]||id}">
-       <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id]||""}</svg>
-       <span>${SHORT[id]||id}</span></button>`).join("");
-  const sync = ()=>nav.querySelectorAll("button").forEach(b=>
+  const hamburger = document.getElementById("hamburger");
+  if(!hamburger || typeof TABS==="undefined") return;
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "drawer-backdrop";
+  const drawer = document.createElement("aside");
+  drawer.className = "drawer"; drawer.id = "drawer";
+  drawer.setAttribute("role","dialog"); drawer.setAttribute("aria-label","Site navigation");
+  drawer.setAttribute("aria-hidden","true");
+  drawer.innerHTML =
+    `<div class="drawer-head">
+       <span class="dtitle"><span class="dot"></span>Menu</span>
+       <button class="drawer-close" type="button" aria-label="Close menu">
+         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+       </button>
+     </div>
+     <nav>${TABS.map(([id,name])=>
+       `<button data-tab="${id}">
+          <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id]||""}</svg>
+          <span>${name}</span></button>`).join("")}</nav>`;
+  document.body.appendChild(backdrop);
+  document.body.appendChild(drawer);
+
+  const sync = ()=>drawer.querySelectorAll("nav button").forEach(b=>
     b.classList.toggle("active", b.dataset.tab===current));
-  nav.querySelectorAll("button").forEach(b=>b.onclick=()=>{ go(b.dataset.tab); sync(); });
-  // Wrap go() so the bar tracks navigation triggered anywhere (tabs, drill-ins).
+
+  let open=false;
+  function setOpen(v){
+    open=v;
+    backdrop.classList.toggle("open",v);
+    drawer.classList.toggle("open",v);
+    hamburger.setAttribute("aria-expanded",v?"true":"false");
+    drawer.setAttribute("aria-hidden",v?"false":"true");
+    document.body.style.overflow=v?"hidden":"";   // freeze background scroll while open
+  }
+  hamburger.onclick=()=>setOpen(!open);
+  backdrop.onclick=()=>setOpen(false);
+  drawer.querySelector(".drawer-close").onclick=()=>setOpen(false);
+  drawer.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{ go(b.dataset.tab); setOpen(false); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&open) setOpen(false); });
+  // Close (and release the frozen scroll) if the viewport grows to desktop width.
+  window.matchMedia("(min-width:641px)").addEventListener("change",e=>{ if(e.matches&&open) setOpen(false); });
+
+  // Wrap go() so the drawer tracks navigation triggered anywhere (tabs, drill-ins).
   if(typeof go==="function"){ const _go=go; window.go=function(t){ _go(t); sync(); }; }
   window.addEventListener("hashchange", sync);
   sync();
@@ -3454,27 +3517,6 @@ fetch("data.json").then(r=>r.json()).then(j=>{
     const n=parseInt(e.key,10);
     if(n>=1 && n<=TABS.length) go(TABS[n-1][0]);
   });
-})();
-
-// Pin the fixed bottom nav to the VISUAL viewport. On iOS Safari the visual
-// viewport (URL bar collapsed) is taller than the layout viewport that
-// position:fixed;bottom:0 anchors to, so the bar drifts up and the page shows
-// through below it. visualViewport gives the real offset; translate to correct
-// it. No-op where unsupported (delta ~0 on desktop / standalone).
-(function(){
-  const vv = window.visualViewport;
-  const nav = document.getElementById("bottomnav");
-  if(!vv || !nav) return;
-  let raf = 0;
-  const pin = ()=>{ raf=0;
-    const delta = document.documentElement.clientHeight - (vv.height + vv.offsetTop);
-    nav.style.transform = `translateY(${-delta}px)`;
-  };
-  const sched = ()=>{ if(!raf) raf=requestAnimationFrame(pin); };
-  vv.addEventListener("resize", sched);
-  vv.addEventListener("scroll", sched);
-  window.addEventListener("orientationchange", sched);
-  pin();
 })();
 
 //============================================================ QOL: line-chart hover/tap tooltips
