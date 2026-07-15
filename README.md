@@ -35,7 +35,13 @@ node validate-data.js        # verify meta matches the rows (exit 1 if not)
 node validate-data.js --fix  # rebuild meta (count / span / sports) from rows
 ```
 
-CI runs this automatically on every pull request into `main`.
+CI runs this automatically on every pull request into `main` (`.github/workflows/validate-data.yml`).
+
+Automated `claude/*` PRs are opened as drafts, which GitHub can't merge — so they
+used to pile up open. `.github/workflows/auto-merge.yml` closes that loop: once the
+data check passes on a `claude/*` PR, it marks the PR ready and squash-merges it.
+PRs with merge conflicts (e.g. two branches editing the single-line `data.json`) are
+left open for a human to reconcile; a `hold` label opts a PR out entirely.
 
 The raw source files live in `source/` (`training.log.txt`, `running.log.txt`),
 with `source/DECODING.md` documenting the shorthand grammar and `source/mike-review.md`
