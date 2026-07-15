@@ -2074,15 +2074,8 @@ function renderInsights(app){
      ${fact("🗓️", fmtNum(coverage)+"%", "of all days had a workout")}
    </div>
 
-   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
-     <div class="card"><h3>By day of week</h3>${stackedColumnChart(dow,{unit:"sessions",series:STACK_SERIES})}<div class="note-sm">Total sessions on each weekday, all years combined — split by sport (everything but run/bike/swim is “other”).</div></div>
-     <div class="card"><h3>By month (all years)</h3>${stackedColumnChart(mon,{shortLabel:l=>l[0],unit:"sessions",series:STACK_SERIES})}<div class="note-sm">Sessions in each calendar month, every year stacked together and split by sport — reveals seasonal patterns.</div></div>
-   </div>
-
-   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
-     <div class="card"><h3>Why days were skipped <span class="muted" style="font-weight:400;font-size:12px">· ${years[0]}–${years[years.length-1]}</span></h3>
-       ${restData.some(d=>d.value)?columnChart(restData.filter(d=>d.value>0),{unit:"days"}):`<div class="muted">No rest-reason notes found.</div>`}
-       <div class="note-sm">Note-only days across all ${years.length} years (${years[0]}–${years[years.length-1]}), grouped by likely reason and keyword-matched from the diary jottings (medium confidence). Reasons with no matching notes are omitted.</div></div>
+   <div class="card" style="margin-bottom:18px"><h3>On this day — ${MONTHS[_today.getMonth()]} ${_today.getDate()}</h3>
+     ${otd.length?`<div class="kvgrid" style="grid-template-columns:1fr">${otd.map(r=>`<div><b style="display:inline-block;width:42px">${r.d.slice(0,4)}</b>${sportTag(r.s)} <span class="muted">${[fmtDur(r.t),r.k!=null?fmtNum(r.k,1)+" km":"",perf(r)].filter(Boolean).join(" · ")}</span></div>`).join("")}</div>`:`<div class="muted">No workouts recorded on this date in any year.</div>`}
    </div>
 
    <div class="card" style="margin-bottom:18px"><h3>Distance by year</h3>${stackedColumnChart(distByYear,{unit:"km",shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtNum(v)+" km",series:STACK_SERIES})}<div class="note-sm">Total distance logged each year, split by sport (everything but run/bike/swim is “other”). Active days per year live in Reports → Consistency.</div></div>
@@ -2091,6 +2084,16 @@ function renderInsights(app){
      <h3>Cumulative distance — year vs year</h3>
      ${cumulativeChart(real)}
      <div class="note-sm">Each line is one year's distance total as the year progresses — handy for spotting fast vs slow years.</div>
+   </div>
+
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
+     <div class="card"><h3>🏃 Avg run pace by year</h3>${runTrend.length?columnChart(runTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtPace(v)+"/km",unit:"min/km"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Shorter = faster · years with &ge;8 runs</div></div>
+     <div class="card"><h3>🚴 Avg bike speed by year</h3>${bikeTrend.length?columnChart(bikeTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>v.toFixed(1)+" km/h",valFmt:v=>v.toFixed(1),unit:"km/h"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Years with &ge;8 rides</div></div>
+   </div>
+
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
+     <div class="card"><h3>By day of week</h3>${stackedColumnChart(dow,{unit:"sessions",series:STACK_SERIES})}<div class="note-sm">Total sessions on each weekday, all years combined — split by sport (everything but run/bike/swim is “other”).</div></div>
+     <div class="card"><h3>By month (all years)</h3>${stackedColumnChart(mon,{shortLabel:l=>l[0],unit:"sessions",series:STACK_SERIES})}<div class="note-sm">Sessions in each calendar month, every year stacked together and split by sport — reveals seasonal patterns.</div></div>
    </div>
 
    <div class="card" style="margin-bottom:18px"><h3>Sessions by sport</h3>
@@ -2102,7 +2105,13 @@ function renderInsights(app){
      </div>
      <div class="note-sm">All-time session counts by activity (top ${topSports.length}).</div></div>
 
-   <div class="card" style="line-height:1.7">
+   <div class="card" style="margin-bottom:18px"><h3>By decade</h3>
+     <div class="note-sm" style="margin-bottom:8px">Totals grouped into calendar decades (90s, 00s…). <b>Top sport</b> is the most-logged sport of that decade by session count. The 1990s and 2020s are partial decades.</div>
+     <div class="tablewrap"><table><thead><tr><th>Decade</th><th class="num">Workouts</th><th class="num">Distance</th><th class="num">Hours</th><th>Top sport</th></tr></thead>
+     <tbody>${decRows.map(o=>`<tr><td><b>${o.dec}s</b></td><td class="num">${fmtNum(o.count)}</td><td class="num">${fmtNum(Math.round(o.dist))} km</td><td class="num">${Math.round(o.dur/3600)}</td><td>${sportTag(o.top)}</td></tr>`).join("")}</tbody></table></div>
+   </div>
+
+   <div class="card" style="line-height:1.7;margin-bottom:18px">
      <h3>Consistency</h3>
      <div class="kvgrid">
        <div><b>Most active year</b>${topYear?topYear[0]+" — "+fmtNum(topYear[1])+" sessions":"—"}</div>
@@ -2114,19 +2123,10 @@ function renderInsights(app){
      </div>
    </div>
 
-   <div class="card" style="margin-top:18px"><h3>By decade</h3>
-     <div class="note-sm" style="margin-bottom:8px">Totals grouped into calendar decades (90s, 00s…). <b>Top sport</b> is the most-logged sport of that decade by session count. The 1990s and 2020s are partial decades.</div>
-     <div class="tablewrap"><table><thead><tr><th>Decade</th><th class="num">Workouts</th><th class="num">Distance</th><th class="num">Hours</th><th>Top sport</th></tr></thead>
-     <tbody>${decRows.map(o=>`<tr><td><b>${o.dec}s</b></td><td class="num">${fmtNum(o.count)}</td><td class="num">${fmtNum(Math.round(o.dist))} km</td><td class="num">${Math.round(o.dur/3600)}</td><td>${sportTag(o.top)}</td></tr>`).join("")}</tbody></table></div>
-   </div>
-
-   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:18px">
-     <div class="card"><h3>🏃 Avg run pace by year</h3>${runTrend.length?columnChart(runTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtPace(v)+"/km",unit:"min/km"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Shorter = faster · years with &ge;8 runs</div></div>
-     <div class="card"><h3>🚴 Avg bike speed by year</h3>${bikeTrend.length?columnChart(bikeTrend,{shortLabel:l=>"'"+l.slice(2),fmt:v=>v.toFixed(1)+" km/h",valFmt:v=>v.toFixed(1),unit:"km/h"}):`<div class="muted">Not enough data.</div>`}<div class="note-sm">Years with &ge;8 rides</div></div>
-   </div>
-
-   <div class="card" style="margin-top:18px"><h3>On this day — ${MONTHS[_today.getMonth()]} ${_today.getDate()}</h3>
-     ${otd.length?`<div class="kvgrid" style="grid-template-columns:1fr">${otd.map(r=>`<div><b style="display:inline-block;width:42px">${r.d.slice(0,4)}</b>${sportTag(r.s)} <span class="muted">${[fmtDur(r.t),r.k!=null?fmtNum(r.k,1)+" km":"",perf(r)].filter(Boolean).join(" · ")}</span></div>`).join("")}</div>`:`<div class="muted">No workouts recorded on this date in any year.</div>`}
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
+     <div class="card"><h3>Why days were skipped <span class="muted" style="font-weight:400;font-size:12px">· ${years[0]}–${years[years.length-1]}</span></h3>
+       ${restData.some(d=>d.value)?columnChart(restData.filter(d=>d.value>0),{unit:"days"}):`<div class="muted">No rest-reason notes found.</div>`}
+       <div class="note-sm">Note-only days across all ${years.length} years (${years[0]}–${years[years.length-1]}), grouped by likely reason and keyword-matched from the diary jottings (medium confidence). Reasons with no matching notes are omitted.</div></div>
    </div>
 
    ${topShoes.length?`<div class="card" style="margin-top:18px">
@@ -2585,6 +2585,9 @@ const VH_CATS = {
   docs: ["Docs",     "vt-docs"],  // documentation & methodology
 };
 const VERSION_HISTORY = [
+  { date:"2026-07-15", entries:[
+    { c:"ux",   t:"<b>Reordered the Insights charts</b> most-interesting first — <b>On this day</b> now leads, followed by yearly distance, pace &amp; speed trends and training patterns; the <b>running-shoe leaderboard</b> drops to last." },
+  ]},
   { date:"2026-07-14", entries:[
     { c:"ux",   t:"Calendar <b>matching-days</b> rows now jump <b>straight into Raw Data</b> — no intermediate day popup — on a ±2-week window with that day highlighted." },
     { c:"ux",   t:"The calendar <b>category filter now lives in the URL</b>, so browser <b>Back</b> from a day's Raw Data returns you to the same filtered matching-days table you left." },
