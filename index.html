@@ -2607,6 +2607,9 @@ const VH_CATS = {
   docs: ["Docs",     "vt-docs"],  // documentation & methodology
 };
 const VERSION_HISTORY = [
+  { date:"2026-07-15", entries:[
+    { c:"ux",   t:"<b>Data QA</b> now opens on the <b>Outliers</b> tab — the 130 physically-impossible entries are the most extreme and highest-impact fixes, so they come first rather than the 3,265-row Spot-check queue." },
+  ]},
   { date:"2026-07-14", entries:[
     { c:"ux",   t:"Calendar <b>matching-days</b> rows now jump <b>straight into Raw Data</b> — no intermediate day popup — on a ±2-week window with that day highlighted." },
     { c:"ux",   t:"The calendar <b>category filter now lives in the URL</b>, so browser <b>Back</b> from a day's Raw Data returns you to the same filtered matching-days table you left." },
@@ -3273,7 +3276,7 @@ const QAStore = {
   clearEdit(id){ const e=this.edits(); delete e[id]; this._save(this.K_EDIT,e); },
   exportBlob(){ return JSON.stringify({exportedAt:new Date().toISOString(),rulings:this.rulings(),edits:this.edits()},null,2); },
 };
-let QADATA=null, qaSub="review";   // land straight on Spot-check & rulings — the primary workflow
+let QADATA=null, qaSub="outliers";   // land straight on Outliers — the 130 physically-impossible entries are the highest-impact fixes
 const qaId = r => `${r.d}|${r.s}|${r.r||""}`;
 
 function renderQA(app){
