@@ -2221,8 +2221,12 @@ function activityModel(){
     (bySport[r.s]||(bySport[r.s]=[])).push(r.k/(r.t/3600)); }
   const ref={}; for(const s in bySport){ const a=bySport[s].sort((x,y)=>x-y); ref[s]=a[Math.floor(a.length/2)]; }
   // 2) roll every day up into sessions / seconds / km / load, and pick the top note
-  const day={}, noteDay={}; let minY=Infinity,maxY=-Infinity;
+  //    raceDay = any day carrying a RACE-tagged effort (isRace — Mike's own marker,
+  //    the same one the Performance tab uses). Most races are logged as workouts, so
+  //    this must key off the effort, not just no-workout diary notes.
+  const day={}, noteDay={}, raceDay={}; let minY=Infinity,maxY=-Infinity;
   for(const r of DATA){
+    if(isRace(r)) raceDay[r.d]=true;
     if(r.s==="note"){ const c=classifyNote(noteText(r)); if(c==="other") continue;
       if(!noteDay[r.d] || NOTE_RANK[c]>NOTE_RANK[noteDay[r.d]]) noteDay[r.d]=c; continue; }
     const y=yearOf(r); if(y<minY)minY=y; if(y>maxY)maxY=y;
@@ -2236,7 +2240,7 @@ function activityModel(){
   // 3) the top-1% load threshold across all days that carried any load
   const loads=Object.values(day).map(d=>d.load).filter(v=>v>0).sort((x,y)=>x-y);
   const hot = loads.length>=2 ? loads[Math.floor(loads.length*0.99)] : Infinity;
-  return _actModel={ref,day,noteDay,minY,maxY,hot};
+  return _actModel={ref,day,noteDay,raceDay,minY,maxY,hot};
 }
 // green shade for a day's load (effort-minutes): four steps, darker = more load
 function loadShade(load){ const a = load<30?.4 : load<60?.58 : load<120?.76 : .92; return `rgba(54,194,168,${a})`; }
@@ -2265,7 +2269,7 @@ function calCatsFromURL(){
   return p.get("cats").split(",").filter(k=>valid.has(k));
 }
 function renderCalendar(app){
-  const {day,noteDay,minY,maxY,hot}=activityModel();
+  const {day,noteDay,raceDay,minY,maxY,hot}=activityModel();
   if(!isFinite(minY)){ app.innerHTML=`<h2 class="section">Activity calendar</h2><div class="card muted">No activity recorded.</div>`; return; }
   const years=[]; for(let y=minY;y<=maxY;y++) years.push(y);
   // per-year totals for the summary strip + a most-active default year
@@ -2283,18 +2287,22 @@ function renderCalendar(app){
   while(cur<=end){ const wk=[];
     for(let i=0;i<7;i++){ const ds=cur.toISOString().slice(0,10), y=cur.getUTCFullYear();
       const inSpan=y>=minY&&y<=maxY, d=day[ds]||{c:0,dur:0,dist:0,load:0};
-      wk.push({ds,y,inSpan,dom:cur.getUTCDate(),mo:cur.getUTCMonth()+1,c:d.c,dur:d.dur,dist:d.dist,load:d.load,note:noteDay[ds]||null});
+      wk.push({ds,y,inSpan,dom:cur.getUTCDate(),mo:cur.getUTCMonth()+1,c:d.c,dur:d.dur,dist:d.dist,load:d.load,note:noteDay[ds]||null,race:!!raceDay[ds]});
       cur.setUTCDate(cur.getUTCDate()+1); }
     weeks.push(wk);
   }
-  const catOf=d=> !d.inSpan?"none" : (!d.c ? (d.note||"none") : (d.load>0&&d.load>=hot?"top":"trained"));
+  // race wins over everything (a race day is a race day even when it carried a big
+  // load), then no-workout diary tints, then the green/orange load scale.
+  const catOf=d=> !d.inSpan?"none" : (d.race?"race" : (!d.c ? (d.note||"none") : (d.load>0&&d.load>=hot?"top":"trained")));
   const color=d=>{ if(!d.inSpan) return "transparent";
+    if(d.race) return NOTE_COL.race;
     if(!d.c) return d.note?NOTE_COL[d.note]:"var(--panel2)";
     if(d.load>0&&d.load>=hot) return "rgba(255,178,90,.95)";
     return loadShade(d.load); };
   const tip=d=>{ if(!d.inSpan) return "";
-    if(!d.c) return d.note?`${d.ds} · ${NOTE_LABEL[d.note]}`:"";
-    const bits=[`${d.c} session${d.c===1?"":"s"}`]; if(d.dur)bits.push(fmtDurShort(d.dur));
+    if(!d.c) return (d.race||d.note)?`${d.ds} · ${NOTE_LABEL[d.race?"race":d.note]}`:"";
+    const bits=[]; if(d.race)bits.push(NOTE_LABEL.race);
+    bits.push(`${d.c} session${d.c===1?"":"s"}`); if(d.dur)bits.push(fmtDurShort(d.dur));
     if(d.dist)bits.push(fmtNum(d.dist,1)+" km"); bits.push("load "+Math.round(d.load));
     if(d.load>0&&d.load>=hot)bits.push("top 1%");
     return `${d.ds} · ${bits.join(" · ")}`; };
@@ -2323,14 +2331,15 @@ function renderCalendar(app){
          <li>So one long, fast effort beats five short easy ones (5×10-min jog ≈ 35; one fast 200-min ride ≈ 280).</li>
          <li><b style="color:rgba(255,178,90,.95)">Orange = top 1%</b> of daily load across all ${years.length} years — the hardest days, not the busiest.</li>
        </ul>
+       <div style="margin-top:9px;font-weight:700;color:var(--text)"><span style="color:${NOTE_COL.race}">Pink = race day</span> — any effort Mike tagged <code>RACE</code> in his log (the same marker the <b>Performance</b> tab uses), so it lands on the square whether he raced or trained that day.</div>
        <div style="margin-top:9px;font-weight:700;color:var(--text)">Diary tints — no-workout days, by what Mike jotted:</div>
        <ul class="vcal-catgrid">
-         <li><b>race</b> — event / meet</li><li><b>injury</b> — hurt / pain</li>
-         <li><b>illness</b> — sick / flu</li><li><b>weather</b> — storm / heat / cold</li>
-         <li><b>rest</b> — explicit day off</li><li><b>recovery</b> — massage / physio</li>
-         <li><b>travel</b> — trips / away</li><li><b>home</b> — projects / chores</li>
+         <li><b>injury</b> — hurt / pain</li><li><b>illness</b> — sick / flu</li>
+         <li><b>weather</b> — storm / heat / cold</li><li><b>rest</b> — explicit day off</li>
+         <li><b>recovery</b> — massage / physio</li><li><b>travel</b> — trips / away</li>
+         <li><b>home</b> — projects / chores</li>
        </ul>
-       <div style="margin-top:9px;opacity:.8">Diary tints are keyword-matched (medium confidence). Typical speeds are each sport's own median, so the scale self-calibrates.</div>
+       <div style="margin-top:9px;opacity:.8">Diary tints are keyword-matched (medium confidence); race days come from the explicit <code>RACE</code> tag. Typical speeds are each sport's own median, so the scale self-calibrates.</div>
      </div>
    </details>`;
 
@@ -2414,22 +2423,27 @@ function renderCalendar(app){
 
   // ---- companion table: lists the days matching the active categories, so a
   // sparse category (travel, races, injuries…) can be read off directly instead
-  // of hunted for in the grid. Tinted note-days follow the same rule as the
-  // calendar (a note only counts on a day with no workout). Tap a row → that day.
+  // of hunted for in the grid. Each day gets ONE category via effCat(), the same
+  // precedence the grid squares use, so the two never disagree. Tap a row → that day.
   const tableEl=document.getElementById("vcal-table");
   const catColor=c=> c==="trained"?"#36c2a8" : c==="top"?"rgba(255,178,90,.95)" : (NOTE_COL[c]||"var(--panel2)");
   const catLbl=c=> c==="top"?"top 1%" : c;
   const TCAP=400;
+  // A day's single effective category, using the SAME precedence as the grid so the
+  // list and the squares never disagree: race → workout load (trained/top) → diary
+  // tint. Every day that carries anything (a workout, a RACE effort, or a note).
+  const effCat=ds=>{
+    if(raceDay[ds]) return "race";
+    if(day[ds]) return (day[ds].load>0&&day[ds].load>=hot)?"top":"trained";
+    return noteDay[ds]||null;
+  };
+  const activityDays=new Set([...Object.keys(day),...Object.keys(noteDay),...Object.keys(raceDay)]);
   const updateTable=()=>{
     if(active.size===CAL_CATS.length){ tableEl.innerHTML=`<div class="vcal-table-hint">Tap <b>None</b> then a category (or switch some off) to list those days here — every <b>travel</b>, <b>race</b> or <b>injury</b> day at a glance, no scrolling.</div>`; return; }
     if(!active.size){ tableEl.innerHTML=`<div class="vcal-table-hint">No categories selected — pick one or more above.</div>`; return; }
     const list=[];
-    const noteCats=new Set(["race","injury","illness","weather","rest","recovery","travel","home"]);
-    if([...active].some(c=>noteCats.has(c)))
-      for(const ds in noteDay){ const c=noteDay[ds]; if(active.has(c)&&!day[ds]) list.push({d:ds,cat:c,note:1}); }
-    const wT=active.has("trained"), wTop=active.has("top");
-    if(wT||wTop) for(const ds in day){ const dd=day[ds], top=dd.load>0&&dd.load>=hot;
-      if((top&&wTop)||(!top&&wT)) list.push({d:ds,cat:top?"top":"trained",dd}); }
+    for(const ds of activityDays){ const cat=effCat(ds); if(!cat||!active.has(cat)) continue;
+      list.push({d:ds,cat,dd:day[ds]||null,note:day[ds]?0:1}); }
     list.sort((a,b)=> a.d<b.d?1:a.d>b.d?-1:0);   // newest first
     const total=list.length;
     const rows=list.slice(0,TCAP).map(it=>{
@@ -2437,7 +2451,11 @@ function renderCalendar(app){
       const dstr=`${MONTHS[dt.getUTCMonth()]} ${dt.getUTCDate()}, ${dt.getUTCFullYear()}`;
       const tag=`<span class="vcal-ttag" style="background:${catColor(it.cat)}">${catLbl(it.cat)}</span>`;
       let detail;
-      if(it.note){ const txt=DATA.filter(r=>r.s==="note"&&r.d===it.d).map(noteText).filter(Boolean).join(" · "); detail=escapeHTML(txt)||"<span class='muted'>—</span>"; }
+      if(it.cat==="race"){   // name the race (from the RACE-tagged effort, else the diary note)
+        const rr=DATA.filter(r=>r.d===it.d), tagged=rr.find(isRace);
+        const nm=tagged?raceName(tagged):rr.filter(r=>r.s==="note").map(noteText).filter(Boolean).join(" · ");
+        detail=nm?escapeHTML(nm):"Race"; }
+      else if(it.note){ const txt=DATA.filter(r=>r.s==="note"&&r.d===it.d).map(noteText).filter(Boolean).join(" · "); detail=escapeHTML(txt)||"<span class='muted'>—</span>"; }
       else { const dd=it.dd, sports=[...new Set(DATA.filter(r=>r.d===it.d&&r.s!=="note").map(r=>r.s))].map(sportTag).join(" ");
         detail=`${sports} <span class="muted">· ${dd.c} session${dd.c===1?"":"s"}${dd.dur?" · "+fmtDurShort(dd.dur):""}${dd.dist?" · "+fmtNum(dd.dist,1)+" km":""} · load ${Math.round(dd.load)}</span>`; }
       return `<tr data-d="${it.d}"><td class="vcal-tdate">${dstr}</td><td>${tag}</td><td>${detail}</td></tr>`;
@@ -2453,13 +2471,10 @@ function renderCalendar(app){
   const refresh=()=>{ applyFilter(); updateTable(); syncCalURL(); };
 
   // earliest day matching a single active category (for the jump-on-isolate below)
-  const NOTE_CAT_KEYS=new Set(["race","injury","illness","weather","rest","recovery","travel","home"]);
   const firstMatchDate=()=>{
     if(active.size!==1) return null;
     const cat=[...active][0]; let best=null;
-    if(NOTE_CAT_KEYS.has(cat)){ for(const ds in noteDay){ if(noteDay[ds]===cat&&!day[ds]&&(best===null||ds<best)) best=ds; } }
-    else if(cat==="trained"||cat==="top"){ for(const ds in day){ const dd=day[ds], top=dd.load>0&&dd.load>=hot;
-      if((top?"top":"trained")===cat&&(best===null||ds<best)) best=ds; } }
+    for(const ds of activityDays){ if(effCat(ds)===cat&&(best===null||ds<best)) best=ds; }
     return best;
   };
   const chipEls=[...document.querySelectorAll(".vcal-chip")];
