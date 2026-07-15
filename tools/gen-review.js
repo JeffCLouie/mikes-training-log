@@ -77,6 +77,23 @@ for (const r of badPace) {
   b4 += `| ${r.d} | ${fmtHMS(r.t)} / ${r.k} km / ${fmtPace(paceMin(r))} | ${fmtPace(paceMin(r))}/km | ${note} |\n`;
 }
 
+// ---- Batch 5: drifted grid weeks left for a ruling ----
+// tools/fix-drifted-grid-weeks.js corrected the weeks whose label starts on a
+// Sunday and so parsed one week early (stacking onto the prior week). Three of
+// those weeks it deliberately left alone because un-stacking them needs a human
+// call — a run that may be the same session mis-keyed, or race-week data. This is
+// a fixed, hand-identified set (not recomputed), listed here so the ruling isn't lost.
+const drifted = [
+  { week: '2000 May 15–21 (grid "MY 14 MY 20")', cell: 'run 43:43 / 10 km (currently 2000-05-09)',
+    q: 'The running log has 44:43 / 10 km on the corrected day (2000-05-16). Same run mis-keyed by a minute (drop the grid copy), or a distinct run?' },
+  { week: '2000 May 29–Jun 4 (grid "MY 28 JN 4")', cell: 'run "4k 22:00" (currently 2000-05-23)',
+    q: 'Its corrected day (2000-05-30) already holds a different running-log run, and the week has duplicate "karate" cells. Confirm the +7 shift and how to place the 4 km piece.' },
+  { week: '2019 Sep 30–Oct 6 (grid "SE 23 OC 6", Tremblant)', cell: 'run "9k run" (no time) + 5.2 km run 6 s off the log',
+    q: 'Race/travel week: the 5.2 km run matches the log within 6 s (likely the same, drop it) but the timeless "9k run" needs Mike\'s read before moving.' },
+];
+let b5 = `| Week (corrected) | Ambiguous cell | Question |\n|---|---|---|\n`;
+for (const d of drifted) b5 += `| ${d.week} | ${d.cell} | ${d.q} |\n`;
+
 const md = `# Data points for Mike to validate
 
 Rebuilt from the raw source files. Places where today's \`data.json\` disagrees with
@@ -141,6 +158,22 @@ so these can't drive a bogus personal best, but the source rows still need a rul
 ${b4}
 **Proposed ruling:** for each, Mike confirms the true distance (or time); the corrected
 value replaces the typo in the running log. _Mike to supply the right figures._
+
+---
+
+## Batch 5 — drifted grid weeks left for a ruling (${drifted.length} weeks)
+
+The grid heads each week with a date label and the parser dates the columns from the
+Monday **on or before** that label. When a label starts on a **Sunday**, the whole week
+resolves one Monday too early and stacks onto the previous week.
+\`tools/fix-drifted-grid-weeks.js\` un-stacked every such week it could corroborate
+against the running log (runs lining up exactly 7 days later). These three it left
+in place because the fix needs a human call:
+
+${b5}
+**Proposed ruling:** confirm each week is +7 (its neighbours already were), then drop
+the run if it's the same session the running log already holds, else move it +7 with
+the rest of the week. _Mike to confirm._
 `;
 fs.writeFileSync(path.join(ROOT, 'source/mike-review.md'), md);
-console.log(`wrote source/mike-review.md — Batch 1: ${races.length} rows, Batch 2: ${offCount} off-totals, Batch 4: ${badPace.length} impossible-pace runs`);
+console.log(`wrote source/mike-review.md — Batch 1: ${races.length} rows, Batch 2: ${offCount} off-totals, Batch 4: ${badPace.length} impossible-pace runs, Batch 5: ${drifted.length} drifted weeks`);
