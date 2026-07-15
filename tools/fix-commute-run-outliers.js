@@ -7,7 +7,8 @@
  *
  * SAFETY: this tool only ever touches rows that are CURRENTLY physically-impossible
  * outliers (bike > 60 km/h). Every valid row is out of scope by construction. Each
- * targeted row is matched by exact (date, shorthand); the run counts before writing.
+ * outlier is classified by the SHAPE of its shorthand (not by hard-coded dates, so a
+ * grid re-dating like #31 can't misroute it); the run counts before writing.
  *
  * THE TWO SYSTEMATIC MISTAKES
  *
@@ -21,16 +22,19 @@
  *    ride parses with no time and is never flagged). Distances are UNCHANGED, so
  *    annual bike totals do not move. Verified against 2011 (≈36 km/day × commute days
  *    ≈ the logged 3306 km) and the weekly figures in the grid.
- *    This also covers the same shape with an average-speed annotation ("18 a28 18a36"),
- *    an interval note ("18 1on2off 34", "18 32 IMS") or a trailing week-total ("18 18 192").
+ *    This is the default for any impossible-speed bike whose shorthand is a
+ *    distance-pair / interval — first number ≥ 15 km, optionally with "+", an
+ *    average-speed note ("18 a28 18a36"), an interval note ("18 1on2off 34",
+ *    "18 32 IMS") or a trailing week-total ("18 18 192").
  *
- * 2. A run read as a bike  (DROP as duplicate)
+ * 2. A run read as a bike  (DROP as duplicate, or LEAVE if unverifiable)
  *    A run logged in the grid as "distance time" — "8 50" = 8 km in 50:xx, "9 46" =
  *    9 km in 46:00 — lost its time's seconds/colon and was read as a bike (8 km in
- *    8 min = 375 km/h). The run itself is already in the authoritative running log
- *    (src:"r"), so the grid bike is a duplicate artifact. Fix: drop it (same rule as
- *    tools/dedup-grid-runs.js). Each drop below is guarded: the tool refuses unless a
- *    real running-log run exists on that date.
+ *    8 min = 375 km/h). Detected as an impossible-speed bike whose first number is a
+ *    run distance (≤ 12 km) with no interval/average marker. If the authoritative
+ *    running log (src:"r") already has a run that day the grid bike is a duplicate →
+ *    drop it (same rule as tools/dedup-grid-runs.js). If it does NOT — we cannot prove
+ *    it duplicates a logged run — it is LEFT for Mike (reported, not changed).
  *
  * SMALL VARIANTS
  *   - Swim sets "100m in 1:05 2" / "100 in 1:06 2" (100 m repeats, 2 km total) were
@@ -39,13 +43,10 @@
  *     taken as the distance (k=34) and the distance as minutes → rebuilt as k=N with
  *     the time implied by the average (t = N / M · 3600).
  *
- * LEFT FOR MIKE (reported, not changed here)
- *   - 4 grid "runs" read as bikes ("10 52" 2015-06-13, "8 40:24" 2019-09-02,
- *     "9 46" 2019-12-07, "9 46;0" 2020-05-25) that are NOT in the running log — can't
- *     prove they duplicate a logged run, so they are left for Mike rather than dropped.
- *   - The 10 impossible-PACE run entries (a mis-keyed distance/time in the running log
- *     or an interval split) — these need Mike's memory of the real figure and are
- *     already catalogued in source/mike-review.md (Batch 4).
+ * ALSO LEFT FOR MIKE (not touched here): the impossible-PACE run entries — a mis-keyed
+ * distance/time in the running log or an interval split — which need Mike's memory of
+ * the real figure and are already catalogued in source/mike-review.md (Batch 4). They
+ * are runs/swims, never bike outliers, so this tool's bike-only scope skips them.
  *
  *   node tools/fix-commute-run-outliers.js            # dry run
  *   node tools/fix-commute-run-outliers.js --write    # apply, then: node validate-data.js --fix
@@ -55,39 +56,25 @@ const path = require('path');
 const FILE = path.join(__dirname, '..', 'data.json');
 const WRITE = process.argv.includes('--write');
 
-const k = (d, r) => d + '|' + r;
-
-// (2) runs read as bikes — drop as duplicates of the authoritative running-log run.
-const DROP_DUP = new Set([
-  k('2017-07-01', '10 53'), k('2018-03-24', '8 50'),  k('2018-04-17', '10 54'),
-  k('2018-04-20', '10 51'), k('2019-07-27', '9 45'),  k('2019-08-03', '9 50 15'),
-  k('2019-11-06', '8 44'),  k('2019-12-08', '8 41'),  k('2020-05-30', '9 46'),
-  k('2020-06-01', '9  46'), k('2020-08-12', '10 50'), k('2022-01-07', '6 5:16'),
-]);
-
-// runs read as bikes with NO running-log run on that date — leave for Mike (report).
-const LEAVE = new Set([
-  k('2015-06-13', '10 52'), k('2019-09-02', '8 40: 24'),
-  k('2019-12-07', '9 46'),  k('2020-05-25', '9 46;0'),
-]);
-
-// swim sets read as bikes — reclassify to a distance-only swim (2 km total).
-const RECLASS_SWIM = new Set([ k('1994-02-09', '100m in 1:05 2'), k('1995-04-19', '100 in 1:06 2') ]);
-
-// "N a M" single rides — k is the distance N, time implied by the average speed M.
-const NAM = {
-  [k('2001-08-06', '21 a 34')]:   { dist: 21, avg: 34 },
-  [k('2017-06-27', '30 a 35.4')]: { dist: 30, avg: 35.4 },
-  [k('2020-07-07', '30 a 32')]:   { dist: 30, avg: 32 },
-};
-
 const _kmh = r => r.k / (r.t / 3600);
 const isBikeOutlier = r => r.s === 'bike' && r.t > 0 && r.k > 0 && _kmh(r) > 60;
+
+// Classify an impossible-speed bike by the shape of its shorthand. Returns the action.
+function classify(sh) {
+  const t = sh.trim();
+  if (/^100m? in /.test(t)) return 'swim';                       // "100m in 1:05 2" — pool set
+  const first = parseFloat((t.match(/^\d+(?:\.\d+)?/) || ['99'])[0]);
+  const hasMarker = /on|off|IMS|mtb|\ba\s*\d|\d\s*a\d|\sa\s/.test(t); // interval / average-speed note
+  if (first <= 12 && !hasMarker) return 'run';                   // "8 50", "9 46", "6 5:16" — a run
+  const nam = t.match(/^(\d+(?:\.\d+)?)\s+a\s*(\d+(?:\.\d+)?)$/); // single "N a M" — N km at avg M
+  if (nam) return { nam: { dist: parseFloat(nam[1]), avg: parseFloat(nam[2]) } };
+  return 'strip';                                                // commute pair / interval — drop fabricated time
+}
 
 const text = fs.readFileSync(FILE, 'utf8');
 const data = JSON.parse(text);
 
-// running-log run dates, to guard the DROP_DUP set.
+// running-log run dates — a run-as-bike is a droppable duplicate only if one exists.
 const logRunDates = new Set(data.rows.filter(r => r.s === 'run' && r.src === 'r').map(r => r.d));
 
 const arrOpen = text.indexOf('[', text.indexOf('"rows":'));
@@ -119,32 +106,30 @@ function ser(o) {
   return '{' + parts.join(',') + '}';
 }
 
-const counts = { strip: 0, drop: 0, swim: 0, nam: 0, leave: 0, skip: 0 };
+const counts = { strip: 0, drop: 0, swim: 0, nam: 0, leave: 0 };
 const kept = [];
 const log = [];
-let touchedOutliers = 0;
+let touched = 0;
 
 for (const [s, e] of spans) {
   const sub = text.slice(s, e);
   const o = JSON.parse(sub);
   if (!isBikeOutlier(o)) { kept.push(sub); continue; }   // only ever act on impossible-speed bikes
-  touchedOutliers++;
-  const key = k(o.d, o.r);
+  touched++;
+  const action = classify(o.r);
 
-  if (LEAVE.has(key)) { counts.leave++; kept.push(sub); log.push(`  LEAVE   ${o.d} "${o.r}" — grid run not in the running log; flagged for Mike`); continue; }
-
-  if (DROP_DUP.has(key)) {
-    if (!logRunDates.has(o.d)) { console.error(`FAIL  DROP guard: no running-log run on ${o.d} for "${o.r}"`); process.exit(1); }
-    counts.drop++; log.push(`  DROP    ${o.d} "${o.r}" — a run duplicated as a ${_kmh(o).toFixed(0)} km/h bike`); continue;
-  }
-
-  if (RECLASS_SWIM.has(key)) {
+  if (action === 'swim') {
     const n = { ...o, s: 'swim' }; delete n.t; delete n.p;
     counts.swim++; kept.push(ser(n)); log.push(`  SWIM    ${o.d} "${o.r}" — 100 m set reclassified to a distance-only swim`); continue;
   }
 
-  if (NAM[key]) {
-    const { dist, avg } = NAM[key];
+  if (action === 'run') {
+    if (logRunDates.has(o.d)) { counts.drop++; log.push(`  DROP    ${o.d} "${o.r}" — a run duplicated as a ${_kmh(o).toFixed(0)} km/h bike`); continue; }
+    counts.leave++; kept.push(sub); log.push(`  LEAVE   ${o.d} "${o.r}" — grid run not in the running log; flagged for Mike`); continue;
+  }
+
+  if (action.nam) {
+    const { dist, avg } = action.nam;
     const n = { ...o, k: dist, t: Math.round(dist / avg * 3600) }; delete n.p;
     counts.nam++; kept.push(ser(n)); log.push(`  NAM     ${o.d} "${o.r}" — ${dist} km at avg ${avg} km/h (t=${n.t}s)`); continue;
   }
@@ -156,14 +141,13 @@ for (const [s, e] of spans) {
 
 log.sort();
 for (const l of log) console.log(l);
-console.log(`\nActed on ${touchedOutliers} impossible-speed bikes:`);
+console.log(`\nActed on ${touched} impossible-speed bikes:`);
 console.log(`  strip-time ${counts.strip} · drop-dup ${counts.drop} · swim ${counts.swim} · N-a-M ${counts.nam} · left-for-Mike ${counts.leave}`);
 
-const droppedTotal = counts.drop;
 if (!WRITE) { console.log('\n(dry run — pass --write to apply, then run: node validate-data.js --fix)'); process.exit(0); }
 
 const rebuilt = text.slice(0, arrOpen + 1) + kept.join(',') + text.slice(end);
 const check = JSON.parse(rebuilt);
-if (check.rows.length !== data.rows.length - droppedTotal) { console.error('row count mismatch after rebuild — aborting'); process.exit(1); }
+if (check.rows.length !== data.rows.length - counts.drop) { console.error('row count mismatch after rebuild — aborting'); process.exit(1); }
 fs.writeFileSync(FILE, rebuilt);
-console.log(`\nwritten to data.json (${droppedTotal} rows removed). Now run: node validate-data.js --fix`);
+console.log(`\nwritten to data.json (${counts.drop} rows removed). Now run: node validate-data.js --fix`);

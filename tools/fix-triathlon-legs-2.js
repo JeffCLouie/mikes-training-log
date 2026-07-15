@@ -49,7 +49,7 @@ const EDITS = [
     why:   'Perth Tri 1996: fix the bike distance 46 -> 16 km (":46" was T1; 26:38 for 16 km = 36.2 km/h; was 104 km/h)' },
 
   // --- 1998-07-05  OAC Triathlon ---
-  { match: '{"d":"1998-07-04","s":"note","r":"OAC Triathlon","src":"t","c":"u"}',
+  { match: '{"d":"1998-07-04","s":"note","r":"OAC Triathlon","src":"t","c":"u","n":"RACE - OAC Triathlon"}',
     to:    '{"d":"1998-07-04","s":"note","r":"OAC Triathlon","src":"t","c":"u","n":' + JSON.stringify(NOTE.oac98) + '}',
     why:   'OAC Tri 1998: enrich the event note with the reconciled leg summary' },
   { match: '{"d":"1998-07-04","s":"bike","r":"21:00 1:13 40:","src":"t","c":"d","t":1260,"k":40.0}',

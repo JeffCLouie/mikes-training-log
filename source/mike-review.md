@@ -52,7 +52,7 @@ placement as a note. _Mike to confirm or amend._
 
 ---
 
-## Batch 2 — annual totals don't reconcile (69 sport-years off by >3%)
+## Batch 2 — annual totals don't reconcile (58 sport-years off by >3%)
 
 Mike wrote a yearly `Totals` line (Run / Bike / Swim, in km). Today's `data.json`
 distance sums should equal these but mostly **exceed** them — evidence the grid was
@@ -62,90 +62,90 @@ ground-truth target for the corrected parser.**
 
 | Year | Sport | Mike's total | data.json sum | diff | off >3% |
 |---|---|--:|--:|--:|:--:|
-| 1991 | run | 2058 | 2183 | +125 | ⚠️ |
+| 1991 | run | 2058 | 2106.7 | +48.7 |  |
 | 1991 | bike | 1473 | 1544.5 | +71.5 | ⚠️ |
-| 1991 | swim | 117 | 99.75 | -17.25 | ⚠️ |
-| 1992 | run | 2509 | 2705 | +196 | ⚠️ |
-| 1992 | bike | 2656 | 2816.36 | +160.36 | ⚠️ |
-| 1992 | swim | 308.95 | 257.13 | -51.82 | ⚠️ |
-| 1993 | run | 1937 | 2091.9 | +154.9 | ⚠️ |
-| 1993 | bike | 2542 | 3495.4 | +953.4 | ⚠️ |
-| 1993 | swim | 256.8 | 248.5 | -8.3 | ⚠️ |
-| 1994 | run | 1477 | 1831.5 | +354.5 | ⚠️ |
-| 1994 | bike | 2255 | 2635.4 | +380.4 | ⚠️ |
-| 1994 | swim | 173.6 | 182.25 | +8.65 | ⚠️ |
+| 1991 | swim | 117 | 96.85 | -20.15 | ⚠️ |
+| 1992 | run | 2509 | 2671 | +162 | ⚠️ |
+| 1992 | bike | 2656 | 2806.36 | +150.36 | ⚠️ |
+| 1992 | swim | 308.95 | 256.13 | -52.82 | ⚠️ |
+| 1993 | run | 1937 | 2064.7 | +127.7 | ⚠️ |
+| 1993 | bike | 2542 | 3485.4 | +943.4 | ⚠️ |
+| 1993 | swim | 256.8 | 244.2 | -12.6 | ⚠️ |
+| 1994 | run | 1477 | 1704.1 | +227.1 | ⚠️ |
+| 1994 | bike | 2255 | 2625.4 | +370.4 | ⚠️ |
+| 1994 | swim | 173.6 | 177.65 | +4.05 |  |
 | 1995 | run | 1491 | 1555.1 | +64.1 | ⚠️ |
-| 1995 | bike | 2074 | 2874 | +800 | ⚠️ |
-| 1995 | swim | 214.4 | 211.67 | -2.73 |  |
-| 1996 | run | 1832 | 2231.9 | +399.9 | ⚠️ |
-| 1996 | bike | 2353 | 2696.1 | +343.1 | ⚠️ |
-| 1996 | swim | 179.9 | 194.94 | +15.04 | ⚠️ |
+| 1995 | bike | 2074 | 2680.5 | +606.5 | ⚠️ |
+| 1995 | swim | 214.4 | 209.45 | -4.95 |  |
+| 1996 | run | 1832 | 2093.2 | +261.2 | ⚠️ |
+| 1996 | bike | 2353 | 2646.1 | +293.1 | ⚠️ |
+| 1996 | swim | 179.9 | 185.1 | +5.2 |  |
 | 1997 | run | 2345 | 1869.3 | -475.7 | ⚠️ |
 | 1997 | bike | 2287 | 2473 | +186 | ⚠️ |
-| 1997 | swim | 41.6 | 39.74 | -1.86 |  |
+| 1997 | swim | 41.6 | 36.4 | -5.2 | ⚠️ |
 | 1998 | run | 1773 | 1978.3 | +205.3 | ⚠️ |
 | 1998 | bike | 1701 | 2053.6 | +352.6 | ⚠️ |
-| 1998 | swim | 18.7 | 25.62 | +6.92 | ⚠️ |
-| 1999 | run | 1783 | 1940.2 | +157.2 | ⚠️ |
+| 1998 | swim | 18.7 | 19.53 | +0.83 |  |
+| 1999 | run | 1783 | 1914.2 | +131.2 | ⚠️ |
 | 1999 | bike | 1297 | 1311.9 | +14.9 |  |
-| 1999 | swim | 14.1 | 25.17 | +11.07 | ⚠️ |
-| 2000 | run | 1761 | 1911.6 | +150.6 | ⚠️ |
-| 2000 | bike | 491 | 672.5 | +181.5 | ⚠️ |
-| 2000 | swim | 1 | 13.57 | +12.57 | ⚠️ |
-| 2001 | run | 1654 | 1709.9 | +55.9 | ⚠️ |
+| 1999 | swim | 14.1 | 17.1 | +3 |  |
+| 2000 | run | 1761 | 1872.6 | +111.6 | ⚠️ |
+| 2000 | bike | 491 | 642.5 | +151.5 | ⚠️ |
+| 2000 | swim | 1 | 13.5 | +12.5 | ⚠️ |
+| 2001 | run | 1654 | 1700.9 | +46.9 |  |
 | 2001 | bike | 2528 | 2535.5 | +7.5 |  |
-| 2001 | swim | 27 | 25.3 | -1.7 |  |
+| 2001 | swim | 27 | 17.3 | -9.7 | ⚠️ |
 | 2002 | run | 1467 | 1537.7 | +70.7 | ⚠️ |
 | 2002 | bike | 870 | 1202.5 | +332.5 | ⚠️ |
-| 2002 | swim | 3 | 19 | +16 | ⚠️ |
+| 2002 | swim | 3 | 7 | +4 |  |
 | 2003 | run | 1656 | 1696 | +40 |  |
-| 2003 | bike | 497 | 658 | +161 | ⚠️ |
-| 2003 | swim | 0 | 8 | +8 | ⚠️ |
+| 2003 | bike | 497 | 648 | +151 | ⚠️ |
+| 2003 | swim | 0 | 1 | +1 |  |
 | 2004 | run | 922 | 1017.6 | +95.6 | ⚠️ |
 | 2004 | bike | 1533 | 1475 | -58 | ⚠️ |
 | 2004 | swim | 5 | 5 | 0 |  |
 | 2005 | run | 1050 | 1125.3 | +75.3 | ⚠️ |
 | 2005 | bike | 2199 | 2258 | +59 |  |
-| 2005 | swim | 92 | 102 | +10 | ⚠️ |
+| 2005 | swim | 92 | 93 | +1 |  |
 | 2006 | run | 833 | 929.9 | +96.9 | ⚠️ |
 | 2006 | bike | 799 | 1006 | +207 | ⚠️ |
-| 2007 | run | 1476 | 1612.7 | +136.7 | ⚠️ |
+| 2007 | run | 1476 | 1603.5 | +127.5 | ⚠️ |
 | 2007 | bike | 613 | 825.5 | +212.5 | ⚠️ |
-| 2008 | run | 1517 | 1680.2 | +163.2 | ⚠️ |
+| 2008 | run | 1517 | 1644.3 | +127.3 | ⚠️ |
 | 2008 | bike | 395 | 718.2 | +323.2 | ⚠️ |
 | 2009 | run | 1935 | 1982.3 | +47.3 |  |
 | 2009 | bike | 504 | 690.5 | +186.5 | ⚠️ |
-| 2009 | swim | 0 | 10 | +10 | ⚠️ |
+| 2009 | swim | 0 | 6 | +6 | ⚠️ |
 | 2010 | run | 1451 | 1598 | +147 | ⚠️ |
 | 2010 | bike | 2839 | 2926.9 | +87.9 | ⚠️ |
-| 2010 | swim | 2.6 | 5.8 | +3.2 |  |
+| 2010 | swim | 2.6 | 3.8 | +1.2 |  |
 | 2011 | run | 412 | 470.8 | +58.8 | ⚠️ |
 | 2011 | bike | 3306 | 2946 | -360 | ⚠️ |
 | 2011 | swim | 0 | 5 | +5 |  |
 | 2012 | run | 1994 | 2062.3 | +68.3 | ⚠️ |
 | 2012 | bike | 976 | 1092.6 | +116.6 | ⚠️ |
-| 2012 | swim | 0 | 6 | +6 | ⚠️ |
+| 2012 | swim | 0 | 2 | +2 |  |
 | 2013 | run | 1692 | 1763 | +71 | ⚠️ |
 | 2013 | bike | 1021 | 1271.7 | +250.7 | ⚠️ |
-| 2013 | swim | 0 | 7 | +7 | ⚠️ |
+| 2013 | swim | 0 | 4 | +4 |  |
 | 2014 | run | 1230 | 1285.6 | +55.6 | ⚠️ |
 | 2014 | bike | 2497 | 2598.62 | +101.62 | ⚠️ |
-| 2014 | swim | 0 | 6.07 | +6.07 | ⚠️ |
+| 2014 | swim | 0 | 3 | +3 |  |
 | 2015 | run | 1417 | 1457.6 | +40.6 |  |
 | 2015 | bike | 1961 | 2041.18 | +80.18 | ⚠️ |
-| 2015 | swim | 0 | 3 | +3 |  |
+| 2015 | swim | 0 | 1 | +1 |  |
 | 2016 | run | 1531 | 1636.8 | +105.8 | ⚠️ |
 | 2016 | bike | 4323 | 3750 | -573 | ⚠️ |
-| 2016 | swim | 0 | 21.5 | +21.5 | ⚠️ |
+| 2016 | swim | 0 | 4.5 | +4.5 |  |
 | 2017 | run | 1208 | 1268.6 | +60.6 | ⚠️ |
 | 2017 | bike | 5502 | 4525.8 | -976.2 | ⚠️ |
-| 2017 | swim | 4 | 21.1 | +17.1 | ⚠️ |
+| 2017 | swim | 4 | 14.6 | +10.6 | ⚠️ |
 | 2018 | run | 1107 | 1107.2 | +0.2 |  |
-| 2018 | bike | 4340 | 4330.3 | -9.7 |  |
-| 2018 | swim | 10 | 25.6 | +15.6 | ⚠️ |
+| 2018 | bike | 4340 | 4224.3 | -115.7 |  |
+| 2018 | swim | 10 | 27.5 | +17.5 | ⚠️ |
 | 2019 | run | 1290 | 1283.9 | -6.1 |  |
-| 2019 | bike | 2616 | 3368.7 | +752.7 | ⚠️ |
-| 2020 | run | 1205 | 1299.3 | +94.3 | ⚠️ |
+| 2019 | bike | 2616 | 3355.7 | +739.7 | ⚠️ |
+| 2020 | run | 1205 | 1284.3 | +79.3 | ⚠️ |
 | 2020 | bike | 4448 | 4514.5 | +66.5 |  |
 | 2021 | run | 845 | 875.7 | +30.7 | ⚠️ |
 | 2021 | bike | 5277 | 5126.6 | -150.4 |  |
@@ -165,9 +165,9 @@ shorthand the parser wasn't sure about. This is why the numbers can't simply be
 
 | Sport | Total km | of which doubtful (c≠"x") | % |
 |---|--:|--:|--:|
-| bike | 75732 | 72283 | 95% |
-| swim | 1734 | 1568 | 90% |
-| run | 50819 | 3813 | 8% |
+| bike | 75300 | 71761 | 95% |
+| swim | 1610 | 1445 | 90% |
+| run | 50282 | 3334 | 7% |
 
 **Implication:** runs are trustworthy (from the clean running log). Bike/swim
 distance totals should come from Mike's own weekly/annual totals, not from summing
@@ -196,3 +196,24 @@ so these can't drive a bogus personal best, but the source rows still need a rul
 
 **Proposed ruling:** for each, Mike confirms the true distance (or time); the corrected
 value replaces the typo in the running log. _Mike to supply the right figures._
+
+---
+
+## Batch 5 — drifted grid weeks left for a ruling (3 weeks)
+
+The grid heads each week with a date label and the parser dates the columns from the
+Monday **on or before** that label. When a label starts on a **Sunday**, the whole week
+resolves one Monday too early and stacks onto the previous week.
+`tools/fix-drifted-grid-weeks.js` un-stacked every such week it could corroborate
+against the running log (runs lining up exactly 7 days later). These three it left
+in place because the fix needs a human call:
+
+| Week (corrected) | Ambiguous cell | Question |
+|---|---|---|
+| 2000 May 15–21 (grid "MY 14 MY 20") | run 43:43 / 10 km (currently 2000-05-09) | The running log has 44:43 / 10 km on the corrected day (2000-05-16). Same run mis-keyed by a minute (drop the grid copy), or a distinct run? |
+| 2000 May 29–Jun 4 (grid "MY 28 JN 4") | run "4k 22:00" (currently 2000-05-23) | Its corrected day (2000-05-30) already holds a different running-log run, and the week has duplicate "karate" cells. Confirm the +7 shift and how to place the 4 km piece. |
+| 2019 Sep 30–Oct 6 (grid "SE 23 OC 6", Tremblant) | run "9k run" (no time) + 5.2 km run 6 s off the log | Race/travel week: the 5.2 km run matches the log within 6 s (likely the same, drop it) but the timeless "9k run" needs Mike's read before moving. |
+
+**Proposed ruling:** confirm each week is +7 (its neighbours already were), then drop
+the run if it's the same session the running log already holds, else move it +7 with
+the rest of the week. _Mike to confirm._

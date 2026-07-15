@@ -85,7 +85,7 @@ const EDITS = [
   { match: '{"d":"1994-07-23","s":"note","r":"Kingston Tri","src":"t","c":"u"}',
     to:    '{"d":"1994-07-23","s":"note","r":"Kingston Tri","src":"t","c":"u","n":' + JSON.stringify(NOTE.kingston) + '}',
     why:   'Kingston Tri: enrich the event note with the reconciled leg summary' },
-  { match: '{"d":"1994-07-23","s":"run","r":"15  1:05:57","src":"t","c":"d","t":3957,"k":15.0}',
+  { match: '{"d":"1994-07-23","s":"run","r":"15  1:05:57","src":"t","c":"d","t":3957,"k":15.0,"n":"RACE - Kingston Triathlon"}',
     drop:  true,
     why:   'Kingston Tri: drop the grid run (15 km/1:05:57) that duplicates the running-log race run' },
   { match: '{"d":"1994-07-24","s":"bike","r":"av149 8 31","src":"t","c":"d","k":31.0,"a":149.0}',
