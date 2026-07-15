@@ -1,7 +1,11 @@
 name: Validate data
 
-# Runs the data.json integrity check on every push and every PR into main,
-# so meta/rows drift can't be merged. Part of the branch -> PR -> main flow.
+# Runs on every push and every PR into main, so nothing broken can merge:
+#   1. data.json stays internally consistent (meta/rows can't drift), and
+#   2. the inline <script> in index.html parses (a UI-only PR touches no data,
+#      so without this it would pass "green" without its JS ever being checked —
+#      and with auto-merge on, a syntax error could ship to the live site).
+# Part of the branch -> PR -> main flow.
 on:
   push:
     branches: [main]
@@ -18,3 +22,5 @@ jobs:
           node-version: '20'
       - name: Check data.json is internally consistent
         run: node validate-data.js
+      - name: Check index.html inline script parses
+        run: node tools/check-index-html.js
