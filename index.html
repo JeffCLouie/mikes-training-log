@@ -362,6 +362,17 @@
   .erarec .es{font-size:10.5px;color:var(--muted);margin-top:3px;min-height:12px}
   .erarec.clk{transition:transform .08s,border-color .12s}
   .erarec.clk:hover,.erarec.clk:focus-visible{border-color:var(--accent);transform:translateY(-1px);outline:none}
+  /* Performance: multisport races — finish time stays visible on the first line,
+     the leg breakdown wraps below (a table cell would nowrap and shove it off-screen). */
+  .trilist{display:flex;flex-direction:column}
+  .tri-row{padding:11px 4px;border-top:1px solid var(--line);cursor:pointer;transition:background .1s}
+  .tri-row:first-child{border-top:none}
+  .tri-row:hover,.tri-row:focus-visible{background:var(--panel2);outline:none}
+  .tri-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .tri-ev{font-weight:600;color:var(--text)}
+  .tri-fin{font-weight:800;font-size:17px;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .tri-meta{color:var(--muted);font-size:12px;margin-top:3px;line-height:1.4}
+  .tri-meta .tri-d{color:var(--accent2)}
   /* Raw Data: focus banner + highlighted target row */
   .focusbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--accent);
     border-radius:10px;padding:9px 13px;margin-bottom:10px;font-size:13px}
@@ -2503,6 +2514,12 @@ const VH_CATS = {
   docs: ["Docs",     "vt-docs"],  // documentation & methodology
 };
 const VERSION_HISTORY = [
+  { date:"2026-07-15", entries:[
+    { c:"feat", t:"New <b>Multisport races</b> section on the Performance tab — each triathlon's full <b>swim + T1 + bike + T2 + run</b> finish time (the Tremblant Half Ironman's 5:20:29, not just its 1:57:57 run leg), with the leg breakdown." },
+    { c:"data", t:"Applied the Tremblant fix to <b>every mis-parsed triathlon</b>: Sharbot Lake (2001, 2005) and OAC (1994, 1998). Transitions (<code>t1</code>/<code>t2</code>) and placements had been read as phantom bike distances — recovered the real swim &amp; bike legs and rebuilt each race-finish note." },
+    { c:"data", t:"Removed the duplicate garbled <b>2018 Tremblant</b> rows (a stray Saturday copy of the Sunday cell that was already fixed)." },
+    { c:"pipe", t:"Added <code>tools/fix-triathlon-transitions.js</code> — a reproducible, self-checking pass for the triathlon transition mis-parses." },
+  ]},
   { date:"2026-07-14", entries:[
     { c:"ux",   t:"Removed the <b>activity calendar</b> from Insights now that it has its own dedicated <b>Calendar</b> page — no more duplicate heatmap." },
     { c:"feat", t:"<b>By day of week</b>, <b>By month</b> and <b>Distance by year</b> on Insights are now stacked by sport — run / bike / swim / other." },
@@ -2734,6 +2751,23 @@ function renderPerf(app){
 // Standard-distance race bands: a race whose distance falls in the band counts as
 // that event (a 10.2 km race is a 10K; a tri run leg at 10 km counts too).
 const RACE_BANDS=[["5K",5,4.6,5.6],["10K",10,9.2,10.8],["Half",21.0975,20.4,22.2],["Marathon",42.195,40.0,43.6]];
+
+// Multisport races. A triathlon's real result is the whole swim + T1 + bike + T2 + run
+// finish, not the run leg "Every race" lists (a Half Ironman run leg looks like a slow
+// half-marathon). Each rebuilt triathlon carries that finish time on a RACE summary note
+// whose text holds the leg breakdown — see tools/fix-triathlon-transitions.js.
+const TRI_RX=/\b(tri|triathlon|ironman|duathlon|aquathlon)\b/i;
+function triFinishes(rows){
+  return rows.filter(r=>r.s==="note"&&isRace(r)&&r.t>0&&TRI_RX.test((r.n||"")+" "+(r.r||"")))
+             .slice().sort((a,b)=>a.d<b.d?1:-1);   // newest first
+}
+// Event name from a summary note: drop the "RACE -" marker, stop at the " — finish …" tail.
+function triEventName(r){
+  return ((r.n||"").replace(/^.*?\bRACE\b\s*[-–:]*\s*/,"").split(/\s+—\s+finish/i)[0].trim()||"Triathlon").slice(0,44);
+}
+// The parenthetical leg split Mike's cell recorded, e.g. "swim 35:14, T1 3:45, bike …".
+function triBreakdown(r){ const m=(r.n||"").match(/\(([^)]*)\)/); return m?m[1]:""; }
+
 function perfRaces(){
   const races=perfRows().filter(isRace).filter(r=>r.s==="run"&&r.t>0&&r.k>0&&_pace(r)>=3.0&&_pace(r)<=10);
   if(!races.length) return `<div class="card">No <b>RACE</b>-tagged efforts in this range. Mike marks races with a “RACE –” tag in his log; widen the year filter to see them.</div>`;
@@ -2756,6 +2790,19 @@ function perfRaces(){
       <td class="num">${fmtNum(r.k,1)}</td><td class="num">${fmtDur(r.t)}</td>
       <td class="num">${fmtPace(_pace(r))}</td></tr>`
   ).join("");
+  // Multisport: triathlons/duathlons whose full finish time we recovered (swim+bike+run).
+  // A flex list, not a table — the finish time stays pinned to the first line while the
+  // long leg breakdown wraps below it (mobile-first: no horizontal scroll to see the time).
+  const tris=triFinishes(perfRows());
+  const triRows=tris.map(r=>{
+    const bd=triBreakdown(r);
+    return `<div class="tri-row clk" ${focusAttrs(r.d,r.d,rowId(r),triEventName(r))}>
+      <div class="tri-head"><span class="tri-ev">${escapeHTML(triEventName(r))}</span><span class="tri-fin">${fmtDur(r.t)}</span></div>
+      <div class="tri-meta"><span class="tri-d">${r.d}</span>${bd?" · "+escapeHTML(bd):""}</div></div>`;
+  }).join("");
+  const triCard=tris.length?`<div class="card" style="margin-bottom:16px"><h3>Multisport races</h3>
+     <div class="note-sm" style="margin-bottom:10px">A triathlon's real result is the whole <b>swim + T1 + bike + T2 + run</b> finish — not the run leg that “Every race” lists (a Half Ironman run split looks like a slow half-marathon otherwise). Tap to open in Raw Data.</div>
+     <div class="trilist">${triRows}</div></div>`:"";
   return `
    <div class="grid stat-row" style="margin-bottom:16px">
      <div class="card stat"><div class="num">${races.length}</div><div class="lbl">races logged</div></div>
@@ -2768,6 +2815,7 @@ function perfRaces(){
    ${prCards?`<div class="card" style="margin-bottom:16px"><h3>Race personal records</h3>
      <div class="note-sm" style="margin-bottom:8px">Fastest <b>race-day</b> finish at each standard distance (a hard training run doesn't count).</div>
      <div class="grid recgrid">${prCards}</div></div>`:""}
+   ${triCard}
    <div class="card"><h3>Every race</h3>
      <div class="note-sm" style="margin-bottom:8px">Newest first. Tap a row to open it in Raw Data.</div>
      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">km</th><th class="num">Time</th><th class="num">Pace</th></tr></thead>

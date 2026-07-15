@@ -77,7 +77,13 @@ swims — and recover the real distances they displaced; each fix is corroborate
 the weekly totals or the running log),
 `fix-tremblant-2018.js` (un-garble the 2018 Tremblant Half Ironman cell — recover
 the dropped swim leg, restore the bike-leg time, and remove the phantom 445 km/h
-"ride" the mis-parse produced).
+"ride" the mis-parse produced),
+`fix-triathlon-transitions.js` (the same treatment for every other mis-parsed
+triathlon — Sharbot Lake 2001/2005 and OAC 1994/1998: the grid split each race's
+cell across two days, reading the transitions `t1`/`t2` and placements like `7c20o`
+as phantom bike distances; this cleans the real swim/bike legs, drops the phantoms,
+and rebuilds each race-finish note — corroborated by the finish time and the weekly
+totals — plus it clears the leftover duplicate Tremblant fragments).
 
 ### Outlier validation
 
