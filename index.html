@@ -394,6 +394,11 @@
   .tl .ev .dt{font-size:11.5px;color:var(--muted);font-weight:700;letter-spacing:.3px}
   .tl .ev .tx{font-size:14px;margin-top:1px}
   .tl .ev .ic{margin-right:6px}
+  .tl .ev.clk{cursor:pointer}
+  .tl .ev.clk:hover,.tl .ev.clk:focus-visible{transform:none;outline:none}
+  .tl .ev.clk .tx{transition:color .12s}
+  .tl .ev.clk:hover .tx,.tl .ev.clk:focus-visible .tx{color:var(--accent)}
+  .tl .ev.clk:hover::before,.tl .ev.clk:focus-visible::before{background:var(--accent2,var(--accent))}
   /* year in review */
   .wrap-hero{text-align:center;padding:24px 18px}
   .wrap-hero .yr{font-size:42px;font-weight:800;letter-spacing:1px;line-height:1}
@@ -2980,12 +2985,6 @@ function rollingMax(rows,key,win){
   return {val:best,end:bestEnd};
 }
 function monthMax(rows,key){ const m={}; for(const r of rows){ const k=r.d.slice(0,7); m[k]=(m[k]||0)+(key==="k"?(r.k||0):1);} let bk=null; for(const k in m) if(bk===null||m[k]>m[bk])bk=k; return bk?{val:m[bk],ym:bk}:null; }
-function distMilestones(rows,thresholds){
-  const rs=rows.filter(r=>r.k>0).slice().sort((a,b)=>a.d<b.d?-1:1);
-  let cum=0,ti=0; const out=[];
-  for(const r of rs){ cum+=r.k; while(ti<thresholds.length&&cum>=thresholds[ti]){ out.push({km:thresholds[ti],date:r.d}); ti++; } }
-  return out;
-}
 // Riegel race-time projection from the fastest recent run (last ~2 years of data).
 function predictRaces(rows){
   const sane=rows.filter(r=>saneRun(r)&&r.k>=3); if(!sane.length) return null;
@@ -3003,17 +3002,21 @@ function buildBadges(rows,prs){
   const hours=rows.reduce((a,r)=>a+(r.t||0),0)/3600;
   const bikeKm=rows.filter(r=>r.s==="bike").reduce((a,r)=>a+(r.k||0),0);
   const swimKm=rows.filter(r=>r.s==="swim").reduce((a,r)=>a+(r.k||0),0);
-  const sportsN=new Set(rows.map(r=>r.s)).size, yearsN=new Set(rows.map(yearOf)).size;
-  const century=rows.some(r=>r.s==="bike"&&r.k>=100), dcentury=rows.some(r=>r.s==="bike"&&r.k>=200);
+  const sportsN=new Set(rows.map(r=>r.s)).size;
+  const dcentury=rows.some(r=>r.s==="bike"&&r.k>=200);
   const marathon=rows.some(r=>r.s==="run"&&r.k>=42.195);
   const st=streakInfo(rows);
   const prBy={}; for(const p of prs) prBy[p.name]=p.sec; const get=n=>prBy[n]??Infinity;
-  const byDay={}; for(const r of rows){ (byDay[r.d]||(byDay[r.d]=new Set())).add(r.s); }
-  const triDay=Object.values(byDay).some(s=>s.has("run")&&s.has("bike")&&s.has("swim"));
+  const numSessions=rows.length;
+  const shoesN=new Set(rows.filter(r=>r.sh&&r.sh.trim()).map(r=>r.sh.trim().toLowerCase())).size;
+  // Never-miss-a-month: longest run of consecutive calendar months with any activity.
+  const ymSet=[...new Set(rows.map(r=>r.d.slice(0,7)))].sort();
+  let moStreak=0,moCur=0,moPrev=null;
+  for(const k of ymSet){ const idx=(+k.slice(0,4))*12+(+k.slice(5,7)-1); moCur=(moPrev!==null&&idx===moPrev+1)?moCur+1:1; if(moCur>moStreak)moStreak=moCur; moPrev=idx; }
   const B=(ic,name,desc,earned,detail)=>({ic,name,desc,earned,detail});
   return [
     B("🌍","Globetrotter","Cover 40,075 km — once around the Earth",total>=40075,fmtNum(Math.round(total))+" km logged"),
-    B("💯","Century Club","Ride 100 km in a single day",century,century?"Done":""),
+    B("🔢","Five-Figure Club","Log 10,000 sessions",numSessions>=10000,fmtNum(numSessions)+" sessions logged"),
     B("🚵","Double Century","Ride 200 km in a single day",dcentury,dcentury?"Done":""),
     B("🏅","Marathoner","Run a marathon distance (42.2 km)",marathon,marathon?"Done":""),
     B("⚡","Sub-20 5K","Best 5K under 20:00",get("5K")<1200,get("5K")<Infinity?"Best "+fmtDur(Math.round(get("5K"))):""),
@@ -3024,24 +3027,37 @@ function buildBadges(rows,prs){
     B("🗓️","Iron Month","Train 30 days in a row",st.longest>=30,st.longest+"-day best streak"),
     B("🚴","Le Tour","Bike 3,360 km — a Tour de France",bikeKm>=3360,fmtNum(Math.round(bikeKm))+" km biked"),
     B("🏊","Channel Crossing","Swim 33.8 km lifetime",swimKm>=33.8,fmtNum(Math.round(swimKm))+" km swum"),
-    B("💪","Triathlete","Run, bike and swim on the same day",triDay,triDay?"Done":""),
+    B("👟","Shoe Graveyard","Wear through 25 pairs of shoes",shoesN>=25,shoesN+" pairs retired"),
     B("🤸","All-Rounder","Log 10+ different sports",sportsN>=10,sportsN+" sports logged"),
     B("⏳","10,000 Hours","Train 10,000 hours total",hours>=10000,fmtNum(Math.round(hours))+" h trained"),
-    B("🎂","Decade Strong","Train across 10+ years",yearsN>=10,yearsN+" years active"),
+    B("♾️","Perpetual Motion","Train every month for 10 years straight",moStreak>=120,moStreak+" months unbroken"),
   ];
 }
 function buildMilestones(rows){
   const sorted=rows.slice().sort((a,b)=>a.d<b.d?-1:1); if(!sorted.length) return [];
-  const ev=[{date:sorted[0].d,ic:"🎉",text:`First logged workout — ${sportName(sorted[0].s)}`}];
-  const firstOf=(s,text,ic)=>{ const r=sorted.find(x=>x.s===s); if(r) ev.push({date:r.d,ic,text}); };
+  const ev=[];
+  // Every milestone drills into Raw Data pinned to the exact entry that earned it
+  // (single-point focus → ±2-week context window, same as records elsewhere).
+  const add=(row,ic,text)=>{ if(row) ev.push({date:row.d,ic,text,nav:entryNav(row,text)}); };
+  add(sorted[0],"🎉",`First logged workout — ${sportName(sorted[0].s)}`);
+  const firstOf=(s,text,ic)=>add(sorted.find(x=>x.s===s),ic,text);
   firstOf("run","First run","🏃"); firstOf("bike","First ride","🚴"); firstOf("swim","First swim","🏊");
-  const f10=sorted.find(r=>r.s==="run"&&r.k>=10); if(f10) ev.push({date:f10.d,ic:"🏃",text:"First 10 km run"});
-  const fM=sorted.find(r=>r.s==="run"&&r.k>=42.195); if(fM) ev.push({date:fM.d,ic:"🏅",text:"First marathon-distance run"});
-  const fC=sorted.find(r=>r.s==="bike"&&r.k>=100); if(fC) ev.push({date:fC.d,ic:"💯",text:"First 100 km ride"});
-  for(const m of distMilestones(rows,[1000,5000,10000,25000,50000,75000,100000,150000,200000]))
-    ev.push({date:m.date,ic:"📍",text:`${fmtNum(m.km)} km lifetime total reached`});
-  const st=streakInfo(rows); if(st.longest>=7&&st.start) ev.push({date:st.start,ic:"🔥",text:`Longest streak begins — ${st.longest} days straight (through ${st.end})`});
-  ev.push({date:sorted[sorted.length-1].d,ic:"⏱️",text:`Most recent workout — ${sportName(sorted[sorted.length-1].s)}`});
+  add(sorted.find(r=>r.s==="run"&&r.k>=10),"🏃","First 10 km run");
+  add(sorted.find(r=>r.s==="run"&&r.k>=21.0975),"🎽","First half-marathon run");
+  add(sorted.find(r=>r.s==="run"&&r.k>=42.195),"🏅","First marathon-distance run");
+  add(sorted.find(r=>r.s==="bike"&&r.k>=100),"💯","First 100 km ride");
+  // Cumulative crossings — emit a milestone at the entry that pushes a running
+  // total past each threshold (overall & per-sport distance, hours, session count).
+  const cross=(pred,val,ths,ic,label)=>{ let cum=0,ti=0; for(const r of sorted){ if(pred&&!pred(r)) continue; cum+=val(r); while(ti<ths.length&&cum>=ths[ti]){ add(r,ic,label(ths[ti])); ti++; } } };
+  cross(r=>r.k>0, r=>r.k, [1000,5000,10000,25000,50000,75000,100000,150000,200000], "📍", km=>`${fmtNum(km)} km lifetime total`);
+  cross(r=>r.s==="run"&&r.k>0, r=>r.k, [1000,5000,10000,25000,50000,75000,100000], "🏃", km=>`${fmtNum(km)} km of running`);
+  cross(r=>r.s==="bike"&&r.k>0, r=>r.k, [1000,5000,10000,25000,50000,75000,100000], "🚴", km=>`${fmtNum(km)} km of cycling`);
+  cross(r=>r.s==="swim"&&r.k>0, r=>r.k, [100,250,500,1000,1500,2000], "🏊", km=>`${fmtNum(km)} km of swimming`);
+  cross(r=>r.t>0, r=>r.t/3600, [500,1000,2500,5000,7500,10000], "⏳", h=>`${fmtNum(h)} hours trained`);
+  cross(null, ()=>1, [1000,2500,5000,7500,10000], "🔢", n=>`${fmtNum(n)}th session logged`);
+  const st=streakInfo(rows); if(st.longest>=7&&st.start) ev.push({date:st.start,ic:"🔥",text:`Longest streak begins — ${st.longest} days straight (through ${st.end})`,nav:rangeNav(st.start,st.end,`Longest streak — ${st.longest} days`)});
+  const last=sorted[sorted.length-1];
+  ev.push({date:last.d,ic:"⏱️",text:`Most recent workout — ${sportName(last.s)}`,nav:entryNav(last,"Most recent workout")});
   return ev.sort((a,b)=>a.date<b.date?-1:1);
 }
 function renderRecords(app){
@@ -3102,7 +3118,10 @@ function renderRecords(app){
   const earnedBadges=badges.filter(b=>b.earned);
   const badgeHtml=`<h3 style="margin-top:22px">Achievements <span class="muted" style="font-weight:600;text-transform:none;letter-spacing:0">· ${earnedBadges.length} unlocked</span></h3>
      <div class="grid badges">${earnedBadges.map(b=>`<div class="card badge earned"><div class="bic">${b.ic}</div><div class="bn">${b.name}</div><div class="bd">${b.detail||"Unlocked"}</div></div>`).join("")}</div>`;
-  const mileHtml=`<h3 style="margin-top:22px">Milestones</h3><div class="card"><div class="tl">${buildMilestones(rows).map(e=>`<div class="ev"><div class="dt">${e.date}</div><div class="tx"><span class="ic">${e.ic}</span>${e.text}</div></div>`).join("")}</div></div>`;
+  const mileHtml=`<h3 style="margin-top:22px">Milestones</h3><div class="card"><div class="tl">${buildMilestones(rows).map(e=>{
+      const at=e.nav?` ${focusAttrs(e.nav.from,e.nav.to,e.nav.idx,e.nav.label)}`:"";
+      return `<div class="ev${e.nav?" clk":""}"${at}><div class="dt">${e.date}</div><div class="tx"><span class="ic">${e.ic}</span>${e.text}${e.nav?' <span class="drillcue">→</span>':""}</div></div>`;
+    }).join("")}</div></div>`;
 
   app.innerHTML=`<h2 class="section">Records &amp; Achievements</h2>${filterBar()}
     <h3>Personal records</h3><div class="grid recgrid">${recCards}</div>
