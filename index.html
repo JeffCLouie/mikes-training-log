@@ -39,6 +39,9 @@
   }
   nav.tabs button:hover{color:var(--text);background:var(--panel)}
   nav.tabs button.active{color:var(--text);background:var(--panel2);border-color:var(--line)}
+  /* Hamburger + slide-out drawer: mobile only (desktop keeps the top tabs above). */
+  .hamburger{display:none;background:transparent;border:none;color:var(--text);padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .drawer,.drawer-backdrop{display:none}
   main{max-width:1180px;margin:0 auto;padding:22px 18px 70px}
   h2.section{font-size:20px;margin:6px 0 16px;font-weight:700}
   h3{font-size:15px;margin:0 0 10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
@@ -142,6 +145,21 @@
   .cardhead h3{margin:0}
   .xlab{position:relative;height:15px;margin-top:7px}
   .xlab span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
+  /* stacked column charts: each bar split into coloured segments by sport */
+  .bar.stack{display:flex;flex-direction:column-reverse;overflow:hidden;background:none}
+  /* 2px surface gap between stacked segments (none under the bottom one) */
+  .bar.stack .sseg{width:100%;flex:none;min-height:0;box-shadow:inset 0 -2px 0 var(--panel)}
+  .bar.stack .sseg:first-child{box-shadow:none}
+  .stack-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--muted);margin-bottom:8px}
+  .stack-legend .k{display:inline-flex;align-items:center;gap:5px}
+  .stack-legend .sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+  /* exact-numbers readout under a stacked chart (fills on hover / tap) */
+  .sc-readout{display:flex;flex-wrap:wrap;align-items:center;gap:5px 14px;margin-top:10px;font-size:12px;color:var(--muted);min-height:20px;line-height:1.5}
+  .sc-readout b{color:var(--text);font-weight:700;margin-right:2px}
+  .sc-readout .sc-item{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+  .sc-readout .sc-item i{width:9px;height:9px;border-radius:2px;display:inline-block;flex:none}
+  .sc-readout .sc-tot{color:var(--text);font-weight:600}
+  .sc-readout .sc-hint{font-style:italic}
   /* compact SVG line chart (y-axis fitted to the data range, not forced to 0) */
   .linechart{width:100%;height:auto;display:block;overflow:visible}
   .lc-line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
@@ -162,17 +180,8 @@
   .fact .big{font-size:22px;line-height:1}
   .fact .ftxt b{display:block;font-size:17px;font-weight:800}
   .fact .ftxt span{color:var(--muted);font-size:12.5px}
-  /* insights: activity heatmap (GitHub-style) */
-  .hm-box{position:relative}
-  /* Year follows the scroll: pinned badge showing the year currently in view. */
-  .hm-scroll{overflow-x:auto;padding-bottom:4px;scroll-behavior:smooth}
-  .hm-months{display:flex;gap:3px;margin-bottom:4px;font-size:10px;color:var(--muted);height:15px}
-  .hm-mlabel{width:16px;flex:none;white-space:nowrap;overflow:visible}
-  .hm{display:flex;gap:3px}
-  .hm-week{display:flex;flex-direction:column;gap:3px;flex:none}
+  /* activity-calendar legend swatches (shared by the dedicated Calendar page) */
   .hm-cell{width:16px;height:16px;border-radius:3px;background:var(--panel2)}
-  .hm-cell[data-d]{cursor:pointer}
-  .hm-cell[data-d]:hover{outline:2px solid var(--text);outline-offset:-1px}
   .hm-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 6px;margin-top:9px;font-size:11.5px;color:var(--muted)}
   .hm-legend .hm-cell{width:12px;height:12px}
   /* day-detail overlay (tap a calendar square) */
@@ -189,6 +198,7 @@
   .shoe .track{flex:1;background:var(--panel2);border-radius:6px;height:16px;overflow:hidden;min-width:60px}
   .shoe .fill{display:block;height:100%;min-width:3px;background:linear-gradient(90deg,#1d6e60,var(--accent));border-radius:6px}
   .shoe .km{width:74px;flex:none;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .shoescroll{max-height:440px;overflow-y:auto;padding-right:4px}
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px}
   .legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
   .checks{display:flex;flex-wrap:wrap;gap:8px}
@@ -245,7 +255,7 @@
   .vcal-head{position:sticky;top:0;z-index:2;background:var(--panel);padding:8px 0 6px;border-bottom:1px solid var(--line)}
   .vcal-head .dow{font-size:10.5px;color:var(--muted);text-align:center;font-weight:700;letter-spacing:.3px}
   .vcal-head .dow.we{color:var(--accent2)}
-  .vcal{display:flex;flex-direction:column;gap:3px;padding-top:5px}
+  .vcal{--vcal-cell-h:44px;display:flex;flex-direction:column;gap:3px;padding-top:5px}
   /* content-visibility:auto lets the browser SKIP layout/style/paint for off-screen
      weeks — so initial render, scrolling, and filter re-styling only touch the ~15
      visible rows instead of all ~1,700. Critical for the large grid on mobile. */
@@ -305,7 +315,7 @@
   @media (max-width:600px){
     .vcal-scroll{max-width:none;max-height:62vh}
     .vcal-head,.vcal{--vcal-gut:34px}
-    .vcal-cell{--vcal-cell-h:38px}
+    .vcal{--vcal-cell-h:38px}   /* on the container so BOTH cell height and row intrinsic-size match */
     .vcal-cell .dn{font-size:8.5px;top:1px;left:3px}
     .vcal-catgrid{grid-template-columns:1fr}
     .vcal-ttable td{padding:8px 7px;font-size:12px}
@@ -345,13 +355,7 @@
   .kvgrid div.clk:hover,.kvgrid div.clk:focus-visible{transform:none;background:var(--panel2)}
   .clk .drillcue{opacity:0;transition:opacity .12s;color:var(--accent);font-weight:700}
   .clk:hover .drillcue,.clk:focus-visible .drillcue{opacity:1}
-  /* Performance: age-grade pills + records-by-era cards */
-  .agpill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:700}
-  .ag-base{background:rgba(138,160,181,.14);color:#8aa0b5}
-  .ag-ok{background:rgba(77,159,255,.16);color:#7fbcff}
-  .ag-good{background:rgba(54,194,168,.18);color:#4fd6bb}
-  .ag-strong{background:rgba(120,210,120,.20);color:#8fe08f}
-  .ag-elite{background:rgba(255,178,90,.22);color:#ffc072}
+  /* Performance: records-by-era cards */
   .eragrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
   .eracard{padding:14px 16px}
   .erarecs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
@@ -444,30 +448,55 @@
   html{-webkit-text-size-adjust:100%}
   header.top{padding-top:env(safe-area-inset-top)}
   .tablewrap{-webkit-overflow-scrolling:touch}
-  /* Bottom tab bar: hidden on desktop, shown on phones. */
-  .bottomnav{display:none}
-
   @media(max-width:640px){
-    /* Move primary navigation to a fixed, thumb-reachable bottom bar. */
+    /* Primary navigation moves to a hamburger drawer (top-left). */
     nav.tabs{display:none}
-    .bottomnav{
-      display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
-      background:rgba(16,21,28,.97);backdrop-filter:blur(12px);
-      border-top:1px solid var(--line);
-      padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+    .top-inner{position:relative}
+    .hamburger{
+      display:flex;align-items:center;justify-content:center;
+      position:absolute;left:8px;top:50%;transform:translateY(-50%);
+      width:42px;height:42px;border-radius:10px;z-index:2;
     }
-    .bottomnav button{
-      flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-      background:none;border:none;color:var(--muted);
-      font-size:10px;font-weight:600;line-height:1;padding:6px 2px;
-      cursor:pointer;min-height:46px;
+    .hamburger:active{background:var(--panel2)}
+    .hamburger svg{width:26px;height:26px;stroke:currentColor;fill:none;
+      stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    /* Keep the centred title clear of the hamburger on both sides. */
+    .brand{padding:0 46px;font-size:17px}
+
+    /* Slide-out navigation drawer + dimmed backdrop. */
+    .drawer-backdrop{
+      display:block;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.5);
+      opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s;
     }
-    .bottomnav button svg{width:23px;height:23px;stroke:currentColor;fill:none;
+    .drawer-backdrop.open{opacity:1;visibility:visible}
+    .drawer{
+      display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:71;
+      width:min(80vw,290px);background:var(--panel);border-right:1px solid var(--line);
+      box-shadow:2px 0 26px rgba(0,0,0,.55);
+      transform:translateX(-100%);transition:transform .22s ease;
+      padding-top:env(safe-area-inset-top);overflow-y:auto;-webkit-overflow-scrolling:touch;
+    }
+    .drawer.open{transform:none}
+    .drawer-head{display:flex;align-items:center;justify-content:space-between;
+      padding:16px 14px 14px 18px;border-bottom:1px solid var(--line)}
+    .drawer-head .dtitle{font-weight:700;font-size:16px;display:flex;align-items:center;gap:9px}
+    .drawer-head .dtitle .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+    .drawer-close{background:transparent;border:none;color:var(--muted);cursor:pointer;
+      width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px}
+    .drawer-close:active{background:var(--panel2)}
+    .drawer-close svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .drawer nav{display:flex;flex-direction:column;gap:2px;padding:8px}
+    .drawer nav button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+      background:none;border:none;color:var(--muted);cursor:pointer;
+      padding:13px 14px;border-radius:10px;font-size:15.5px;font-weight:600}
+    .drawer nav button svg{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;
       stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-    .bottomnav button.active{color:var(--accent)}
-    .bottomnav button:active{opacity:.55}
-    /* Keep content clear of the fixed bottom bar. */
-    main{padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+    .drawer nav button.active{color:var(--text);background:var(--panel2)}
+    .drawer nav button.active svg{color:var(--accent)}
+    .drawer nav button:active{background:var(--panel2)}
+
+    /* Content no longer needs to clear a fixed bottom bar. */
+    main{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 
     /* Bigger, zoom-proof controls — iOS Safari zooms inputs under 16px on focus. */
     select,input[type=text],input[type=number],input[type=date]{font-size:16px;padding:10px 12px}
@@ -510,7 +539,7 @@
   #toTop.show{opacity:1;visibility:visible;transform:none}
   #toTop:active{filter:brightness(.92)}
   #toTop svg{width:22px;height:22px;stroke:#04201a;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-  @media(max-width:640px){ #toTop{bottom:calc(70px + env(safe-area-inset-bottom));width:40px;height:40px} }
+  @media(max-width:640px){ #toTop{bottom:calc(18px + env(safe-area-inset-bottom));width:40px;height:40px} }
   /* ---- Data QA ---- */
   .qa-subnav{display:flex;gap:6px;flex-wrap:wrap}
   .qa-subnav button{background:var(--panel2);border:1px solid var(--line);color:var(--muted);
@@ -581,12 +610,14 @@
 <body>
 <header class="top">
   <div class="top-inner">
+    <button class="hamburger" id="hamburger" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
+    </button>
     <div class="brand">Mike's Training Log</div>
     <nav class="tabs" id="tabs"></nav>
   </div>
 </header>
 <main id="app"><div class="loading">Loading training data…</div></main>
-<nav class="bottomnav" id="bottomnav"></nav>
 
 <script>
 //============================================================ data + config
@@ -762,6 +793,63 @@ function columnChart(data, opts={}){
   </div>`;
 }
 
+// Stacked column chart — like columnChart, but each bar is split into coloured
+// segments by series (Insights uses it to break sessions/distance down by sport).
+//   data: [{label, parts:{<key>:value,…}}]
+//   opts.series: [{key,label,color}] — stack order is bottom→top and it also
+//                drives the legend row shown above the chart.
+function stackedColumnChart(data, opts={}){
+  const series = opts.series || [];
+  const totalOf = d => series.reduce((s,se)=>s+(d.parts[se.key]||0), 0);
+  const fmt = opts.fmt || (v=>fmtNum(v));
+  const valFmt = opts.valFmt || fmt;
+  const rawMax = Math.max(1, ...data.map(totalOf));
+  const allInt = data.every(d=>series.every(se=>Number.isInteger(d.parts[se.key]||0)));
+  const ticks = niceTicks(rawMax, 4, allInt);
+  const axisMax = ticks[ticks.length-1];
+  const n = data.length;
+  const showVals = opts.values!==false && n <= (opts.maxValues || (window.innerWidth<560 ? 7 : 18));
+  const bars = data.map(d=>{
+    const tot = totalOf(d);
+    const h = (tot/axisMax*100).toFixed(1);
+    // segments stack bottom→top in series order; each is a share of this bar's total
+    const segs = tot>0 ? series.map(se=>{ const v=d.parts[se.key]||0; if(v<=0) return "";
+      return `<span class="sseg" style="height:${(v/tot*100).toFixed(2)}%;background:${se.color}"></span>`; }).join("") : "";
+    const val = showVals && tot>0 ? `<span class="val">${valFmt(tot)}</span>` : "";
+    // exact-numbers readout for this bar (shown below the chart on hover / tap)
+    const items = series.filter(se=>(d.parts[se.key]||0)>0)
+      .map(se=>`<span class="sc-item"><i style="background:${se.color}"></i>${se.label} ${fmt(d.parts[se.key])}</span>`).join("");
+    const readout = `<b>${d.label}</b>${items}<span class="sc-item sc-tot">Total ${fmt(tot)}</span>`;
+    return `<div class="bar stack" style="height:${h}%" data-v="${tot}" data-r="${encodeURIComponent(readout)}">${segs}${val}</div>`;
+  }).join("");
+  const axisFmt = opts.axisFmt || (v=>fmtK(v));
+  const grid = ticks.map(t=>`<div class="gline${t===0?' base':''}" style="bottom:${(t/axisMax*100).toFixed(2)}%"></div>`).join("");
+  const yax = ticks.map(t=>`<span style="bottom:${(t/axisMax*100).toFixed(2)}%">${axisFmt(t)}</span>`).join("");
+  const maxLabels = opts.maxLabels || (window.innerWidth<560 ? 7 : 14);
+  const step = Math.max(1, Math.ceil(n/maxLabels));
+  const lastShown = Math.floor((n-1)/step)*step;
+  const showLast = (n-1) - lastShown >= step*0.6;
+  let labs = "";
+  data.forEach((d,i)=>{
+    const isTick = (i%step===0) || (i===n-1 && showLast);
+    if(!isTick) return;
+    const left=((i+0.5)/n*100).toFixed(2);
+    const text=opts.shortLabel?opts.shortLabel(d.label):d.label;
+    labs+=`<span style="left:${left}%">${text}</span>`;
+  });
+  const legend = `<div class="stack-legend">${series.map(se=>`<span class="k"><span class="sw" style="background:${se.color}"></span>${se.label}</span>`).join("")}</div>`;
+  const noun = opts.unit==="km" ? "distance" : "session";
+  const hint = `<span class="sc-hint">Tap or hover a column for its exact ${noun} split.</span>`;
+  return `<div class="scchart">${legend}<div class="chartwrap"><div class="yunit">${opts.unit||"sessions"}</div>
+    <div class="yaxis">${yax}</div>
+    <div class="plot">
+      <div class="chart">${grid}${bars}</div>
+      <div class="xlab">${labs}</div>
+    </div>
+  </div>
+  <div class="sc-readout">${hint}</div></div>`;
+}
+
 // Compact SVG line chart for trends where the variation matters more than the
 // absolute level (e.g. a cumulative running total), so the y-axis fits the data range
 // instead of starting at zero. points: [{label, value}].
@@ -836,6 +924,15 @@ document.addEventListener("click",e=>{
   document.querySelectorAll(".bar.show").forEach(x=>x.classList.remove("show"));
   if(!on) bar.classList.add("show");
 });
+// stacked bars: hovering or tapping a column fills the exact-numbers readout
+// below its chart with each sport's value + the total (works for mouse and touch).
+function fillStackReadout(e){
+  const bar=e.target.closest&&e.target.closest(".bar.stack"); if(!bar||!bar.dataset.r) return;
+  const out=bar.closest(".scchart")?.querySelector(".sc-readout");
+  if(out) out.innerHTML=decodeURIComponent(bar.dataset.r);
+}
+document.addEventListener("pointerover",fillStackReadout);
+document.addEventListener("click",fillStackReadout);
 function route(){
   const app=document.getElementById("app");
   if(current==="dash") renderDash(app);
@@ -1115,17 +1212,15 @@ function reportRunning(){
   const prs=distancePRs(runs);
   const prCards=prs.map(p=>_recCard(p.name,fmtDur(Math.round(p.sec)),fmtPace(_pace(p.row))+"/km · "+fmtNum(p.row.k,1)+" km",p.row)).join("");
   const races=runs.filter(isRace);
-  const graded=races.map(r=>({r,ag:ageGradeRun(r)})).filter(x=>x.ag);
-  const bestAG=graded.length?graded.reduce((x,y)=>y.ag.pct>x.ag.pct?y:x):null;
   return `
    ${_statRow([_stat(fmtNum(a.count),"runs"),_stat(fmtNum(Math.round(a.dist)),"total km"),_stat(Math.round(a.dur/3600),"hours"),_stat(years[0]+"–"+years[years.length-1],"span")])}
    <div class="card" style="margin-bottom:16px"><h3>Distance per year</h3>${columnChart(kmByYear,{shortLabel:l=>"'"+l.slice(2),unit:"km",fmt:v=>fmtNum(v)+" km",axisFmt:v=>fmtK(v)})}</div>
    ${paceByYear.length>1?`<div class="card" style="margin-bottom:16px"><h3>Average pace per year</h3>${lineChart(paceByYear,{unit:"min/km",fmt:v=>fmtPace(v)+"/km",axisFmt:v=>fmtPace(v)})}
-     <div class="note-sm">Mean pace of runs ≥3 km. Lower is faster — the drift upward over the years is largely age (see the <b>Performance → Age-Graded</b> tab, which factors that out).</div></div>`:""}
+     <div class="note-sm">Mean pace of runs ≥3 km. Lower is faster; the drift upward over the years mostly tracks age.</div></div>`:""}
    <div class="card" style="margin-bottom:16px"><h3>Distance personal records</h3><div class="note-sm" style="margin-bottom:8px">Best average pace held for at least each distance, in training or racing.</div><div class="grid recgrid">${prCards}</div></div>
    ${races.length?`<div class="card" style="margin-bottom:16px"><h3>Racing</h3>
-     ${_statRow([_stat(races.length,"races run"),_stat(new Set(races.map(yearOf)).size,"years raced"),bestAG?_stat(fmtPct(bestAG.ag.pct),"best age-grade"):""])}
-     <div class="note-sm">Full race breakdown — including age-graded results — is on the <b>Performance → Races</b> tab.</div></div>`:""}
+     ${_statRow([_stat(races.length,"races run"),_stat(new Set(races.map(yearOf)).size,"years raced")])}
+     <div class="note-sm">Full race breakdown — with race-day PRs — is on the <b>Performance → Races</b> tab.</div></div>`:""}
    <div class="card"><h3>Cumulative distance by year</h3>${cumulativeChart(runs)}</div>`;
 }
 
@@ -1181,17 +1276,17 @@ function reportTri(){
   const years=[...new Set(tri.map(yearOf))].sort();
   const byYear=years.map(y=>({label:String(y),value:tri.filter(r=>yearOf(r)===y&&r.s==="run").length||tri.filter(r=>yearOf(r)===y).length}));
   const sorted=runLegs.slice().sort((a,b)=>a.d<b.d?1:-1);
-  const rows=sorted.map(r=>{ const ag=ageGradeRun(r);
-    return `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
+  const rows=sorted.map(r=>
+    `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
       <td>${r.d}</td><td>${escapeHTML(raceName(r))}</td><td class="num">${fmtNum(r.k,1)}</td>
-      <td class="num">${fmtDur(r.t)}</td><td class="num">${fmtPace(_pace(r))}</td><td class="num">${ag?ag.age:""}</td>
-      <td class="num">${ag?`<span class="agpill ${agClass(ag.pct)}">${fmtPct(ag.pct)}</span>`:"—"}</td></tr>`; }).join("");
+      <td class="num">${fmtDur(r.t)}</td><td class="num">${fmtPace(_pace(r))}</td></tr>`
+  ).join("");
   return `
    ${_statRow([_stat(new Set(tri.map(r=>r.d)).size,"triathlons"),_stat(years[0]+"–"+years[years.length-1],"span"),_stat(new Set(tri.map(yearOf)).size,"years")])}
    <div class="card" style="margin-bottom:16px"><h3>Triathlons per year</h3>${columnChart(byYear,{shortLabel:l=>"'"+l.slice(2),unit:"races"})}</div>
    <div class="card"><h3>Run legs</h3>
-     <div class="note-sm" style="margin-bottom:8px">The precise log records each triathlon's <b>run leg</b> (swim &amp; bike legs live in the weekly grid). Pace and age-grade are for the run. Newest first.</div>
-     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">Run km</th><th class="num">Run time</th><th class="num">Pace</th><th class="num">Age</th><th class="num">AG %</th></tr></thead>
+     <div class="note-sm" style="margin-bottom:8px">The precise log records each triathlon's <b>run leg</b> (swim &amp; bike legs live in the weekly grid). Pace is for the run. Newest first.</div>
+     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">Run km</th><th class="num">Run time</th><th class="num">Pace</th></tr></thead>
      <tbody>${rows}</tbody></table></div></div>`;
 }
 
@@ -1841,7 +1936,6 @@ const NOTE_COL  = { race:"rgba(228,80,200,.90)", injury:"rgba(224,90,108,.80)", 
 const NOTE_RANK = { race:7, injury:6, illness:5, weather:4.5, rest:4, recovery:3, travel:2, home:1 };
 const NOTE_LABEL= { race:"race / event", injury:"injury", illness:"illness", weather:"weather day", rest:"rest day", recovery:"therapy / recovery", travel:"travel", home:"home project" };
 
-let _insightsYear = null;
 function renderInsights(app){
   const real = filtered(DATA).filter(r=>r.s!=="note");
   const a = agg(real);
@@ -1870,19 +1964,29 @@ function renderInsights(app){
   const equator=a.dist/40075, moonPct=a.dist/384400*100, marathons=runKm/42.195, totalDays=a.dur/86400;
   const fact=(icon,big,sub)=>`<div class="card stat fact"><span class="big">${icon}</span><span class="ftxt"><b>${big}</b><span>${sub}</span></span></div>`;
 
-  if(_insightsYear===null || !years.includes(_insightsYear))
-    _insightsYear = topYear ? +topYear[0] : years[years.length-1];
+  // Sport groups for the stacked charts: run / bike / swim, and everything else.
+  // On-brand categorical palette stepped for the dark card surface (validated:
+  // in-band lightness, ≥3:1 contrast, adjacent CVD ΔE ≥ 18). run = the brand
+  // teal, bike = the brand blue, swim = amber, other = a recessive neutral slate.
+  const STACK_SERIES = [
+    {key:"run",   label:"Run",   color:"#2aa189"},
+    {key:"bike",  label:"Bike",  color:"#3d80d4"},
+    {key:"swim",  label:"Swim",  color:"#c2863a"},
+    {key:"other", label:"Other", color:"#5f7186"},
+  ];
+  const grpOf = s => (s==="run"||s==="bike"||s==="swim") ? s : "other";
+  const zeroParts = () => ({run:0, bike:0, swim:0, other:0});
 
-  // weekly + seasonal training patterns
-  const dow = WEEKDAYS.map(w=>({label:w, value:0}));
-  real.forEach(r=>{ const d=new Date(r.d+"T00:00:00Z").getUTCDay(); dow[(d+6)%7].value++; });
-  const mon = MONTHS.map(m=>({label:m, value:0}));
-  real.forEach(r=>{ mon[monthOf(r)-1].value++; });
+  // weekly + seasonal training patterns, split by sport group
+  const dow = WEEKDAYS.map(w=>({label:w, parts:zeroParts()}));
+  real.forEach(r=>{ const d=new Date(r.d+"T00:00:00Z").getUTCDay(); dow[(d+6)%7].parts[grpOf(r.s)]++; });
+  const mon = MONTHS.map(m=>({label:m, parts:zeroParts()}));
+  real.forEach(r=>{ mon[monthOf(r)-1].parts[grpOf(r.s)]++; });
 
   // shoe mileage leaderboard (running km attributed to each shoe)
   const shoes={};
   for(const r of real){ if(r.s!=="run"||!r.sh||!r.k) continue; shoes[r.sh]=(shoes[r.sh]||0)+r.k; }
-  const topShoes=Object.entries(shoes).sort((x,y)=>y[1]-x[1]).slice(0,10);
+  const topShoes=Object.entries(shoes).sort((x,y)=>y[1]-x[1]);
   const shoeMax=topShoes.length?topShoes[0][1]:1;
 
   // extra fun-fact equivalences + standout sessions
@@ -1940,9 +2044,11 @@ function renderInsights(app){
 
   // More patterns: annual volume + sport mix. (Cumulative distance lives in the
   // Reports distance report; active days per year in Reports > Consistency.)
-  const kmByYear={}; for(const r of real) if(r.k) kmByYear[yearOf(r)]=(kmByYear[yearOf(r)]||0)+r.k;
+  const kmByYear={}; for(const r of real){ if(!r.k) continue; const y=yearOf(r);
+    const o=kmByYear[y]||(kmByYear[y]=zeroParts()); o[grpOf(r.s)]+=r.k; }
   const volYears=Object.keys(kmByYear).sort();
-  const distByYear=volYears.map(y=>({label:y, value:Math.round(kmByYear[y])}));
+  const distByYear=volYears.map(y=>{ const o=kmByYear[y];
+    return {label:y, parts:{run:Math.round(o.run), bike:Math.round(o.bike), swim:Math.round(o.swim), other:Math.round(o.other)}}; });
   const sportCnt={}; for(const r of real) sportCnt[r.s]=(sportCnt[r.s]||0)+1;
   const topSports=Object.entries(sportCnt).sort((x,y)=>y[1]-x[1]).slice(0,12);
   const sportMax=topSports.length?topSports[0][1]:1;
@@ -1968,34 +2074,18 @@ function renderInsights(app){
      ${fact("🗓️", fmtNum(coverage)+"%", "of all days had a workout")}
    </div>
 
-   <div class="card" style="margin-bottom:18px">
-     <div class="cardhead" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-       <h3>Activity calendar</h3>
-       <div style="display:flex;align-items:center;gap:14px">
-         <a href="#calendar" style="font-size:12.5px;font-weight:600">Full calendar →</a>
-         <label class="fld" style="max-width:120px">Year
-           <select id="hm-year">${years.slice().reverse().map(y=>`<option ${y===_insightsYear?"selected":""}>${y}</option>`).join("")}</select></label>
-       </div>
-     </div>
-     <div class="hm-box">
-       <div class="hm-scroll" id="hm-scroll">${activityHeatmap()}</div>
-     </div>
-     <div class="hm-legend">Less <span class="hm-cell" style="background:var(--panel2)"></span><span class="hm-cell" style="background:rgba(54,194,168,.4)"></span><span class="hm-cell" style="background:rgba(54,194,168,.6)"></span><span class="hm-cell" style="background:rgba(54,194,168,.8)"></span><span class="hm-cell" style="background:rgba(54,194,168,1)"></span> More<span class="hm-cell" style="background:rgba(255,178,90,.95);margin-left:12px"></span> top 1%<span class="hm-cell" style="background:rgba(224,90,108,.80);margin-left:12px"></span> injury<span class="hm-cell" style="background:rgba(232,150,60,.80);margin-left:8px"></span> illness<span class="hm-cell" style="background:rgba(125,142,170,.82);margin-left:8px"></span> rest<span class="hm-cell" style="background:rgba(80,180,220,.74);margin-left:8px"></span> recovery<span class="hm-cell" style="background:rgba(150,130,255,.72);margin-left:8px"></span> travel<span class="hm-cell" style="background:rgba(190,140,85,.76);margin-left:8px"></span> home<span class="hm-cell" style="background:rgba(228,80,200,.90);margin-left:8px"></span> race<span class="hm-cell" style="background:rgba(200,212,224,.80);margin-left:8px"></span> weather</div>
-     <div class="note-sm">Each square is one day. Green shows that day's <b>training load</b> (time weighted by intensity) — darker means more — and orange marks the hardest 1%. Days with no workout but a diary note are tinted by what Mike jotted — a race/event, injury, illness, weather, rest, therapy/recovery, travel, or a home project. <b>Tap any square</b> for that day's workouts and notes, or open the <a href="#calendar">full vertical calendar →</a> for filters and a how-it's-measured breakdown.</div>
-   </div>
-
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
-     <div class="card"><h3>By day of week</h3>${columnChart(dow,{unit:"sessions"})}<div class="note-sm">Total sessions on each weekday, all years combined — which days Mike trains most.</div></div>
-     <div class="card"><h3>By month (all years)</h3>${columnChart(mon,{shortLabel:l=>l[0],unit:"sessions"})}<div class="note-sm">Sessions in each calendar month, every year stacked together — reveals seasonal patterns.</div></div>
+     <div class="card"><h3>By day of week</h3>${stackedColumnChart(dow,{unit:"sessions",series:STACK_SERIES})}<div class="note-sm">Total sessions on each weekday, all years combined — split by sport (everything but run/bike/swim is “other”).</div></div>
+     <div class="card"><h3>By month (all years)</h3>${stackedColumnChart(mon,{shortLabel:l=>l[0],unit:"sessions",series:STACK_SERIES})}<div class="note-sm">Sessions in each calendar month, every year stacked together and split by sport — reveals seasonal patterns.</div></div>
    </div>
 
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:18px">
      <div class="card"><h3>Why days were skipped <span class="muted" style="font-weight:400;font-size:12px">· ${years[0]}–${years[years.length-1]}</span></h3>
-       ${restData.some(d=>d.value)?columnChart(restData,{unit:"days"}):`<div class="muted">No rest-reason notes found.</div>`}
-       <div class="note-sm">Note-only days across all ${years.length} years (${years[0]}–${years[years.length-1]}), grouped by likely reason and keyword-matched from the diary jottings (medium confidence).</div></div>
+       ${restData.some(d=>d.value)?columnChart(restData.filter(d=>d.value>0),{unit:"days"}):`<div class="muted">No rest-reason notes found.</div>`}
+       <div class="note-sm">Note-only days across all ${years.length} years (${years[0]}–${years[years.length-1]}), grouped by likely reason and keyword-matched from the diary jottings (medium confidence). Reasons with no matching notes are omitted.</div></div>
    </div>
 
-   <div class="card" style="margin-bottom:18px"><h3>Distance by year</h3>${columnChart(distByYear,{unit:"km",shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtNum(v)+" km"})}<div class="note-sm">Total distance logged each year, all sports. (Active days per year live in Reports → Consistency.)</div></div>
+   <div class="card" style="margin-bottom:18px"><h3>Distance by year</h3>${stackedColumnChart(distByYear,{unit:"km",shortLabel:l=>"'"+l.slice(2),fmt:v=>fmtNum(v)+" km",series:STACK_SERIES})}<div class="note-sm">Total distance logged each year, split by sport (everything but run/bike/swim is “other”). Active days per year live in Reports → Consistency.</div></div>
 
    <div class="card" style="margin-bottom:18px">
      <h3>Cumulative distance — year vs year</h3>
@@ -2040,33 +2130,16 @@ function renderInsights(app){
    </div>
 
    ${topShoes.length?`<div class="card" style="margin-top:18px">
-     <h3>Top running shoes by distance</h3>
-     <div class="shoebar">
+     <h3>Running shoes by distance <span class="muted" style="font-weight:400;font-size:12px">· ${topShoes.length} pairs</span></h3>
+     <div class="shoescroll"><div class="shoebar">
        ${topShoes.map(([nm,km])=>`<div class="shoe">
          <span class="nm" title="${escapeHTML(nm)}">${escapeHTML(nm)}</span>
          <span class="track"><span class="fill" style="width:${(km/shoeMax*100).toFixed(1)}%"></span></span>
          <span class="km">${fmtNum(km)} km</span></div>`).join("")}
-     </div>
-     <div class="note-sm">Distance attributed to the shoe noted on each run.</div>
+     </div></div>
+     <div class="note-sm">Distance attributed to the shoe noted on each run — every pair Mike logged (${fmtNum(topShoes.length)} in all), ranked by total distance. Scroll for the full list.</div>
    </div>`:""}`;
 
-  // The heatmap is one continuous all-years strip. The Year dropdown scrolls it
-  // to that year; scrolling updates the dropdown to match.
-  const ysel=document.getElementById("hm-year");
-  const scroll=document.getElementById("hm-scroll");
-  const grid=scroll&&scroll.querySelector(".hm");
-  if(scroll&&grid){
-    const kids=grid.children;
-    const step=()=>kids.length>1?(kids[1].getBoundingClientRect().left-kids[0].getBoundingClientRect().left)||16:16;
-    const yearAt=()=>{ const i=Math.min(kids.length-1,Math.max(0,Math.round(scroll.scrollLeft/step()))); const el=kids[i]; return el?+el.dataset.year:_insightsYear; };
-    const sync=()=>{ const y=yearAt(); if(ysel&&+ysel.value!==y)ysel.value=y; _insightsYear=y; };
-    const scrollToYear=y=>{ for(let i=0;i<kids.length;i++){ if(+kids[i].dataset.year===y){ scroll.scrollTo({left:i*step(),behavior:"smooth"}); break; } } };
-    scroll.addEventListener("scroll",sync,{passive:true});
-    grid.addEventListener("click",e=>{ const c=e.target.closest(".hm-cell[data-d]"); if(c) showDayOverlay(c.dataset.d); });
-    if(ysel) ysel.onchange=()=>scrollToYear(+ysel.value);
-    // jump to the most-active year on open (no smooth animation for the initial jump)
-    requestAnimationFrame(()=>{ for(let i=0;i<kids.length;i++){ if(+kids[i].dataset.year===_insightsYear){ scroll.scrollLeft=i*step(); break; } } sync(); });
-  }
   wireFilter();
 }
 
@@ -2145,45 +2218,6 @@ function activityModel(){
 }
 // green shade for a day's load (effort-minutes): four steps, darker = more load
 function loadShade(load){ const a = load<30?.4 : load<60?.58 : load<120?.76 : .92; return `rgba(54,194,168,${a})`; }
-
-// GitHub-style activity heatmap spanning ALL years as one continuous Monday-top
-// week grid coloured by each day's training LOAD (empty cells are rest days).
-// Returns the month-label row + the week grid; the caller wraps it in a
-// horizontal scroller. Each week carries data-year (its Thursday's year,
-// ISO-week style) so scrolling can sync the year dropdown to the view.
-function activityHeatmap(){
-  const {day,noteDay,minY,maxY,hot}=activityModel();
-  if(!isFinite(minY)) return `<div class="muted">No activity recorded.</div>`;
-  const start=new Date(Date.UTC(minY,0,1));
-  start.setUTCDate(start.getUTCDate()-((start.getUTCDay()+6)%7));   // back to Monday
-  const end=new Date(Date.UTC(maxY,11,31));
-  end.setUTCDate(end.getUTCDate()+(6-((end.getUTCDay()+6)%7)));     // forward to Sunday
-  const weeks=[]; const cur=new Date(start);
-  while(cur<=end){
-    const wk=[];
-    for(let i=0;i<7;i++){
-      const ds=cur.toISOString().slice(0,10), y=cur.getUTCFullYear();
-      const inSpan=y>=minY&&y<=maxY, d=day[ds]||{c:0,dur:0,load:0};
-      wk.push({ds,y,inSpan,c:d.c,dur:d.dur,load:d.load,note:noteDay[ds]||null});
-      cur.setUTCDate(cur.getUTCDate()+1);
-    }
-    weeks.push({cells:wk, year:wk[3].y});   // Thursday's year labels the week
-  }
-  const color=d=>{
-    if(!d.inSpan) return "transparent";
-    if(!d.c) return d.note ? NOTE_COL[d.note] : "var(--panel2)";   // no workout: show a diary-note colour if any
-    if(d.load>0 && d.load>=hot) return "rgba(255,178,90,.95)";     // top ~1% of days by training load
-    return loadShade(d.load);
-  };
-  // Month label sits on the week containing the 1st; January also shows the year.
-  const months=weeks.map(w=>{ const f=w.cells.find(d=>d.inSpan&&d.ds.slice(8)==="01");
-    if(!f) return ""; const mo=+f.ds.slice(5,7); return mo===1?"'"+f.ds.slice(2,4):MONTHS[mo-1]; });
-  const tip=d=>{ if(!d.inSpan) return "";
-    if(!d.c) return d.note ? `${d.ds} · ${NOTE_LABEL[d.note]}` : "";
-    return `${d.ds} · ${d.c} session${d.c===1?"":"s"}${d.dur?" · "+fmtDurShort(d.dur):""}${d.load>0&&d.load>=hot?" · top 1%":""}`; };
-  return `<div class="hm-months">${months.map(m=>`<div class="hm-mlabel">${m}</div>`).join("")}</div>
-    <div class="hm">${weeks.map(w=>`<div class="hm-week" data-year="${w.year}">${w.cells.map(d=>`<div class="hm-cell"${d.inSpan&&(d.c||d.note)?` data-d="${d.ds}"`:""} style="background:${color(d)}" title="${tip(d)}"></div>`).join("")}</div>`).join("")}</div>`;
-}
 
 //============================================================ CALENDAR (dedicated page)
 // The Insights heatmap, but full-page and scrolled VERTICALLY: every week is one
@@ -2321,6 +2355,13 @@ function renderCalendar(app){
   const pitch=rowEls.length>1?((rowEls[1].offsetTop-rowEls[0].offsetTop)||1):1;
   const yearIndex={}; rowEls.forEach((el,i)=>{ const y=+el.dataset.y; if(yearIndex[y]==null) yearIndex[y]=i; });
   const topOfYear=y=>firstTop+(yearIndex[y]||0)*pitch;
+  // scroll a specific date's week to just under the sticky header (rows[0] starts
+  // on `start`, one week per row) and sync the year label + summary to it.
+  const startMs=start.getTime();
+  const scrollToDate=ds=>{ const wi=Math.floor((Date.parse(ds+"T00:00:00Z")-startMs)/(7*864e5));
+    const i=Math.max(0,Math.min(rowEls.length-1,wi));
+    scroll.scrollTop=Math.max(0, firstTop+i*pitch-headH()-4);
+    const y=+ds.slice(0,4); if(ysel)ysel.value=y; _calYear=y; fillSum(y); };
   const fillSum=y=>{ const o=ysum[y];
     sumEl.innerHTML = o
       ? `<b>${y}</b> · <b>${o.days}</b> active day${o.days===1?"":"s"} · <b>${fmtNum(o.sess)}</b> session${o.sess===1?"":"s"} · <b>${Math.round(o.dur/3600)}h</b> trained · <b>${o.top}</b> top-1% day${o.top===1?"":"s"}`
@@ -2389,15 +2430,34 @@ function renderCalendar(app){
     const ds=tr.dataset.d; openFocus(ds,ds,null,"Day: "+ds); });
   const refresh=()=>{ applyFilter(); updateTable(); syncCalURL(); };
 
+  // earliest day matching a single active category (for the jump-on-isolate below)
+  const NOTE_CAT_KEYS=new Set(["race","injury","illness","weather","rest","recovery","travel","home"]);
+  const firstMatchDate=()=>{
+    if(active.size!==1) return null;
+    const cat=[...active][0]; let best=null;
+    if(NOTE_CAT_KEYS.has(cat)){ for(const ds in noteDay){ if(noteDay[ds]===cat&&!day[ds]&&(best===null||ds<best)) best=ds; } }
+    else if(cat==="trained"||cat==="top"){ for(const ds in day){ const dd=day[ds], top=dd.load>0&&dd.load>=hot;
+      if((top?"top":"trained")===cat&&(best===null||ds<best)) best=ds; } }
+    return best;
+  };
   const chipEls=[...document.querySelectorAll(".vcal-chip")];
-  chipEls.forEach(ch=>ch.setAttribute("aria-pressed", active.has(ch.dataset.cat)?"true":"false"));   // reflect restored filter
-  chipEls.forEach(ch=>ch.onclick=()=>{ const k=ch.dataset.cat;
-    if(active.has(k)) active.delete(k); else active.add(k);
-    ch.setAttribute("aria-pressed", active.has(k)?"true":"false"); refresh(); });
-  document.getElementById("vcal-all").onclick=()=>{ active.clear(); CAL_CATS.forEach(c=>active.add(c[0]));
-    chipEls.forEach(ch=>ch.setAttribute("aria-pressed","true")); refresh(); };
-  document.getElementById("vcal-none").onclick=()=>{ active.clear();
-    chipEls.forEach(ch=>ch.setAttribute("aria-pressed","false")); refresh(); };
+  const syncChips=()=>chipEls.forEach(ch=>ch.setAttribute("aria-pressed", active.has(ch.dataset.cat)?"true":"false"));
+  syncChips();   // reflect the restored-from-URL filter on the chips
+  // Tapping a category ISOLATES it (drop the rest) when everything is currently
+  // shown — so "click travel" means "show only travel", not "hide travel". Tapping
+  // the lone selected one again restores all; from a partial selection it toggles.
+  // Isolating down to a single category jumps the grid to that category's first day.
+  const onCat=k=>{
+    if(active.size===CAL_CATS.length){ active.clear(); active.add(k); }
+    else if(active.size===1&&active.has(k)){ CAL_CATS.forEach(c=>active.add(c[0])); }
+    else if(active.has(k)){ active.delete(k); }
+    else { active.add(k); }
+    syncChips(); refresh();
+    const fd=firstMatchDate(); if(fd) scrollToDate(fd);
+  };
+  chipEls.forEach(ch=>ch.onclick=()=>onCat(ch.dataset.cat));
+  document.getElementById("vcal-all").onclick=()=>{ CAL_CATS.forEach(c=>active.add(c[0])); syncChips(); refresh(); };
+  document.getElementById("vcal-none").onclick=()=>{ active.clear(); syncChips(); refresh(); };
   refresh();   // apply restored filter (grid dimming + table + URL) on first render
   // open on the default (most-active) year without a scroll animation
   requestAnimationFrame(()=>{ scroll.scrollTop=Math.max(0,topOfYear(_calYear)-headH()-4); fillSum(_calYear);
@@ -2491,15 +2551,11 @@ function renderAbout(app){
          These power the <i>Why days were skipped</i> chart and the tinted,
          tappable squares on the activity calendar. Classification is keyword-based
          (medium confidence), so the odd note may be mis-bucketed.</li>
-       <li><span class="pill d">interpreted</span> <b>Age grading &amp; race detection
+       <li><span class="pill d">interpreted</span> <b>Race detection
          (Performance tab).</b> A "race" is any effort Mike tagged <code>RACE</code>
-         in his log — his own high-precision marker. Age grading uses approximate
-         WMA-style men's road factors and Mike's birth <b>year</b> only (age = race
-         year − birth year); the default birth year is an estimate from his 2017
-         50–59 age-category placing and is editable on the Age-Graded tab. It's for
-         comparing his own efforts across ages, not for official records. Age-graded
-         figures use races only — training runs, age-graded, throw up efforts too
-         good to be true.</li>
+         in his log — his own high-precision marker, far cleaner than keyword-guessing
+         "race"/"sprint" out of prose. Race-day PRs and the by-era records draw only
+         on these, so a hard training run doesn't set a record.</li>
      </ul>
      <p class="note-sm">Spotted something off? It's almost certainly in the
      original shorthand — open the <b>Raw Data</b> tab to see exactly what Mike
@@ -2534,10 +2590,13 @@ const VERSION_HISTORY = [
     { c:"ux",   t:"The calendar <b>category filter now lives in the URL</b>, so browser <b>Back</b> from a day's Raw Data returns you to the same filtered matching-days table you left." },
     { c:"ux",   t:"<b>Every drill-in into Raw Data</b> — a record, a personal best, a Data QA entry, a calendar day, a race basis — now opens a <b>±2-week context window</b> centred on it, with that entry/day pinned. Never a lone row; the surrounding training always reads as context." },
     { c:"feat", t:"Added a <b>Month</b> filter on Raw Data alongside Year — narrow the table to a specific year + month." },
-    { c:"feat", t:"New <b>Performance</b> tab — a lens on Mike's <b>best</b> efforts, not his volume: races only, age-graded, and split by era." },
+    { c:"ux",   t:"Removed the <b>activity calendar</b> from Insights now that it has its own dedicated <b>Calendar</b> page — no more duplicate heatmap." },
+    { c:"feat", t:"<b>By day of week</b>, <b>By month</b> and <b>Distance by year</b> on Insights are now stacked by sport — run / bike / swim / other." },
+    { c:"ux",   t:"The shoe leaderboard now lists <b>every pair</b> Mike logged (66), scrollable and ranked by distance — not just the top 10." },
+    { c:"fix",  t:"“Why days were skipped” no longer shows an empty <b>Rest</b> bar — reasons with no matching notes are omitted." },
+    { c:"feat", t:"New <b>Performance</b> tab — a lens on Mike's <b>best</b> efforts, not his volume: races only, and split by era." },
     { c:"feat", t:"<b>Races</b> view: every RACE-tagged effort, race-day PRs at each standard distance, and a per-year race count — training days excluded." },
-    { c:"feat", t:"<b>Age-graded</b> racing (WMA-style) with an editable birth year — a 4:20/km 10 K at 55 now compares fairly with a 3:40/km one at 30; form by year comes out near-flat." },
-    { c:"feat", t:"<b>Records by era</b> (decade / 5-year) so his later-life bests aren't buried by his 20s–30s; each era is tagged with his age." },
+    { c:"feat", t:"<b>Records by era</b> (decade / 5-year) so his later-life bests aren't buried by his 20s–30s." },
     { c:"feat", t:"Sport-specific premade <b>reports</b> — running, cycling, swimming and triathlon deep-dives in the Reports tab." },
     { c:"ux",   t:"Rebuilt the <b>Data QA</b> review cards — each now shows what was interpreted, why it's flagged, the raw shorthand and a ruling box with one-tap <i>Looks right</i> / <i>Drop</i>; the tab opens straight on Spot-check." },
     { c:"ux",   t:"Added a per-row <b>“add context”</b> button on Raw Data — rule on any entry inline; it feeds the same Data QA store." },
@@ -2695,10 +2754,9 @@ function cumulativeChart(rows){
 }
 
 //============================================================ PERFORMANCE ANALYTICS
-// Four related lenses on Mike's *best* performance rather than his volume:
-//   Races      — only the efforts Mike tagged RACE, so training noise is excluded.
-//   Age-Graded — WMA-style age grading so a 55-year-old effort compares fairly to a 30-year-old one.
-//   By Era     — records per decade / 5-year block, since all-time bests skew to his youth.
+// Two related lenses on Mike's *best* performance rather than his volume:
+//   Races  — only the efforts Mike tagged RACE, so training noise is excluded.
+//   By Era — records per decade / 5-year block, since all-time bests skew to his youth.
 // Plus sport-specific premade reports live in the Reports tab.
 
 // A race is any effort Mike flagged with an explicit uppercase RACE tag in his log
@@ -2715,69 +2773,6 @@ function raceName(r){
   n=n.replace(/\s+1\/2\s*$/,"").trim();
   return (n||"Race").slice(0,44);
 }
-
-// ---- Age grading (WMA-style, men's road running) --------------------------
-// Age grading normalises a performance for age: it expresses a time as a % of the
-// world-class standard for someone that age, so efforts set decades apart compare
-// fairly. Mike's raw times are naturally fastest in his youth; age grading reveals
-// how strong an effort *was for his age at the time*.
-//
-// We only know Mike's birth YEAR (see below), so age ≈ race-year − birth-year.
-// Standards/factors are approximate WMA-style men's road values — good enough to
-// rank Mike's own efforts against each other, not for official record purposes.
-const BIRTH_KEY="mtl_birthYear";
-const BIRTH_DEFAULT=1962;   // best estimate: he placed in the 50-59 category in Aug 2017. Editable in the UI.
-function birthYear(){
-  try{ const v=+localStorage.getItem(BIRTH_KEY); if(v>=1930&&v<=2010) return v; }catch(e){}
-  return BIRTH_DEFAULT;
-}
-function setBirthYear(y){ try{ localStorage.setItem(BIRTH_KEY,String(y)); }catch(e){} }
-function ageAt(dateStr){ return (+dateStr.slice(0,4)) - birthYear(); }
-// Open-class world-class standards (men, road) — the 100% reference time per distance.
-const AG_STD = {
-  "5K":       {km:5,        sec:780},   // 13:00
-  "10K":      {km:10,       sec:1605},  // 26:45
-  "Half":     {km:21.0975,  sec:3510},  // 58:30
-  "Marathon": {km:42.195,   sec:7380},  // 2:03:00
-};
-// Age factors (multiply-your-time, ≤1) at 5-year anchors, interpolated per year.
-// Men's road running, WMA-style; ~0.5%/yr decline in the 30s steepening with age.
-const AG_AGES = [30,35,40,45,50,55,60,65,70,75,80];
-const AG_FACT = {
-  "5K":       [1.000,0.976,0.947,0.913,0.874,0.831,0.784,0.732,0.675,0.613,0.546],
-  "10K":      [1.000,0.975,0.945,0.910,0.871,0.828,0.780,0.728,0.671,0.609,0.542],
-  "Half":     [1.000,0.973,0.942,0.906,0.866,0.822,0.774,0.721,0.663,0.600,0.532],
-  "Marathon": [1.000,0.971,0.939,0.902,0.861,0.817,0.768,0.714,0.655,0.591,0.523],
-};
-// Which standard distance an arbitrary run is closest to (on a log scale, so a 15 km
-// run maps to Half not 10K), so any run — not just exact-distance ones — can be graded.
-function nearestStd(km){
-  let best="10K", bd=Infinity;
-  for(const k in AG_STD){ const d=Math.abs(Math.log(km/AG_STD[k].km)); if(d<bd){bd=d;best=k;} }
-  return best;
-}
-function agFactor(std, age){
-  const f=AG_FACT[std];
-  if(age<=AG_AGES[0]) return f[0];
-  if(age>=AG_AGES[AG_AGES.length-1]) return f[f.length-1];
-  for(let i=1;i<AG_AGES.length;i++){ if(age<=AG_AGES[i]){
-    const t=(age-AG_AGES[i-1])/(AG_AGES[i]-AG_AGES[i-1]); return f[i-1]+t*(f[i]-f[i-1]); } }
-  return f[f.length-1];
-}
-// Age-grade a run by comparing its pace to the age-adjusted world-class pace for the
-// nearest standard distance. Returns {pct, agPace(open-equiv min/km), factor, age, std}.
-function ageGradeRun(r){
-  if(!(r.s==="run" && r.t>0 && r.k>=1.5)) return null;
-  const pace=_pace(r); if(pace<3.0 || pace>10) return null;   // drop parse artifacts
-  const std=nearestStd(r.k), S=AG_STD[std];
-  const openPace=(S.sec/60)/S.km;                 // world-class open pace at that distance
-  const age=ageAt(r.d), f=agFactor(std,age);
-  const stdPaceAge=openPace/f;                    // age-adjusted world-class pace (slower when older)
-  return {pct: stdPaceAge/pace*100, agPace: pace*f, factor:f, age, std, pace, km:r.k};
-}
-const fmtPct = v => v.toFixed(1)+"%";
-// Colour a % so strong age grades read at a glance (WMA-style bands).
-function agClass(p){ return p>=80?"ag-elite":p>=70?"ag-strong":p>=60?"ag-good":p>=50?"ag-ok":"ag-base"; }
 
 // ---- Performance tab ------------------------------------------------------
 let perfSub="races";
@@ -2808,9 +2803,10 @@ function wirePerfYearBar(){
   if(cl) cl.onclick=()=>{ const ys=allYears(); FILTER.fromY=ys[0]; FILTER.toY=ys[ys.length-1]; rerender(); };
 }
 function renderPerf(app){
-  const subs=[["races","Races"],["age","Age-Graded"],["era","By Era"]];
+  const subs=[["races","Races"],["era","By Era"]];
+  if(perfSub!=="races"&&perfSub!=="era") perfSub="races";   // old #age deep-links fall back to Races
   app.innerHTML=`<h2 class="section">Performance</h2>
-    <div class="note-sm" style="margin:-6px 0 12px">Your <b>best</b> efforts, not your volume — races only, age-graded, and split by era. Running-based.</div>
+    <div class="note-sm" style="margin:-6px 0 12px">Your <b>best</b> efforts, not your volume — races only, and split by era. Running-based.</div>
     <div class="qa-subnav" id="perf-nav">${subs.map(([s,n])=>`<button data-s="${s}" class="${perfSub===s?"on":""}">${n}</button>`).join("")}</div>
     ${perfYearBar()}
     <div id="perf-out"></div>`;
@@ -2818,7 +2814,6 @@ function renderPerf(app){
   wirePerfYearBar();
   const out=document.getElementById("perf-out");
   if(perfSub==="races"){ out.innerHTML=perfRaces(); }
-  else if(perfSub==="age"){ out.innerHTML=perfAge(); wireBirthInput(); }
   else { out.innerHTML=perfEra(); wireEraToggle(); }
 }
 
@@ -2831,30 +2826,27 @@ function perfRaces(){
   const sorted=races.slice().sort((a,b)=>a.d<b.d?1:-1);   // newest first
   const years=[...new Set(races.map(yearOf))].sort();
   const byYear=years.map(y=>({label:String(y),value:races.filter(r=>yearOf(r)===y).length}));
-  // best age-graded race in range
-  const graded=races.map(r=>({r,ag:ageGradeRun(r)})).filter(x=>x.ag);
-  const bestAG=graded.length?graded.reduce((a,b)=>b.ag.pct>a.ag.pct?b:a):null;
+  const raceKm=races.reduce((s,r)=>s+(r.k||0),0);
   // race PRs at standard distances (races only — fastest actual finishing time in band)
   const prCards=RACE_BANDS.map(([name,D,lo,hi])=>{
     const c=races.filter(r=>r.k>=lo&&r.k<=hi); if(!c.length) return "";
-    const b=c.reduce((x,y)=>y.t<x.t?y:x); const ag=ageGradeRun(b);
+    const b=c.reduce((x,y)=>y.t<x.t?y:x);
     return `<div class="card stat rec clk" ${focusAttrs(b.d,b.d,rowId(b),name+" race PR")}>
       <div class="l">${name} race PR</div><div class="v">${fmtDur(b.t)}</div>
-      <div class="sub">${fmtPace(_pace(b))}/km · ${fmtNum(b.k,1)} km${ag?" · "+fmtPct(ag.pct)+" AG":""}</div>
-      <div class="d">${b.d}${ag?" · age "+ag.age:""} <span class="drillcue">→</span></div></div>`;
+      <div class="sub">${fmtPace(_pace(b))}/km · ${fmtNum(b.k,1)} km</div>
+      <div class="d">${b.d} <span class="drillcue">→</span></div></div>`;
   }).filter(Boolean).join("");
-  const rows=sorted.map(r=>{ const ag=ageGradeRun(r);
-    return `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
+  const rows=sorted.map(r=>
+    `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
       <td>${r.d}</td><td>${escapeHTML(raceName(r))}</td>
       <td class="num">${fmtNum(r.k,1)}</td><td class="num">${fmtDur(r.t)}</td>
-      <td class="num">${fmtPace(_pace(r))}</td><td class="num">${ag?ag.age:""}</td>
-      <td class="num">${ag?`<span class="agpill ${agClass(ag.pct)}">${fmtPct(ag.pct)}</span>`:"—"}</td></tr>`;
-  }).join("");
+      <td class="num">${fmtPace(_pace(r))}</td></tr>`
+  ).join("");
   return `
    <div class="grid stat-row" style="margin-bottom:16px">
      <div class="card stat"><div class="num">${races.length}</div><div class="lbl">races logged</div></div>
      <div class="card stat"><div class="num">${years[0]}–${years[years.length-1]}</div><div class="lbl">race span</div></div>
-     ${bestAG?`<div class="card stat"><div class="num">${fmtPct(bestAG.ag.pct)}</div><div class="lbl">best age-grade</div></div>`:""}
+     <div class="card stat"><div class="num">${fmtNum(Math.round(raceKm))}</div><div class="lbl">km raced</div></div>
      <div class="card stat"><div class="num">${new Set(races.map(yearOf)).size}</div><div class="lbl">years raced</div></div>
    </div>
    <div class="card" style="margin-bottom:16px"><h3>Races per year</h3>${columnChart(byYear,{shortLabel:l=>"'"+l.slice(2),unit:"races"})}
@@ -2863,63 +2855,9 @@ function perfRaces(){
      <div class="note-sm" style="margin-bottom:8px">Fastest <b>race-day</b> finish at each standard distance (a hard training run doesn't count).</div>
      <div class="grid recgrid">${prCards}</div></div>`:""}
    <div class="card"><h3>Every race</h3>
-     <div class="note-sm" style="margin-bottom:8px">Newest first. <b>AG</b> = age-graded % (higher is a stronger effort for his age that day). Tap a row to open it in Raw Data.</div>
-     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">km</th><th class="num">Time</th><th class="num">Pace</th><th class="num">Age</th><th class="num">AG %</th></tr></thead>
+     <div class="note-sm" style="margin-bottom:8px">Newest first. Tap a row to open it in Raw Data.</div>
+     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">km</th><th class="num">Time</th><th class="num">Pace</th></tr></thead>
      <tbody>${rows}</tbody></table></div></div>`;
-}
-
-function birthControl(){
-  return `<label class="fld" style="max-width:220px">Mike's birth year
-    <input id="birth-in" type="number" min="1930" max="2010" value="${birthYear()}" inputmode="numeric"></label>`;
-}
-function wireBirthInput(){
-  const el=document.getElementById("birth-in"); if(!el) return;
-  const apply=()=>{ const v=+el.value; if(v>=1930&&v<=2010){ setBirthYear(v); renderPerf(document.getElementById("app")); } };
-  el.onchange=apply;
-}
-function perfAge(){
-  // Race-based on purpose: age-grading training runs surfaces too-good-to-be-true
-  // efforts (a mis-measured short run at a hot pace grades like a masters record).
-  // Mike's flagged races are the clean signal — the whole reason for this lens.
-  const races=perfRows().filter(isRace).filter(r=>r.s==="run"&&r.t>0&&r.k>0);
-  const graded=races.map(r=>({r,ag:ageGradeRun(r)})).filter(x=>x.ag);
-  const method=`<div class="card" style="margin-bottom:16px"><div class="cardhead" style="justify-content:space-between;gap:12px;flex-wrap:wrap">
-     <h3 style="margin:0">Age-graded racing</h3>${birthControl()}</div>
-     <div class="note-sm">Age grading rescales each <b>race</b> to a % of the world-class standard for a man <b>that age</b>, so a 4:20/km 10 K at 55 compares fairly with a 3:40/km 10 K at 30. Uses WMA-style men's road factors (approximate); training runs are excluded (age-graded, they throw up efforts too good to be true). Only Mike's birth <b>year</b> is known, so age = race year − birth year — edit it above and every figure updates. Default ${BIRTH_DEFAULT} comes from his 50–59 age-category placing in 2017.</div></div>`;
-  if(!graded.length) return method+`<div class="card">No gradeable races in this range. Mike marks races with a “RACE –” tag; widen the year filter.</div>`;
-  const years=[...new Set(graded.map(x=>yearOf(x.r)))].sort();
-  const byYear=years.map(y=>{ const g=graded.filter(x=>yearOf(x.r)===y); const b=g.reduce((a,c)=>c.ag.pct>a.ag.pct?c:a); return {label:String(y),value:+b.ag.pct.toFixed(1),sub:"age "+b.ag.age}; });
-  const best=graded.reduce((a,b)=>b.ag.pct>a.ag.pct?b:a);
-  // age-graded PRs: best age-grade at each standard distance (may not be his fastest raw time)
-  const agPRs=RACE_BANDS.map(([name,D,lo,hi])=>{
-    const c=graded.filter(x=>x.r.k>=lo&&x.r.k<=hi); if(!c.length) return "";
-    const b=c.reduce((x,y)=>y.ag.pct>x.ag.pct?y:x);
-    return `<div class="card stat rec clk" ${focusAttrs(b.r.d,b.r.d,rowId(b.r),name+" best age-grade")}>
-      <div class="l">${name}</div><div class="v">${fmtPct(b.ag.pct)}</div>
-      <div class="sub">${fmtDur(b.r.t)} · ${fmtPace(b.ag.pace)}/km open-equiv</div>
-      <div class="d">${b.r.d} · age ${b.ag.age} <span class="drillcue">→</span></div></div>`;
-  }).filter(Boolean).join("");
-  const top=graded.slice().sort((a,b)=>b.ag.pct-a.ag.pct).slice(0,20).map(x=>{
-    const r=x.r,ag=x.ag;
-    return `<tr class="clk" ${focusAttrs(r.d,r.d,rowId(r),raceName(r))}>
-      <td>${r.d}</td><td>${escapeHTML(raceName(r))}</td>
-      <td class="num">${fmtNum(r.k,1)}</td><td class="num">${fmtDur(r.t)}</td><td class="num">${fmtPace(ag.pace)}</td>
-      <td class="num">${ag.age}</td><td class="num"><span class="agpill ${agClass(ag.pct)}">${fmtPct(ag.pct)}</span></td></tr>`;
-  }).join("");
-  return method+`
-   <div class="grid stat-row" style="margin-bottom:16px">
-     <div class="card stat"><div class="num">${fmtPct(best.ag.pct)}</div><div class="lbl">best race age-grade (age ${best.ag.age})</div></div>
-     <div class="card stat"><div class="num">${fmtPace(best.ag.agPace)}</div><div class="lbl">its open-age equivalent /km</div></div>
-     <div class="card stat"><div class="num">${graded.length}</div><div class="lbl">races age-graded</div></div>
-   </div>
-   <div class="card" style="margin-bottom:16px"><h3>Age-graded race form by year</h3>${columnChart(byYear,{shortLabel:l=>"'"+l.slice(2),unit:"age-grade %",fmt:v=>v.toFixed(1)+"%",axisFmt:v=>v+"%"})}
-     <div class="note-sm">His best race age-grade each year. Far flatter than raw pace, which just declines with age — age grading strips the aging out, so what's left is real competitive form.</div></div>
-   ${agPRs?`<div class="card" style="margin-bottom:16px"><h3>Best age-grade by distance</h3>
-     <div class="note-sm" style="margin-bottom:8px">The race that graded highest for his age at each distance — often <b>not</b> his fastest raw time, which is the point.</div>
-     <div class="grid recgrid">${agPRs}</div></div>`:""}
-   <div class="card"><h3>Top 20 age-graded races</h3>
-     <div class="tablewrap"><table><thead><tr><th>Date</th><th>Event</th><th class="num">km</th><th class="num">Time</th><th class="num">Open-equiv pace</th><th class="num">Age</th><th class="num">AG %</th></tr></thead>
-     <tbody>${top}</tbody></table></div></div>`;
 }
 
 function wireEraToggle(){
@@ -2930,7 +2868,7 @@ function perfEra(){
   const toggle=`<div class="card" style="margin-bottom:16px"><div class="cardhead" style="justify-content:space-between;gap:12px;flex-wrap:wrap">
     <h3 style="margin:0">Records by era</h3>
     <div class="qa-subnav" id="era-size"><button data-n="10" class="${eraSize===10?"on":""}">Decades</button><button data-n="5" class="${eraSize===5?"on":""}">5-year</button></div></div>
-    <div class="note-sm">Mike's all-time bests nearly all come from his 20s–30s, which buries what he ran later. Splitting records by era shows his best at every stage of life. Distance records are <b>race-day</b> bests (“—” = he didn't race that distance in the era); <b>longest run</b> counts any run. Age ranges assume birth year ${birthYear()} (edit it on the Age-Graded tab).</div></div>`;
+    <div class="note-sm">Mike's all-time bests nearly all come from his 20s–30s, which buries what he ran later. Splitting records by era shows his best at every stage of life. Distance records are <b>race-day</b> bests (“—” = he didn't race that distance in the era); <b>longest run</b> counts any run.</div></div>`;
   if(!runs.length) return toggle+`<div class="card">No runs in this range.</div>`;
   const ys=runs.map(yearOf); const y0=Math.min(...ys), y1=Math.max(...ys);
   const start=Math.floor(y0/eraSize)*eraSize;
@@ -2942,22 +2880,21 @@ function perfEra(){
   blocks.reverse();   // newest era first
   const cards=blocks.map(bl=>{
     // Distance records are RACE-DAY bests — a hard training run (whose parsed pace can
-    // be a mis-measured artifact) shouldn't set a record. Matches the Races/Age tabs.
+    // be a mis-measured artifact) shouldn't set a record. Matches the Races tab.
     const eraRaces=bl.rows.filter(isRace);
     const bandBest=(lo,hi)=>{ const c=eraRaces.filter(r=>r.k>=lo&&r.k<=hi&&_pace(r)>=3&&_pace(r)<=10); return c.length?c.reduce((x,y)=>y.t<x.t?y:x):null; };
-    const graded=eraRaces.map(r=>({r,ag:ageGradeRun(r)})).filter(x=>x.ag);
-    const bestAG=graded.length?graded.reduce((a,b)=>b.ag.pct>a.ag.pct?b:a):null;
+    const raceSane=eraRaces.filter(r=>_pace(r)>=3&&_pace(r)<=10);
+    const fastest=raceSane.length?raceSane.reduce((a,b)=>_pace(b)<_pace(a)?b:a):null;
     const longest=bl.rows.reduce((a,b)=>(b.k||0)>(a.k||0)?b:a);
     const rec=(l,v,sub,row)=> row?`<div class="erarec clk" ${focusAttrs(row.d,row.d,rowId(row),l)}><span class="el">${l}</span><span class="ev">${v}</span><span class="es">${sub}</span></div>`
                                  :`<div class="erarec"><span class="el">${l}</span><span class="ev muted">—</span><span class="es"></span></div>`;
-    const ageLo=bl.s-birthYear(), ageHi=Math.min(bl.e,y1)-birthYear();
     return `<div class="card eracard">
       <div class="cardhead" style="justify-content:space-between"><h3 style="margin:0">${bl.s}${eraSize>1?"–"+bl.e:""}</h3>
-        <span class="muted">${bl.rows.length} runs · ${eraRaces.length} races · age ${ageLo}–${ageHi}</span></div>
+        <span class="muted">${bl.rows.length} runs · ${eraRaces.length} races</span></div>
       <div class="erarecs">
         ${RACE_BANDS.map(([n,D,lo,hi])=>{ const b=bandBest(lo,hi); return b?rec(n,fmtDur(b.t),fmtPace(_pace(b))+"/km · "+b.d,b):rec(n,"—","",null); }).join("")}
+        ${rec("Fastest race pace",fastest?fmtPace(_pace(fastest))+"/km":"—",fastest?fmtNum(fastest.k,1)+" km · "+fastest.d:"",fastest)}
         ${rec("Longest run",longest.k?fmtNum(longest.k,1)+" km":"—",longest.d||"",longest.k?longest:null)}
-        ${rec("Best age-grade",bestAG?fmtPct(bestAG.ag.pct):"—",bestAG?"age "+bestAG.ag.age+" · "+bestAG.r.d:"",bestAG?bestAG.r:null)}
       </div></div>`;
   }).join("");
   return toggle+`<div class="eragrid">${cards}</div>`;
@@ -3546,10 +3483,10 @@ fetch("data.json").then(r=>r.json()).then(j=>{
      <div class="rawbox">${e}</div></div>`;
 });
 
-//============================================================ mobile bottom nav
-// A fixed, thumb-reachable tab bar for phones. Built additively: it drives the
-// existing go() router and mirrors its active state, so it needs no changes to
-// the routing code above.
+//============================================================ mobile nav drawer
+// A slide-out menu (hamburger, top-left) for phones — replaces the old crowded
+// bottom bar. Built additively: it drives the existing go() router and mirrors
+// its active state, so it needs no changes to the routing code above.
 (function(){
   const ICONS = {
     dash:    '<path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.6V21h13V9.6"/>',
@@ -3564,17 +3501,50 @@ fetch("data.json").then(r=>r.json()).then(j=>{
     changelog:'<path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 4v4h4"/><path d="M12 8v4.2l2.8 1.7"/>',
     about:   '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1.1" fill="currentColor" stroke="none"/>',
   };
-  const SHORT = {dash:"Home", insights:"Insights", calendar:"Calendar", records:"Records", perf:"Perf", wrapped:"Recap", reports:"Reports", browse:"Data", qa:"QA", changelog:"History", about:"About"};
-  const nav = document.getElementById("bottomnav");
-  if(!nav || typeof TABS==="undefined") return;
-  nav.innerHTML = TABS.map(([id])=>
-    `<button data-tab="${id}" aria-label="${SHORT[id]||id}">
-       <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id]||""}</svg>
-       <span>${SHORT[id]||id}</span></button>`).join("");
-  const sync = ()=>nav.querySelectorAll("button").forEach(b=>
+  const hamburger = document.getElementById("hamburger");
+  if(!hamburger || typeof TABS==="undefined") return;
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "drawer-backdrop";
+  const drawer = document.createElement("aside");
+  drawer.className = "drawer"; drawer.id = "drawer";
+  drawer.setAttribute("role","dialog"); drawer.setAttribute("aria-label","Site navigation");
+  drawer.setAttribute("aria-hidden","true");
+  drawer.innerHTML =
+    `<div class="drawer-head">
+       <span class="dtitle"><span class="dot"></span>Menu</span>
+       <button class="drawer-close" type="button" aria-label="Close menu">
+         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+       </button>
+     </div>
+     <nav>${TABS.map(([id,name])=>
+       `<button data-tab="${id}">
+          <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id]||""}</svg>
+          <span>${name}</span></button>`).join("")}</nav>`;
+  document.body.appendChild(backdrop);
+  document.body.appendChild(drawer);
+
+  const sync = ()=>drawer.querySelectorAll("nav button").forEach(b=>
     b.classList.toggle("active", b.dataset.tab===current));
-  nav.querySelectorAll("button").forEach(b=>b.onclick=()=>{ go(b.dataset.tab); sync(); });
-  // Wrap go() so the bar tracks navigation triggered anywhere (tabs, drill-ins).
+
+  let open=false;
+  function setOpen(v){
+    open=v;
+    backdrop.classList.toggle("open",v);
+    drawer.classList.toggle("open",v);
+    hamburger.setAttribute("aria-expanded",v?"true":"false");
+    drawer.setAttribute("aria-hidden",v?"false":"true");
+    document.body.style.overflow=v?"hidden":"";   // freeze background scroll while open
+  }
+  hamburger.onclick=()=>setOpen(!open);
+  backdrop.onclick=()=>setOpen(false);
+  drawer.querySelector(".drawer-close").onclick=()=>setOpen(false);
+  drawer.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{ go(b.dataset.tab); setOpen(false); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&open) setOpen(false); });
+  // Close (and release the frozen scroll) if the viewport grows to desktop width.
+  window.matchMedia("(min-width:641px)").addEventListener("change",e=>{ if(e.matches&&open) setOpen(false); });
+
+  // Wrap go() so the drawer tracks navigation triggered anywhere (tabs, drill-ins).
   if(typeof go==="function"){ const _go=go; window.go=function(t){ _go(t); sync(); }; }
   window.addEventListener("hashchange", sync);
   sync();
@@ -3603,27 +3573,6 @@ fetch("data.json").then(r=>r.json()).then(j=>{
     const n=parseInt(e.key,10);
     if(n>=1 && n<=TABS.length) go(TABS[n-1][0]);
   });
-})();
-
-// Pin the fixed bottom nav to the VISUAL viewport. On iOS Safari the visual
-// viewport (URL bar collapsed) is taller than the layout viewport that
-// position:fixed;bottom:0 anchors to, so the bar drifts up and the page shows
-// through below it. visualViewport gives the real offset; translate to correct
-// it. No-op where unsupported (delta ~0 on desktop / standalone).
-(function(){
-  const vv = window.visualViewport;
-  const nav = document.getElementById("bottomnav");
-  if(!vv || !nav) return;
-  let raf = 0;
-  const pin = ()=>{ raf=0;
-    const delta = document.documentElement.clientHeight - (vv.height + vv.offsetTop);
-    nav.style.transform = `translateY(${-delta}px)`;
-  };
-  const sched = ()=>{ if(!raf) raf=requestAnimationFrame(pin); };
-  vv.addEventListener("resize", sched);
-  vv.addEventListener("scroll", sched);
-  window.addEventListener("orientationchange", sched);
-  pin();
 })();
 
 //============================================================ QOL: line-chart hover/tap tooltips
