@@ -1,0 +1,87 @@
+name: Auto-merge green PRs
+
+# Why this exists
+# ---------------
+# Every automated PR here is opened as a *draft* (that's the Claude Code default),
+# and GitHub disables the merge button on drafts — so green, conflict-free PRs
+# just pile up open forever until someone hand-merges each one. This workflow
+# closes that loop: once the "Validate data" check passes on a `claude/*` PR into
+# main, it marks the PR ready and squash-merges it (matching the "… (#NN)" history).
+#
+# It deliberately does nothing to PRs that still have merge conflicts — those stay
+# open (and, if a draft, stay a draft) because they need a human to reconcile them.
+# That's what keeps the currently-held triathlon-fix PRs from auto-landing: they
+# conflict on the single-line data.json, so this workflow leaves them alone. A
+# `hold` (or `do-not-automerge`) label is honoured as an explicit override too.
+#
+# Trigger note: workflow_run fires using the copy of this file on the DEFAULT
+# branch, so it only takes effect once this PR is merged into main.
+
+on:
+  workflow_run:
+    workflows: ["Validate data"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    # Only when the data check passed, and only for check runs that came from a PR
+    # (not the push-to-main run — that guard also prevents a merge→push→merge loop).
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Squash-merge the PR if it's a green, conflict-free claude/* branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          # Only automate the automated PRs.
+          case "$HEAD_BRANCH" in
+            claude/*) : ;;
+            *) echo "· '$HEAD_BRANCH' is not a claude/* branch — skipping."; exit 0 ;;
+          esac
+
+          # Locate the open PR for this branch that targets main.
+          pr=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --base main --state open \
+                 --json number,isDraft,headRefOid,labels --jq '.[0] // empty')
+          if [ -z "$pr" ]; then echo "· No open PR for $HEAD_BRANCH — skipping."; exit 0; fi
+          num=$(echo "$pr"    | jq -r '.number')
+          headoid=$(echo "$pr"| jq -r '.headRefOid')
+          held=$(echo "$pr"   | jq -r '[.labels[].name] | any(. == "hold" or . == "do-not-automerge")')
+
+          # Don't act on a stale check run — a newer commit will get its own run.
+          if [ "$headoid" != "$HEAD_SHA" ]; then
+            echo "· PR #$num head moved past $HEAD_SHA — a newer run will handle it."; exit 0
+          fi
+          if [ "$held" = "true" ]; then
+            echo "· PR #$num carries a hold label — skipping."; exit 0
+          fi
+
+          # Wait out GitHub's async mergeability computation (UNKNOWN → CLEAN/DIRTY).
+          mergeable=""
+          for i in 1 2 3 4 5 6; do
+            mergeable=$(gh pr view "$num" --repo "$REPO" --json mergeable --jq '.mergeable')
+            [ "$mergeable" != "UNKNOWN" ] && break
+            echo "· mergeability still computing (try $i)…"; sleep 5
+          done
+
+          if [ "$mergeable" = "CONFLICTING" ]; then
+            echo "· PR #$num has merge conflicts — leaving it open for a human to reconcile."; exit 0
+          fi
+          if [ "$mergeable" != "MERGEABLE" ]; then
+            echo "· PR #$num mergeability is '$mergeable' — not acting this run."; exit 0
+          fi
+
+          # Green + conflict-free: take it out of draft (drafts can't merge) and land it.
+          gh pr ready "$num" --repo "$REPO" || true
+          gh pr merge "$num" --repo "$REPO" --squash
+          echo "✓ Auto-merged PR #$num."
