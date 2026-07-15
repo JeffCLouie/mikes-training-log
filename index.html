@@ -365,6 +365,17 @@
   .erarec .es{font-size:10.5px;color:var(--muted);margin-top:3px;min-height:12px}
   .erarec.clk{transition:transform .08s,border-color .12s}
   .erarec.clk:hover,.erarec.clk:focus-visible{border-color:var(--accent);transform:translateY(-1px);outline:none}
+  /* Performance: multisport races — finish time stays visible on the first line,
+     the leg breakdown wraps below (a table cell would nowrap and shove it off-screen). */
+  .trilist{display:flex;flex-direction:column}
+  .tri-row{padding:11px 4px;border-top:1px solid var(--line);cursor:pointer;transition:background .1s}
+  .tri-row:first-child{border-top:none}
+  .tri-row:hover,.tri-row:focus-visible{background:var(--panel2);outline:none}
+  .tri-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .tri-ev{font-weight:600;color:var(--text)}
+  .tri-fin{font-weight:800;font-size:17px;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .tri-meta{color:var(--muted);font-size:12px;margin-top:3px;line-height:1.4}
+  .tri-meta .tri-d{color:var(--accent2)}
   /* Performance: race-series quick filter (wraps to show every option, no
      horizontal scroll on mobile) */
   .racechips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
@@ -2537,14 +2548,20 @@ function renderAbout(app){
          into a single distance — together producing absurd figures (e.g. 140 km/h
          "rides"). The yearly <b>Avg bike speed</b> and <b>Avg run pace</b> charts
          now ignore physically impossible entries; a year left with fewer than 8
-         sane rides reads <i>“Not enough data.”</i> The new <b>Data QA →
-         Outliers</b> tab lists every such entry (~150), most-extreme first, each
+         sane rides reads <i>“Not enough data.”</i> The <b>Data QA →
+         Outliers</b> tab lists every such entry, most-extreme first, each
          linking to its Raw Data row — the systematic version of scanning the
-         Records page for a bogus best. The 2018 Tremblant Half Ironman, whose
-         garbled cell became a phantom 445 km/h "ride" and briefly topped the
-         biggest-day record, is the first corrected at source
-         (<code>tools/fix-tremblant-2018.js</code>): it now reads as a proper
-         swim + bike + run.</li>
+         Records page for a bogus best. Most are now corrected at source: the
+         2018 Tremblant Half Ironman (a phantom 445 km/h "ride" that briefly
+         topped the biggest-day record) plus a dozen early triathlons whose stacked
+         race cells mis-read finish times, transitions and metre swim distances
+         as 100–442 km/h bikes (<code>tools/fix-triathlon-legs*.js</code>,
+         <code>fix-triathlon-transitions.js</code>), and the recurring commute
+         mis-parse — two ride legs logged as bare distances (<code>25 25</code>)
+         given a fabricated minute-time, plus runs read as bikes
+         (<code>tools/fix-commute-run-outliers.js</code>). The list dropped
+         from ~130 to ~14; the remainder are impossible-<i>pace</i> runs awaiting
+         Mike's call.</li>
        <li><span class="pill d">mitigated</span> <b>Track intervals filed as cycling.</b>
          Workouts written as track repeats (<code>8×475 @1:27</code>,
          <code>6×800 on 2:41</code>) had been deduced as bike rides. 42 such
@@ -2623,7 +2640,11 @@ const VH_CATS = {
 const VERSION_HISTORY = [
   { date:"2026-07-15", entries:[
     { c:"ux",   t:"<b>Reordered the Insights charts</b> most-interesting first — <b>On this day</b> now leads, followed by yearly distance, pace &amp; speed trends and training patterns; the <b>running-shoe leaderboard</b> drops to last." },
-    { c:"ux",   t:"<b>Data QA</b> now opens on the <b>Outliers</b> tab — the 130 physically-impossible entries are the most extreme and highest-impact fixes, so they come first rather than the 3,265-row Spot-check queue." },
+    { c:"ux",   t:"<b>Data QA</b> now opens on the <b>Outliers</b> tab — the physically-impossible entries are the most extreme and highest-impact fixes, so they come first rather than the 3,265-row Spot-check queue." },
+    { c:"data", t:"Recovered the <b>legs of a dozen early triathlons</b> (1993–2005) — Sharbot Lake, Kingston, Kingston Y, National Capital, Mactaquac, Perth, OAC and the Tremblant Half Ironman. Each stacked race cell had turned finish times, transitions (<code>t1</code>/<code>t2</code>) and metre swim distances into phantom 100–442 km/h bike rides; the real swim + bike legs are rebuilt, every set reconciling to the printed finish (<code>fix-triathlon-legs*.js</code>, <code>fix-triathlon-transitions.js</code>)." },
+    { c:"data", t:"Cleared the recurring non-race impossible speeds — <b>commute-pair distance logs</b> (<code>25 25</code> = ride in + ride out) given a fabricated time, and <b>runs mis-read as bikes</b> that duplicate the running log. Distances are unchanged; annual totals hold. The <b>Outliers</b> list dropped from <b>130 to 14</b> (<code>fix-commute-run-outliers.js</code>)." },
+    { c:"feat", t:"New <b>Multisport races</b> section on the Performance tab — each triathlon's full <b>swim + T1 + bike + T2 + run</b> finish time (the Tremblant Half Ironman's 5:20:29, not just its 1:57:57 run leg), with the leg breakdown." },
+    { c:"data", t:"Stopped race <b>summary/finish lines</b> and stray <b>body-weight logs</b> from counting as a phantom <b>Other</b> sport — 36 rows that had inflated <b>Most sports in a day</b> to a bogus 4 and topped <b>Longest session</b> with 3-hour “sessions” are now notes, so both records read true (<code>fix-*-other-rows.js</code>)." },
   ]},
   { date:"2026-07-14", entries:[
     { c:"ux",   t:"Calendar <b>matching-days</b> rows now jump <b>straight into Raw Data</b> — no intermediate day popup — on a ±2-week window with that day highlighted." },
@@ -2803,6 +2824,21 @@ function cumulativeChart(rows){
 // (the running log uses a "RACE - <event>" prefix). That is his own high-precision
 // marker — far cleaner than keyword-guessing "race"/"sprint"/"marathon" out of prose.
 function isRace(r){ return /\bRACE\b/.test((r.n||"")+" "+(r.r||"")); }
+// Multisport races. A triathlon's real result is the whole swim + T1 + bike + T2 + run
+// finish, not the run leg "Every race" lists (a Half Ironman run leg looks like a slow
+// half-marathon). Each rebuilt triathlon carries that finish time on a RACE summary note
+// whose text holds the leg breakdown — see tools/fix-triathlon-transitions.js.
+const TRI_RX=/\b(tri|triathlon|ironman|duathlon|aquathlon)\b/i;
+function triFinishes(rows){
+  return rows.filter(r=>r.s==="note"&&isRace(r)&&r.t>0&&TRI_RX.test((r.n||"")+" "+(r.r||"")))
+             .slice().sort((a,b)=>a.d<b.d?1:-1);   // newest first
+}
+// Event name from a summary note: drop the "RACE -" marker, stop at the " — finish …" tail.
+function triEventName(r){
+  return ((r.n||"").replace(/^.*?\bRACE\b\s*[-–:]*\s*/,"").split(/\s+—\s+finish/i)[0].trim()||"Triathlon").slice(0,44);
+}
+// The parenthetical leg split Mike's cell recorded, e.g. "swim 35:14, T1 3:45, bike …".
+function triBreakdown(r){ const m=(r.n||"").match(/\(([^)]*)\)/); return m?m[1]:""; }
 // A readable event name out of a race note: drop the "RACE -" marker, then cut at
 // the first split time (12:34), doubled space, or sentence break so the diary prose
 // that often trails the name doesn't leak into the label.
@@ -2944,6 +2980,19 @@ function perfRaces(){
        <span class="rs-b">best <b>${fmtDur(best.t)}</b> at ${fmtPace(_pace(best))}/km · ${best.d.slice(0,4)}</span>
       </div>`;
   }
+  // Multisport: triathlons/duathlons whose full finish time we recovered (swim+bike+run).
+  // A flex list, not a table — the finish time stays pinned to the first line while the
+  // long leg breakdown wraps below it (mobile-first: no horizontal scroll to see the time).
+  const tris=triFinishes(perfRows());
+  const triRows=tris.map(r=>{
+    const bd=triBreakdown(r);
+    return `<div class="tri-row clk" ${focusAttrs(r.d,r.d,rowId(r),triEventName(r))}>
+      <div class="tri-head"><span class="tri-ev">${escapeHTML(triEventName(r))}</span><span class="tri-fin">${fmtDur(r.t)}</span></div>
+      <div class="tri-meta"><span class="tri-d">${r.d}</span>${bd?" · "+escapeHTML(bd):""}</div></div>`;
+  }).join("");
+  const triCard=tris.length?`<div class="card" style="margin-bottom:16px"><h3>Multisport races</h3>
+     <div class="note-sm" style="margin-bottom:10px">A triathlon's real result is the whole <b>swim + T1 + bike + T2 + run</b> finish — not the run leg that “Every race” lists (a Half Ironman run split looks like a slow half-marathon otherwise). Tap to open in Raw Data.</div>
+     <div class="trilist">${triRows}</div></div>`:"";
   return `
    <div class="grid stat-row" style="margin-bottom:16px">
      <div class="card stat"><div class="num">${races.length}</div><div class="lbl">races logged</div></div>
@@ -2956,6 +3005,7 @@ function perfRaces(){
    ${prCards?`<div class="card" style="margin-bottom:16px"><h3>Race personal records</h3>
      <div class="note-sm" style="margin-bottom:8px">Fastest <b>race-day</b> finish at each standard distance (a hard training run doesn't count).</div>
      <div class="grid recgrid">${prCards}</div></div>`:""}
+   ${triCard}
    <div class="card"><h3>Every race</h3>
      <div class="note-sm" style="margin-bottom:8px">Tap a race to see just that event across the years. Newest first; tap a row to open it in Raw Data.</div>
      ${chipBar}

@@ -83,7 +83,27 @@ swims — and recover the real distances they displaced; each fix is corroborate
 the weekly totals or the running log),
 `fix-tremblant-2018.js` (un-garble the 2018 Tremblant Half Ironman cell — recover
 the dropped swim leg, restore the bike-leg time, and remove the phantom 445 km/h
-"ride" the mis-parse produced).
+"ride" the mis-parse produced),
+`fix-triathlon-legs.js` and `fix-triathlon-legs-2.js` (the same class of fix across
+eight early triathlons — National Capital 1993, Kingston 1994, Kingston Y 1995,
+Sharbot Lake &amp; Mactaquac 1996, Perth 1996 &amp; 1997, OAC 1998 — where finish
+times, transitions and swim distances had been read as phantom bikes up to 442 km/h;
+recovers the real legs, each reconciled to the printed finish time),
+`fix-triathlon-transitions.js` (the same treatment for the remaining mis-parsed
+triathlons — Sharbot Lake 2001/2005, OAC 1994, Kingston 1996: the grid split each
+race's cell across two days, reading the transitions `t1`/`t2` and placements like
+`7c20o` as phantom bike distances; cleans the real swim/bike legs, drops the phantoms,
+and rebuilds each race-finish note, plus clears the leftover duplicate Tremblant
+fragments),
+`fix-commute-run-outliers.js` (the recurring non-race impossible speeds: commute-pair
+distance logs like `25 25` — 25 km in + 25 km out — that were given a fabricated
+minute-time, and runs mis-read as bikes that duplicate the running log; strips the
+fabricated time or drops the duplicate, leaving distances unchanged, and takes the
+Outliers list from ~130 to ~14 — the remainder impossible-*pace* runs left for Mike),
+`fix-triathlon-other-rows.js`, `fix-race-total-other-rows.js` and
+`fix-bodyweight-other-rows.js` (reclassify race summary/finish lines and stray
+body-weight logs that had been parsed as a phantom "other" sport — 36 rows — into
+notes, so they stop inflating "Most sports in a day" and "Longest session").
 
 ### Outlier validation
 
